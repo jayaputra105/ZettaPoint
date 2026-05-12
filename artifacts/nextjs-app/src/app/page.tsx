@@ -14,8 +14,6 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
-
-
 useEffect(() => {
   const syncData = async () => {
     // Ambil data dari Telegram WebApp
@@ -24,7 +22,7 @@ useEffect(() => {
 
     if (user) {
       try {
-        const res = await fetch('/api/user/sync', { // Sesuaikan sama route API lu
+        const res = await fetch('/api/user', { // Sesuaikan sama route API lu
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -203,8 +201,8 @@ const [userProfile, setUserProfile] = useState({
                 }}
               >
                 <img
-                  src={mockUser.avatar}
-                  alt={mockUser.name}
+                  src={userProfile.avatar}
+                  alt={userProfile.name}
                   className="w-full h-full object-cover"
                   style={{ background: "#1a1a2e" }}
                   onError={(e) => {
@@ -222,10 +220,10 @@ const [userProfile, setUserProfile] = useState({
                   className="font-bold text-sm leading-tight"
                   style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.5)" }}
                 >
-                  {mockUser.name}
+                  {userProfile.name}
                 </p>
                 <p className="text-xs" style={{ color: "rgba(255,215,0,0.5)" }}>
-                  {mockUser.username}
+                  {userProfile.username}
                 </p>
               </div>
             </div>
@@ -249,7 +247,7 @@ const [userProfile, setUserProfile] = useState({
               >
                 <span className="text-xs">🏆</span>
                 <span className="text-xs font-bold" style={{ color: "rgba(255,215,0,0.85)" }}>
-                  Rank #{mockUser.rank}
+                  Rank #{userRank.rank}
                 </span>
               </div>
             </div>
