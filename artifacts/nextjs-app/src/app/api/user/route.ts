@@ -29,24 +29,25 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-const { telegramId, addCoins } = await req.json();
+    const { telegramId, addCoins } = await req.json();
 
-const updated = await db
-  .update(users)
-  .set({ 
-    // Operasi matematika langsung di database
-    coins: sql`${users.coins} + ${addCoins ?? 0}` 
-  })
-  .where(eq(users.telegramId, telegramId.toString()))
-  .returning();
-
-return NextResponse.json(updated[0]);
+    if (!telegramId) {
+      return NextResponse.json({ error: "No Telegram ID provided" }, { status: 400 });
+    }
 
     const updated = await db
       .update(users)
-      .set({ coins: user.coins + (body.addCoins ?? 0) })
-      .where(eq(users.telegramId, MOCK_TELEGRAM_ID))
+      .set({ 
+        // Pake sql helper biar aman dari race condition
+        coins: sql`${users.coins} + ${addCoins ?? 0}` 
+      })
+      .where(eq(users.telegramId, telegramId.toString()))
       .returning();
+
+    if (updated.length === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     return NextResponse.json(updated[0]);
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
