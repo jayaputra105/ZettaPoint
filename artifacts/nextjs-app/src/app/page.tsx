@@ -201,8 +201,8 @@ const [userProfile, setUserProfile] = useState({
                 }}
               >
                 <img
-                  src={userProfile.avatar}
-                  alt={userProfile.name}
+                  src={userProfile?.avatar}
+                  alt={userProfile?.name}
                   className="w-full h-full object-cover"
                   style={{ background: "#1a1a2e" }}
                   onError={(e) => {
@@ -220,10 +220,10 @@ const [userProfile, setUserProfile] = useState({
                   className="font-bold text-sm leading-tight"
                   style={{ color: "#FFD700", textShadow: "0 0 8px rgba(255,215,0,0.5)" }}
                 >
-                  {userProfile.name}
+                  {userProfile?.name}
                 </p>
                 <p className="text-xs" style={{ color: "rgba(255,215,0,0.5)" }}>
-                  {userProfile.username}
+                  {userProfile?.username}
                 </p>
               </div>
             </div>
