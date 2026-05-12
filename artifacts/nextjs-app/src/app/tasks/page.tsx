@@ -38,13 +38,21 @@ export default function TasksPage() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const getTelegramId = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    return tg?.initDataUnsafe?.user?.id?.toString();
+  };
+
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   useEffect(() => {
-    fetch("/api/tasks")
+    const tid = getTelegramId();
+    if (!tid) return;
+
+    fetch(`/api/tasks?telegramId=${tid}`)
       .then((r) => r.json())
       .then((data) => {
         setTasks(Array.isArray(data) ? data : []);
@@ -54,24 +62,27 @@ export default function TasksPage() {
   }, []);
 
   const handleVerify = async (task: Task) => {
-    if (task.completion) return;
+    const tid = getTelegramId();
+    if (task.completion || !tid) return;
+    
     setSubmitting(task.id);
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: task.id }),
+        body: JSON.stringify({ taskId: task.id, telegramId: tid }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      showToast(`+${formatNumber(data.rewardCoins)} Koin berhasil diklaim!`);
+      
+      showToast(`+${formatNumber(data.rewardCoins)} Coins claimed successfully!`);
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, completion: { status: "completed" } } : t
         )
       );
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Gagal submit", "error");
+    } catch (e: any) {
+      showToast(e.message || "Failed to submit", "error");
     } finally {
       setSubmitting(null);
     }
@@ -86,17 +97,25 @@ export default function TasksPage() {
   };
 
   const handleScreenshotSubmit = async (task: Task) => {
-    if (!uploadUrl) { showToast("Pilih screenshot terlebih dahulu", "error"); return; }
+    const tid = getTelegramId();
+    if (!uploadUrl) { showToast("Please select a screenshot first", "error"); return; }
+    if (!tid) return;
+
     setSubmitting(task.id);
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: task.id, screenshotUrl: uploadUrl }),
+        body: JSON.stringify({ 
+          taskId: task.id, 
+          screenshotUrl: uploadUrl,
+          telegramId: tid 
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      showToast("Screenshot terkirim! Menunggu verifikasi admin.");
+      
+      showToast("Screenshot submitted! Awaiting admin verification.");
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, completion: { status: "pending" } } : t
@@ -104,8 +123,8 @@ export default function TasksPage() {
       );
       setActiveUpload(null);
       setUploadUrl("");
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Gagal submit", "error");
+    } catch (e: any) {
+      showToast(e.message || "Submission failed", "error");
     } finally {
       setSubmitting(null);
     }
@@ -113,7 +132,7 @@ export default function TasksPage() {
 
   const social = tasks.filter((t) => t.type === "social");
   const screenshot = tasks.filter((t) => t.type === "screenshot");
-  const completed = tasks.filter((t) => t.completion?.status === "completed").length;
+  const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
 
   return (
     <div
@@ -124,30 +143,29 @@ export default function TasksPage() {
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 pb-28">
         <header className="pt-5 pb-4">
           <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="font-black text-2xl" style={{ color: "#FFD700", textShadow: "0 0 20px rgba(255,215,0,0.5)" }}>
-              Misi Harian
+            <h1 className="font-black text-2xl uppercase tracking-tight" style={{ color: "#FFD700", textShadow: "0 0 20px rgba(255,215,0,0.5)" }}>
+              Daily Quests
             </h1>
             <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Selesaikan misi & kumpulkan koin
+              Complete missions to earn rewards
             </p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15 }}
             className="mt-3 rounded-2xl p-3 flex items-center gap-3"
             style={{ background: "rgba(255,215,0,0.07)", border: "1px solid rgba(255,215,0,0.2)" }}
           >
             <div className="text-2xl">🎯</div>
             <div className="flex-1">
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Progress</p>
+              <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>Progress</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: tasks.length > 0 ? `${(completed / tasks.length) * 100}%` : "0%",
+                      width: tasks.length > 0 ? `${(completedCount / tasks.length) * 100}%` : "0%",
                       background: "linear-gradient(90deg, #FFD700, #FF8C00)",
                       boxShadow: "0 0 8px rgba(255,215,0,0.5)",
                       transition: "width 0.5s ease",
@@ -155,7 +173,7 @@ export default function TasksPage() {
                   />
                 </div>
                 <span className="text-xs font-bold" style={{ color: "#FFD700" }}>
-                  {completed}/{tasks.length}
+                  {completedCount}/{tasks.length}
                 </span>
               </div>
             </div>
@@ -173,9 +191,9 @@ export default function TasksPage() {
           </div>
         ) : (
           <>
-            {[{ label: "📣 Misi Sosial", items: social }, { label: "📸 Upload Bukti", items: screenshot }].map(({ label, items }) => (
+            {[{ label: "📣 Social Missions", items: social }, { label: "📸 Proof Upload", items: screenshot }].map(({ label, items }) => (
               <section key={label} className="mb-5">
-                <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,215,0,0.5)" }}>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: "rgba(255,215,0,0.6)" }}>
                   {label}
                 </p>
                 <div className="flex flex-col gap-3">
@@ -189,157 +207,69 @@ export default function TasksPage() {
                         key={task.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.07 }}
                         className="rounded-2xl overflow-hidden"
                         style={{
-                          background: isDone
-                            ? "rgba(74,222,128,0.05)"
-                            : isPending
-                            ? "rgba(251,191,36,0.05)"
-                            : "rgba(255,255,255,0.03)",
+                          background: isDone ? "rgba(74,222,128,0.05)" : isPending ? "rgba(251,191,36,0.05)" : "rgba(255,255,255,0.03)",
                           border: `1px solid ${isDone ? "rgba(74,222,128,0.3)" : isPending ? "rgba(251,191,36,0.3)" : "rgba(255,215,0,0.15)"}`,
                         }}
                       >
                         <div className="flex items-center gap-3 p-3.5">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                            style={{ background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.15)" }}
-                          >
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.15)" }}>
                             {TYPE_ICONS[task.type] ?? "✅"}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p
-                              className="font-semibold text-sm leading-tight truncate"
-                              style={{ color: isDone ? "rgba(74,222,128,0.9)" : "rgba(255,255,255,0.9)" }}
-                            >
+                            <p className="font-bold text-sm truncate" style={{ color: isDone ? "#4ade80" : "#fff" }}>
                               {task.title}
                             </p>
-                            <p className="text-xs mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
-                              {task.description}
-                            </p>
+                            <p className="text-[11px] truncate opacity-50">{task.description}</p>
                             <div className="flex items-center gap-1.5 mt-1.5">
-                              <Coins size={11} style={{ color: "#FFD700" }} />
-                              <span className="text-xs font-bold" style={{ color: "#FFD700" }}>
-                                +{formatNumber(task.rewardCoins)}
-                              </span>
-                              {isDone && (
-                                <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>
-                                  ✓ Selesai
-                                </span>
-                              )}
-                              {isPending && (
-                                <span className="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}>
-                                  ⏳ Review
-                                </span>
-                              )}
+                              <Coins size={11} className="text-yellow-500" />
+                              <span className="text-xs font-black text-yellow-500">+{formatNumber(task.rewardCoins)}</span>
                             </div>
                           </div>
 
                           {!isDone && !isPending && (
                             task.type === "social" ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 {task.link && (
-                                  <a
-                                    href={task.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    style={{ background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)" }}
-                                  >
-                                    <ExternalLink size={14} style={{ color: "#FFD700" }} />
+                                  <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/5 border border-white/10">
+                                    <ExternalLink size={14} className="text-yellow-500" />
                                   </a>
                                 )}
-                                <button
-                                  onClick={() => handleVerify(task)}
-                                  disabled={submitting === task.id}
-                                  className="px-3 py-1.5 rounded-xl text-xs font-bold"
-                                  style={{
-                                    background: "linear-gradient(135deg, #FFD700, #FF8C00)",
-                                    color: "#000",
-                                    opacity: submitting === task.id ? 0.6 : 1,
-                                  }}
-                                >
+                                <button onClick={() => handleVerify(task)} disabled={submitting === task.id} className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-yellow-500 text-black disabled:opacity-50">
                                   {submitting === task.id ? "..." : "Verify"}
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => { setActiveUpload(isOpen ? null : task.id); setUploadUrl(""); }}
-                                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                style={{ background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.2)" }}
-                              >
-                                <ChevronRight
-                                  size={16}
-                                  style={{
-                                    color: "#FFD700",
-                                    transform: isOpen ? "rotate(90deg)" : "none",
-                                    transition: "transform 0.2s",
-                                  }}
-                                />
+                              <button onClick={() => { setActiveUpload(isOpen ? null : task.id); setUploadUrl(""); }} className="w-8 h-8 rounded-xl flex items-center justify-center bg-yellow-500/10 border border-yellow-500/20">
+                                <ChevronRight size={16} className={`text-yellow-500 transition-transform ${isOpen ? "rotate-90" : ""}`} />
                               </button>
                             )
                           )}
                           {(isDone || isPending) && (
-                            isDone ? (
-                              <CheckCircle size={20} style={{ color: "#4ade80", flexShrink: 0 }} />
-                            ) : (
-                              <Clock size={20} style={{ color: "#fbbf24", flexShrink: 0 }} />
-                            )
+                            isDone ? <CheckCircle size={20} className="text-green-400" /> : <Clock size={20} className="text-amber-400" />
                           )}
                         </div>
 
                         <AnimatePresence>
                           {isOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.25 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="px-3.5 pb-3.5 pt-0 border-t" style={{ borderColor: "rgba(255,215,0,0.1)" }}>
-                                <p className="text-xs mb-2 mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
-                                  Upload screenshot bukti sebagai verifikasi:
-                                </p>
-                                <input
-                                  ref={fileRef}
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={handleFileChange}
-                                />
+                            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                              <div className="px-3.5 pb-3.5 border-t border-white/5">
+                                <p className="text-[10px] my-2 opacity-50">Upload screenshot to verify completion:</p>
+                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                                 {uploadUrl ? (
                                   <div className="relative mb-2">
                                     <img src={uploadUrl} alt="preview" className="w-full h-28 object-cover rounded-xl" />
-                                    <button
-                                      onClick={() => setUploadUrl("")}
-                                      className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                                      style={{ background: "rgba(0,0,0,0.7)", color: "#fff" }}
-                                    >
-                                      ×
-                                    </button>
+                                    <button onClick={() => setUploadUrl("")} className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full text-[10px]">×</button>
                                   </div>
                                 ) : (
-                                  <button
-                                    onClick={() => fileRef.current?.click()}
-                                    className="w-full h-20 rounded-xl flex flex-col items-center justify-center gap-1.5 mb-2"
-                                    style={{ background: "rgba(255,215,0,0.05)", border: "1.5px dashed rgba(255,215,0,0.25)" }}
-                                  >
-                                    <Upload size={18} style={{ color: "rgba(255,215,0,0.5)" }} />
-                                    <span className="text-xs" style={{ color: "rgba(255,215,0,0.5)" }}>Pilih Screenshot</span>
+                                  <button onClick={() => fileRef.current?.click()} className="w-full h-20 rounded-xl flex flex-col items-center justify-center gap-1 border-1.5 border-dashed border-yellow-500/30 bg-yellow-500/5">
+                                    <Upload size={18} className="opacity-30" />
+                                    <span className="text-[10px] opacity-30 uppercase font-bold">Select Screenshot</span>
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => handleScreenshotSubmit(task)}
-                                  disabled={submitting === task.id || !uploadUrl}
-                                  className="w-full py-2.5 rounded-xl font-bold text-sm"
-                                  style={{
-                                    background: uploadUrl ? "linear-gradient(135deg, #FFD700, #FF8C00)" : "rgba(255,215,0,0.1)",
-                                    color: uploadUrl ? "#000" : "rgba(255,215,0,0.3)",
-                                    opacity: submitting === task.id ? 0.6 : 1,
-                                  }}
-                                >
-                                  {submitting === task.id ? "Mengirim..." : "Kirim untuk Verifikasi"}
+                                <button onClick={() => handleScreenshotSubmit(task)} disabled={submitting === task.id || !uploadUrl} className="w-full py-2.5 rounded-xl font-black text-[10px] uppercase bg-yellow-500 text-black disabled:opacity-20">
+                                  {submitting === task.id ? "Uploading..." : "Submit for Review"}
                                 </button>
                               </div>
                             </motion.div>
@@ -357,24 +287,11 @@ export default function TasksPage() {
 
       <AnimatePresence>
         {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 z-50 rounded-2xl px-5 py-3 text-sm font-semibold"
-            style={{
-              transform: "translateX(-50%)",
-              background: toast.type === "success" ? "rgba(74,222,128,0.15)" : "rgba(255,80,80,0.15)",
-              border: `1px solid ${toast.type === "success" ? "rgba(74,222,128,0.4)" : "rgba(255,80,80,0.4)"}`,
-              color: toast.type === "success" ? "#4ade80" : "#f87171",
-              backdropFilter: "blur(12px)",
-            }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl px-5 py-3 text-xs font-bold backdrop-blur-xl" style={{ background: toast.type === "success" ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)", border: `1px solid ${toast.type === "success" ? "#4ade80" : "#f87171"}`, color: toast.type === "success" ? "#4ade80" : "#f87171" }}>
             {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>
-
       <BottomNav />
     </div>
   );

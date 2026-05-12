@@ -3,16 +3,17 @@ import { db } from "@/db";
 import { tasks, taskCompletions, users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
-const MOCK_TELEGRAM_ID = "mock_001";
 
-async function getMockUser() {
-  const [user] = await db.select().from(users).where(eq(users.telegramId, MOCK_TELEGRAM_ID)).limit(1);
-  return user;
-}
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await getMockUser();
+    // Ambil telegramId dari URL, misal: /api/tasks?telegramId=123
+    const { searchParams } = new URL(req.url);
+    const telegramId = searchParams.get("telegramId");
+
+    if (!telegramId) return NextResponse.json({ error: "No ID" }, { status: 400 });
+
+    // Cari user asli
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const allTasks = await db.select().from(tasks).where(eq(tasks.active, true));
@@ -37,9 +38,13 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { taskId, screenshotUrl } = body;
-    const user = await getMockUser();
+    const { taskId, screenshotUrl, telegramId } = body; // Ambil telegramId dari body
+
+    if (!telegramId) return NextResponse.json({ error: "No ID" }, { status: 400 });
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
 
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
     if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });

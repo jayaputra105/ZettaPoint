@@ -14,14 +14,47 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
-const mockUser = {
-  name: "Zetta Hunter",
-  username: "@zettahunter",
-  avatar: "https://api.dicebear.com/9.x/pixel-art/svg?seed=zettahunter&backgroundColor=b6e3f4",
-  rank: 42,
-  zettaCoins: 128450,
-  zettaPoints: 98200,
-};
+
+
+useEffect(() => {
+  const syncData = async () => {
+    // Ambil data dari Telegram WebApp
+    const tg = (window as any).Telegram?.WebApp;
+    const user = tg?.initDataUnsafe?.user;
+
+    if (user) {
+      try {
+        const res = await fetch('/api/user/sync', { // Sesuaikan sama route API lu
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegram_id: user.id.toString(),
+            name: user.first_name,
+            username: user.username || "",
+            coins_local: 0 // Karena lu mau start dari 0
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.user) {
+          setCoins(Number(data.user.coins));
+          setPoints(Number(data.user.points || 0)); // Jika ada kolom points
+          setUserProfile({
+            name: data.user.name,
+            username: `@${data.user.username}`,
+            avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.user.username}&backgroundColor=b6e3f4`,
+            rank: data.user.rank
+          });
+        }
+      } catch (err) {
+        console.error("Gagal nyambung ke Neon:", err);
+      }
+    }
+  };
+
+  syncData();
+}, []);
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -38,8 +71,14 @@ function formatCountdown(ms: number): string {
 }
 
 export default function Home() {
-  const [coins, setCoins] = useState(mockUser.zettaCoins);
-  const [points, setPoints] = useState(mockUser.zettaPoints);
+  const [coins, setCoins] = useState(0);
+const [points, setPoints] = useState(0); 
+const [userProfile, setUserProfile] = useState({
+  name: "Loading...",
+  username: "...",
+  avatar: "",
+  rank: 0
+});
 
   const [lastFreeClick, setLastFreeClick] = useState<number | null>(null);
   const [adsUsed, setAdsUsed] = useState(0);
