@@ -9,10 +9,10 @@ const MAX_ADS_SPINS = 5;
 const MIN_WITHDRAW_COINS = 10000;
 
 const PRIZES = [
-  { label: "50 Koin", coins: 50, usdt: 0, weight: 35 },
-  { label: "100 Koin", coins: 100, usdt: 0, weight: 25 },
-  { label: "200 Koin", coins: 200, usdt: 0, weight: 18 },
-  { label: "500 Koin", coins: 500, usdt: 0, weight: 12 },
+  { label: "50 Koin", coins: 50, usdt: 0, weight: 15 },
+  { label: "100 Koin", coins: 100, usdt: 0, weight: 35 },
+  { label: "200 Koin", coins: 200, usdt: 0, weight: 23 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 17 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
   { label: "10 USDT", coins: 0, usdt: 10, weight: 0 },
 ];
