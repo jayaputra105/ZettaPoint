@@ -39,7 +39,7 @@ export const spinRecords = pgTable("spin_records", {
   userId: integer("user_id").notNull().unique(),
   lastFreeSpinAt: timestamp("last_free_spin_at"),
   adsSpinsToday: integer("ads_spins_today").default(0).notNull(),
-  adsResetAt: timestamp("ads_reset_at").defaultNow().notNull(),
+  adsResetAt: timestamp("ads_reset_at").defaultNow().notNull(), 
 });
 
 export const transactions = pgTable("transactions", {

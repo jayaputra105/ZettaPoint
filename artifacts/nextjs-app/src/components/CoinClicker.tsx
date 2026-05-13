@@ -18,7 +18,7 @@ interface CoinClickerProps {
 
 export default function CoinClicker({
   onCoin,
-  pointsPerClick = 10,
+  pointsPerClick = 100,
   locked = false,
   needsAd = false,
 }: CoinClickerProps) {

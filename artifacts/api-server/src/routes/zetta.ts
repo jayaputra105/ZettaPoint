@@ -4,7 +4,6 @@ import { eq, desc, and } from "drizzle-orm";
 
 const router = Router();
 
-const MOCK_TELEGRAM_ID = "mock_001";
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_ADS_SPINS = 5;
 const MIN_WITHDRAW_COINS = 10000;
@@ -14,8 +13,8 @@ const PRIZES = [
   { label: "100 Koin", coins: 100, usdt: 0, weight: 25 },
   { label: "200 Koin", coins: 200, usdt: 0, weight: 18 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 12 },
-  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 7 },
-  { label: "0.1 USDT", coins: 0, usdt: 0.1, weight: 3 },
+  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
+  { label: "10 USDT", coins: 0, usdt: 10, weight: 0 },
 ];
 
 function weightedRandom(prizes: typeof PRIZES) {
@@ -28,14 +27,16 @@ function weightedRandom(prizes: typeof PRIZES) {
   return 0;
 }
 
-async function getMockUser() {
-  const [user] = await db.select().from(users).where(eq(users.telegramId, MOCK_TELEGRAM_ID)).limit(1);
+async function getUser(telegramId: string) {
+  if (!telegramId) return null;
+  const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
   return user ?? null;
 }
 
 router.get("/user", async (req, res) => {
   try {
-    const user = await getMockUser();
+    const telegramId = req.query.telegramId as string;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (e) {
@@ -45,13 +46,13 @@ router.get("/user", async (req, res) => {
 
 router.patch("/user", async (req, res) => {
   try {
-    const { addCoins = 0 } = req.body;
-    const user = await getMockUser();
+    const { telegramId, addCoins = 0 } = req.body;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const [updated] = await db
       .update(users)
       .set({ coins: user.coins + addCoins })
-      .where(eq(users.telegramId, MOCK_TELEGRAM_ID))
+      .where(eq(users.telegramId, telegramId))
       .returning();
     res.json(updated);
   } catch (e) {
@@ -61,7 +62,8 @@ router.patch("/user", async (req, res) => {
 
 router.get("/tasks", async (req, res) => {
   try {
-    const user = await getMockUser();
+    const telegramId = req.query.telegramId as string;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const allTasks = await db.select().from(tasks).where(eq(tasks.active, true));
     const completions = await db.select().from(taskCompletions).where(eq(taskCompletions.userId, user.id));
@@ -75,8 +77,8 @@ router.get("/tasks", async (req, res) => {
 
 router.post("/tasks", async (req, res) => {
   try {
-    const { taskId, screenshotUrl } = req.body;
-    const user = await getMockUser();
+    const { telegramId, taskId, screenshotUrl } = req.body;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
     if (!task) return res.status(404).json({ error: "Task not found" });
@@ -102,7 +104,8 @@ router.post("/tasks", async (req, res) => {
 
 router.get("/spin", async (req, res) => {
   try {
-    const user = await getMockUser();
+    const telegramId = req.query.telegramId as string;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const [spin] = await db.select().from(spinRecords).where(eq(spinRecords.userId, user.id)).limit(1);
     const now = Date.now();
@@ -126,8 +129,8 @@ router.get("/spin", async (req, res) => {
 
 router.post("/spin", async (req, res) => {
   try {
-    const { useAd } = req.body;
-    const user = await getMockUser();
+    const { telegramId, useAd } = req.body;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const [spin] = await db.select().from(spinRecords).where(eq(spinRecords.userId, user.id)).limit(1);
     const now = Date.now();
@@ -165,7 +168,8 @@ router.get("/leaderboard", async (req, res) => {
 
 router.get("/wallet", async (req, res) => {
   try {
-    const user = await getMockUser();
+    const telegramId = req.query.telegramId as string;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     const txHistory = await db.select().from(transactions).where(eq(transactions.userId, user.id)).orderBy(desc(transactions.createdAt)).limit(20);
     const usdtBalance = txHistory.filter((t) => t.type === "spin_reward" && t.currency === "USDT" && t.status === "completed").reduce((s, t) => s + parseFloat(t.amount), 0);
@@ -177,8 +181,8 @@ router.get("/wallet", async (req, res) => {
 
 router.post("/wallet", async (req, res) => {
   try {
-    const { method, amount, walletAddress, currency } = req.body;
-    const user = await getMockUser();
+    const { telegramId, method, amount, walletAddress, currency } = req.body;
+    const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
     if (currency === "COINS") {
       const amtNum = parseInt(amount);
