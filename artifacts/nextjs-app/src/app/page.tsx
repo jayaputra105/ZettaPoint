@@ -14,46 +14,6 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
-useEffect(() => {
-  const syncData = async () => {
-    // Ambil data dari Telegram WebApp
-    const tg = (window as any).Telegram?.WebApp;
-    const user = tg?.initDataUnsafe?.user;
-
-    if (user) {
-      try {
-        const res = await fetch('/api/user', { // Sesuaikan sama route API lu
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegram_id: user.id.toString(),
-            name: user.first_name,
-            username: user.username || "",
-            coins_local: 0 // Karena lu mau start dari 0
-          })
-        });
-        
-        const data = await res.json();
-        
-        if (data.user) {
-          setCoins(Number(data.user.coins));
-          setPoints(Number(data.user.points || 0)); // Jika ada kolom points
-          setUserProfile({
-            name: data.user.name,
-            username: `@${data.user.username}`,
-            avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.user.username}&backgroundColor=b6e3f4`,
-            rank: data.user.rank
-          });
-        }
-      } catch (err) {
-        console.error("Gagal nyambung ke Neon:", err);
-      }
-    }
-  };
-
-  syncData();
-}, []);
-
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
@@ -70,18 +30,58 @@ function formatCountdown(ms: number): string {
 
 export default function Home() {
   const [coins, setCoins] = useState(0);
-const [points, setPoints] = useState(0); 
-const [userProfile, setUserProfile] = useState({
-  name: "Loading...",
-  username: "...",
-  avatar: "",
-  rank: 0
-});
+  const [points, setPoints] = useState(0);
+  const [userProfile, setUserProfile] = useState({
+    name: "Loading...",
+    username: "...",
+    avatar: "",
+    rank: 0
+  });
 
   const [lastFreeClick, setLastFreeClick] = useState<number | null>(null);
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
+
+  // FIX: useEffect dipindah ke DALAM fungsi Home agar setCoins dkk terbaca
+  useEffect(() => {
+    const syncData = async () => {
+      const tg = (window as any).Telegram?.WebApp;
+      const user = tg?.initDataUnsafe?.user;
+
+      if (user) {
+        try {
+          const res = await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              telegram_id: user.id.toString(),
+              name: user.first_name,
+              username: user.username || "",
+              coins_local: 0
+            })
+          });
+          
+          const data = await res.json();
+          
+          if (data.user) {
+            setCoins(Number(data.user.coins));
+            setPoints(Number(data.user.points || 0));
+            setUserProfile({
+              name: data.user.name,
+              username: `@${data.user.username}`,
+              avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.user.username}&backgroundColor=b6e3f4`,
+              rank: data.user.rank
+            });
+          }
+        } catch (err) {
+          console.error("Gagal nyambung ke Neon:", err);
+        }
+      }
+    };
+
+    syncData();
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
@@ -205,14 +205,6 @@ const [userProfile, setUserProfile] = useState({
                   alt={userProfile?.name}
                   className="w-full h-full object-cover"
                   style={{ background: "#1a1a2e" }}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = "none";
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-weight:900;font-size:1.25rem;color:#FFD700;background:radial-gradient(circle,#1a1040,#0a0520)">ZH</span>`;
-                    }
-                  }}
                 />
               </div>
               <div>
@@ -247,7 +239,7 @@ const [userProfile, setUserProfile] = useState({
               >
                 <span className="text-xs">🏆</span>
                 <span className="text-xs font-bold" style={{ color: "rgba(255,215,0,0.85)" }}>
-                  Rank #{userRank.rank}
+                  Rank #{userProfile.rank}
                 </span>
               </div>
             </div>
