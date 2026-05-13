@@ -33,7 +33,7 @@ export async function POST(req: Request) {
               [
                 {
                   text: "🚀 Play Now",
-                  web_app: { url: 'https://zetta-point-api-server.vercel.app' }
+                  web_app: { url: 'https://zetta-point-api-server.vercel.app/?v=1' }
                 }
               ]
             ]
