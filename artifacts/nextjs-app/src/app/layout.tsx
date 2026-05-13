@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AppProvider } from "@/context/AppProvider"; // Import provider baru
 
 export const metadata: Metadata = {
-  title: "Zetta Clicker",
-  description: "Tap to earn Zetta Coins!",
+  title: "Playzetta", // Update nama sesuai project
+  description: "Tap to earn Zetta Points and USDT!",
 };
 
 export const viewport: Viewport = {
@@ -15,11 +16,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: Readonly < {
   children: React.ReactNode;
-}>) {
+} > ) {
   return (
-    <html lang="id">
+    <html lang="en"> {/* Ganti ke English sesuai rencana */}
       <body
         style={{
           margin: 0,
@@ -29,7 +30,9 @@ export default function RootLayout({
           background: "#000",
         }}
       >
-        {children}
+        <AppProvider>
+          {children}
+        </AppProvider>
       </body>
     </html>
   );
