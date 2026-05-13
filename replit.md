@@ -37,6 +37,7 @@ pnpm workspace monorepo menggunakan TypeScript. Setiap package mengelola depende
 Dark glossy black + gold aesthetic, Telegram mini-app style clicker game.
 
 ### Pages
+room selector
 
 - `/` — Home: Coin clicker dengan cooldown system (1 free click/jam + max 15 ad clicks/jam), shooting stars background, neon gold header
 - `/tasks` — Misi Harian: Social tasks (Verify button) + screenshot upload tasks
