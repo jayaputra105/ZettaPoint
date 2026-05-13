@@ -7,6 +7,8 @@ export const users = pgTable("users", {
   username: text("username"),
   avatar: text("avatar"),
   coins: bigint("coins", { mode: "number" }).default(0).notNull(),
+  usdtBalance: bigint("usdt_balance", { mode: "number" }).default(0).notNull(),
+  zp: bigint("zp", { mode: "number" }).default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

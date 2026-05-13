@@ -9,8 +9,8 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr:
 
 interface WalletData {
   coins: number;
+  zp: number; // Zetta Points untuk leaderboard
   usdtBalance: number;
-  minWithdrawCoins: number;
   transactions: Transaction[];
 }
 
@@ -25,21 +25,14 @@ interface Transaction {
 }
 
 const METHODS = [
-  { id: "TON", label: "TON Wallet", icon: "💎", currency: "COINS", placeholder: "Masukkan alamat TON wallet" },
-  { id: "USDT", label: "USDT (TRC20)", icon: "🟢", currency: "USDT", placeholder: "Masukkan alamat USDT TRC20" },
-  { id: "DANA", label: "DANA", icon: "🔵", currency: "COINS", placeholder: "Masukkan nomor DANA (08xx)" },
-  { id: "GOPAY", label: "GoPay", icon: "🟡", currency: "COINS", placeholder: "Masukkan nomor GoPay (08xx)" },
+  { id: "TON", label: "TON Wallet", icon: "💎", currency: "USDT", placeholder: "Masukkan alamat TON wallet (EQ...)" },
+  { id: "USDT", label: "USDT (TRC20)", icon: "🟢", currency: "USDT", placeholder: "Masukkan alamat USDT TRC20 (T...)" },
 ];
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n.toString();
-}
-
-function formatDate(s: string): string {
-  const d = new Date(s);
-  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+  return n?.toLocaleString("id-ID") ?? "0";
 }
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; label: string }> = {
@@ -56,15 +49,16 @@ export default function WalletPage() {
   const [amount, setAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+  const getTelegramId = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    return tg?.initDataUnsafe?.user?.id?.toString();
   };
 
   const fetchWallet = () => {
-    fetch("/api/wallet")
+    const tid = getTelegramId();
+    if (!tid) return;
+    fetch(`/api/wallet?telegramId=${tid}`)
       .then((r) => r.json())
       .then((d) => { setWallet(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -75,13 +69,14 @@ export default function WalletPage() {
   const selectedMethodData = METHODS.find((m) => m.id === selectedMethod);
 
   const handleWithdraw = async () => {
-    if (!selectedMethod || !amount || !walletAddress) {
-      showToast("Lengkapi semua kolom", "error"); return;
-    }
-    const amtNum = parseInt(amount);
-    if (isNaN(amtNum) || amtNum <= 0) { showToast("Jumlah tidak valid", "error"); return; }
-    if (wallet && amtNum < wallet.minWithdrawCoins && selectedMethodData?.currency === "COINS") {
-      showToast(`Minimum ${wallet.minWithdrawCoins.toLocaleString("id-ID")} koin`, "error"); return;
+    const tid = getTelegramId();
+    if (!tid || !selectedMethod || !amount || !walletAddress) return;
+    
+    const amtNum = parseFloat(amount);
+    if (isNaN(amtNum) || amtNum <= 0) return;
+    if (wallet && amtNum > wallet.usdtBalance) {
+        alert("Saldo USDT tidak mencukupi");
+        return;
     }
 
     setSubmitting(true);
@@ -90,148 +85,80 @@ export default function WalletPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          telegramId: tid,
           method: selectedMethod,
           amount: amtNum,
           walletAddress,
-          currency: selectedMethodData?.currency ?? "COINS",
+          currency: "USDT",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      showToast("Permintaan penarikan berhasil dikirim!");
+      
       setShowWithdraw(false);
       setAmount("");
       setWalletAddress("");
-      setSelectedMethod(null);
       fetchWallet();
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Gagal withdraw", "error");
+      alert("Withdrawal submitted!");
+    } catch (e: any) {
+      alert(e.message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div
-      className="relative min-h-screen w-full overflow-hidden flex flex-col"
-      style={{ background: "radial-gradient(ellipse at 50% 0%, #0d0d1a 0%, #050508 60%, #000 100%)" }}
-    >
+    <div className="relative min-h-screen w-full overflow-hidden flex flex-col" style={{ background: "radial-gradient(ellipse at 50% 0%, #0d0d1a 0%, #050508 60%, #000 100%)" }}>
       <ShootingStars />
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 pb-28">
         <header className="pt-5 pb-4">
-          <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="font-black text-2xl" style={{ color: "#FFD700", textShadow: "0 0 20px rgba(255,215,0,0.5)" }}>
-              Dompet
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Kelola saldo & penarikan
-            </p>
-          </motion.div>
+          <h1 className="font-black text-2xl text-[#FFD700]">Dompet Zetta</h1>
         </header>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 rounded-full"
-              style={{ border: "3px solid rgba(255,215,0,0.15)", borderTop: "3px solid #FFD700" }} />
+            <div className="w-8 h-8 border-2 border-[#FFD700]/20 border-t-[#FFD700] rounded-full animate-spin" />
           </div>
         ) : (
           <>
             <div className="flex flex-col gap-3 mb-5">
-              {[
-                { label: "Total Zetta Coin", value: `${formatNumber(wallet?.coins ?? 0)}`, icon: "🪙", color: "#FFD700", sub: "≈ Hadiah & Reward" },
-                { label: "USDT Balance", value: `$${(wallet?.usdtBalance ?? 0).toFixed(2)}`, icon: "🟢", color: "#4ade80", sub: "Dari hadiah spin" },
-              ].map((item, i) => (
-                <motion.div
-                  key={item.label}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="rounded-3xl p-5 relative overflow-hidden"
-                  style={{
-                    background: "rgba(10,8,2,0.7)",
-                    border: `1.5px solid ${item.color}33`,
-                    boxShadow: `0 0 30px ${item.color}0a`,
-                  }}
-                >
-                  <div className="absolute top-0 right-0 text-6xl opacity-[0.06] pointer-events-none pr-3 pt-1">
-                    {item.icon}
-                  </div>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: `${item.color}88` }}>
-                    {item.label}
-                  </p>
-                  <p className="font-black text-3xl tabular-nums" style={{ color: item.color, textShadow: `0 0 20px ${item.color}50` }}>
-                    {item.value}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>{item.sub}</p>
-                </motion.div>
-              ))}
+              {/* USDT CARD - MAIN WD */}
+              <div className="rounded-3xl p-5 border border-[#4ade80]33 bg-black/40 shadow-[0_0_20px_rgba(74,222,128,0.05)]">
+                <p className="text-[10px] font-bold uppercase text-[#4ade80] mb-1">Saldo USDT (Bisa WD)</p>
+                <p className="font-black text-3xl text-[#4ade80]">${wallet?.usdtBalance?.toFixed(2)}</p>
+                <button onClick={() => setShowWithdraw(true)} className="w-full mt-4 py-3 bg-[#4ade80] text-black font-black rounded-xl text-xs uppercase">Withdraw Sekarang</button>
+              </div>
+
+              {/* ZP CARD */}
+              <div className="rounded-3xl p-5 border border-[#9B59B6]33 bg-black/40">
+                <p className="text-[10px] font-bold uppercase text-[#9B59B6] mb-1">Zetta Points (Leaderboard)</p>
+                <p className="font-black text-2xl text-white">{formatNumber(wallet?.zp ?? 0)} ZP</p>
+              </div>
+
+              {/* COINS CARD */}
+              <div className="rounded-3xl p-5 border border-[#FFD700]33 bg-black/40">
+                <p className="text-[10px] font-bold uppercase text-[#FFD700] mb-1">Zetta Coins (Belanja)</p>
+                <p className="font-black text-2xl text-white">{formatNumber(wallet?.coins ?? 0)} 🪙</p>
+              </div>
             </div>
 
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              onClick={() => setShowWithdraw(true)}
-              className="w-full py-4 rounded-2xl font-black text-base mb-5"
-              style={{
-                background: "linear-gradient(135deg, #FFD700, #FF8C00)",
-                color: "#000",
-                boxShadow: "0 0 30px rgba(255,215,0,0.4)",
-              }}
-            >
-              💸 Tarik Saldo
-            </motion.button>
-
+            {/* TRANSACTIONS */}
             {(wallet?.transactions?.length ?? 0) > 0 && (
-              <section>
-                <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "rgba(255,215,0,0.5)" }}>
-                  Riwayat Transaksi
-                </p>
+              <section className="flex-1 overflow-y-auto">
+                <p className="text-[10px] font-bold uppercase text-white/30 mb-3">Riwayat Transaksi</p>
                 <div className="flex flex-col gap-2">
-                  {wallet!.transactions.map((tx, i) => {
-                    const s = STATUS_STYLE[tx.status] ?? STATUS_STYLE.pending;
-                    const isWithdraw = tx.type === "withdrawal";
-                    return (
-                      <motion.div
-                        key={tx.id}
-                        initial={{ opacity: 0, x: -15 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 * Math.min(i, 8) }}
-                        className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-                        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
-                      >
-                        <div
-                          className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                          style={{ background: isWithdraw ? "rgba(248,113,113,0.1)" : "rgba(74,222,128,0.1)" }}
-                        >
-                          {isWithdraw ? "💸" : "🎰"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
-                            {isWithdraw ? `Withdraw via ${tx.method}` : "Hadiah Spin"}
-                          </p>
-                          <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                            {formatDate(tx.createdAt)}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p
-                            className="font-black text-sm tabular-nums"
-                            style={{ color: isWithdraw ? "#f87171" : "#4ade80" }}
-                          >
-                            {isWithdraw ? "-" : "+"}{tx.amount} {tx.currency === "COINS" ? "🪙" : tx.currency}
-                          </p>
-                          <span
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ background: s.bg, color: s.color }}
-                          >
-                            {s.label}
-                          </span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                  {wallet!.transactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <div>
+                        <p className="text-xs font-bold text-white/80">{tx.type === 'withdrawal' ? `WD via ${tx.method}` : 'Reward'}</p>
+                        <p className="text-[10px] text-white/40">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${tx.type === 'withdrawal' ? 'text-red-400' : 'text-[#4ade80]'}`}>{tx.type === 'withdrawal' ? '-' : '+'}{tx.amount} {tx.currency}</p>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: STATUS_STYLE[tx.status]?.bg, color: STATUS_STYLE[tx.status]?.color }}>{STATUS_STYLE[tx.status]?.label}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
@@ -239,170 +166,32 @@ export default function WalletPage() {
         )}
       </div>
 
+      {/* WITHDRAW MODAL */}
       <AnimatePresence>
         {showWithdraw && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center"
-            style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
-            onClick={() => setShowWithdraw(false)}
-          >
-            <motion.div
-              initial={{ y: 120 }}
-              animate={{ y: 0 }}
-              exit={{ y: 120 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-full max-w-md rounded-t-3xl px-5 pt-5 pb-8 overflow-y-auto"
-              style={{
-                background: "linear-gradient(180deg, #0f0f1e 0%, #080810 100%)",
-                border: "1.5px solid rgba(255,215,0,0.25)",
-                borderBottom: "none",
-                maxHeight: "90vh",
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <p className="font-black text-lg" style={{ color: "#FFD700" }}>Tarik Saldo</p>
-                <button
-                  onClick={() => setShowWithdraw(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                  style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(255,215,0,0.5)" }}>
-                Pilih Metode
-              </p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end justify-center bg-black/80" onClick={() => setShowWithdraw(false)}>
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="w-full max-w-md bg-[#0d0d1a] rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-black text-[#FFD700] mb-4">Withdraw USDT</h3>
+              
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {METHODS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setSelectedMethod(m.id); setWalletAddress(""); setAmount(""); }}
-                    className="flex items-center gap-2 rounded-xl px-3 py-3 transition-all"
-                    style={{
-                      background: selectedMethod === m.id ? "rgba(255,215,0,0.1)" : "rgba(255,255,255,0.03)",
-                      border: `1.5px solid ${selectedMethod === m.id ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.08)"}`,
-                    }}
-                  >
-                    <span className="text-xl">{m.icon}</span>
-                    <span className="font-bold text-sm" style={{ color: selectedMethod === m.id ? "#FFD700" : "rgba(255,255,255,0.6)" }}>
-                      {m.label}
-                    </span>
+                  <button key={m.id} onClick={() => setSelectedMethod(m.id)} className={`p-3 rounded-xl border ${selectedMethod === m.id ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-white/10 bg-white/5'}`}>
+                    <span className="text-xs font-bold text-white">{m.label}</span>
                   </button>
                 ))}
               </div>
 
               {selectedMethod && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col gap-3"
-                >
-                  <div>
-                    <p className="text-xs font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-                      Jumlah {selectedMethodData?.currency === "COINS" ? "Koin" : selectedMethodData?.currency}
-                    </p>
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder={
-                        selectedMethodData?.currency === "COINS"
-                          ? `Min. ${wallet?.minWithdrawCoins?.toLocaleString("id-ID") ?? "10.000"} koin`
-                          : "Jumlah USDT"
-                      }
-                      className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,215,0,0.2)",
-                        color: "rgba(255,255,255,0.85)",
-                      }}
-                    />
-                    {wallet && selectedMethodData?.currency === "COINS" && (
-                      <div className="flex justify-between mt-1.5">
-                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                          Saldo: {formatNumber(wallet.coins)} koin
-                        </span>
-                        <button
-                          onClick={() => setAmount(String(wallet.coins))}
-                          className="text-xs font-bold"
-                          style={{ color: "#FFD700" }}
-                        >
-                          Semua
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-                      {selectedMethodData?.placeholder?.split(" (")[0] ?? "Alamat Tujuan"}
-                    </p>
-                    <input
-                      type="text"
-                      value={walletAddress}
-                      onChange={(e) => setWalletAddress(e.target.value)}
-                      placeholder={selectedMethodData?.placeholder ?? ""}
-                      className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,215,0,0.2)",
-                        color: "rgba(255,255,255,0.85)",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    className="rounded-xl px-3 py-2.5 text-xs"
-                    style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.2)", color: "rgba(251,191,36,0.75)" }}
-                  >
-                    ⚠️ Pastikan alamat tujuan benar. Transaksi yang sudah dikirim tidak bisa dibatalkan.
-                  </div>
-
-                  <button
-                    onClick={handleWithdraw}
-                    disabled={submitting}
-                    className="w-full py-4 rounded-2xl font-black text-sm mt-1"
-                    style={{
-                      background: "linear-gradient(135deg, #FFD700, #FF8C00)",
-                      color: "#000",
-                      opacity: submitting ? 0.7 : 1,
-                    }}
-                  >
-                    {submitting ? "Memproses..." : "💸 Konfirmasi Penarikan"}
-                  </button>
-                </motion.div>
+                <div className="flex flex-col gap-3">
+                  <input type="number" placeholder="Jumlah USDT" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full p-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-[#FFD700]" />
+                  <input type="text" placeholder={selectedMethodData?.placeholder} value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="w-full p-4 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-[#FFD700]" />
+                  <button onClick={handleWithdraw} disabled={submitting} className="w-full py-4 bg-[#FFD700] text-black font-black rounded-2xl uppercase mt-2">{submitting ? "Processing..." : "Konfirmasi Withdraw"}</button>
+                </div>
               )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 z-50 rounded-2xl px-5 py-3 text-sm font-semibold"
-            style={{
-              transform: "translateX(-50%)",
-              background: toast.type === "success" ? "rgba(74,222,128,0.15)" : "rgba(255,80,80,0.15)",
-              border: `1px solid ${toast.type === "success" ? "rgba(74,222,128,0.4)" : "rgba(255,80,80,0.4)"}`,
-              color: toast.type === "success" ? "#4ade80" : "#f87171",
-              backdropFilter: "blur(12px)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <BottomNav />
     </div>
   );

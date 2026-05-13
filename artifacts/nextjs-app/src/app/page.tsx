@@ -43,7 +43,6 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  // FIX: useEffect dipindah ke DALAM fungsi Home agar setCoins dkk terbaca
   useEffect(() => {
     const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
@@ -51,27 +50,26 @@ export default function Home() {
 
       if (user) {
         try {
-          const res = await fetch('/api/user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              telegram_id: user.id.toString(),
-              name: user.first_name,
-              username: user.username || "",
-              coins_local: 0
-            })
+          // Ganti ke GET sesuai route backend (zetta.ts)
+          const params = new URLSearchParams({
+            telegramId: user.id.toString(),
+            firstName: user.first_name,
+            username: user.username || "",
+            photoUrl: user.photo_url || ""
           });
-          
+
+          const res = await fetch(`/api/user?${params.toString()}`);
           const data = await res.json();
           
-          if (data.user) {
-            setCoins(Number(data.user.coins));
-            setPoints(Number(data.user.points || 0));
+          if (data) {
+            setCoins(Number(data.coins));
+            // Jika ada field points di DB, sesuaikan. Kalau gak ada, pake coins dulu.
+            setPoints(Number(data.coins)); 
             setUserProfile({
-              name: data.user.name,
-              username: `@${data.user.username}`,
-              avatar: `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.user.username}&backgroundColor=b6e3f4`,
-              rank: data.user.rank
+              name: data.name,
+              username: data.username ? `@${data.username}` : "User",
+              avatar: data.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.id}`,
+              rank: data.rank // Ini akan muncul "Bronze" sesuai default DB
             });
           }
         } catch (err) {
@@ -102,9 +100,28 @@ export default function Home() {
   const isLocked = !isFreeAvailable && adsRemaining <= 0;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
 
-  const giveCoins = useCallback((amount: number) => {
+const giveCoins = useCallback(async (amount: number) => {
+    
     setCoins((c) => c + amount);
     setPoints((p) => p + amount);
+
+    const tg = (window as any).Telegram?.WebApp;
+    const telegramId = tg?.initDataUnsafe?.user?.id;
+
+    if (telegramId) {
+      try {
+        await fetch('/api/user', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegramId: telegramId.toString(),
+            addCoins: amount
+          })
+        });
+      } catch (err) {
+        console.error("Gagal update koin ke database:", err);
+      }
+    }
   }, []);
 
   const handleCoinClick = useCallback(() => {
@@ -332,7 +349,7 @@ export default function Home() {
             className="text-xs font-medium"
             style={{ color: "rgba(255,215,0,0.5)" }}
           >
-            +10 Zetta Coin per klik
+            +100 Zetta Coin per klik
           </motion.p>
         </div>
 

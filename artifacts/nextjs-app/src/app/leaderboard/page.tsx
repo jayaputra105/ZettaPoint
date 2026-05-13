@@ -19,7 +19,7 @@ interface LeaderUser {
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n.toString();
+  return n?.toString() ?? "0";
 }
 
 const PODIUM_CONFIG = [
@@ -29,7 +29,7 @@ const PODIUM_CONFIG = [
 ];
 
 function AvatarCircle({ user, size, style }: { user: LeaderUser; size: number; style?: React.CSSProperties }) {
-  const initials = user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const initials = user.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "??";
   return (
     <div
       className="rounded-full overflow-hidden flex items-center justify-center font-black"
@@ -55,12 +55,21 @@ function AvatarCircle({ user, size, style }: { user: LeaderUser; size: number; s
 export default function LeaderboardPage() {
   const [users, setUsers] = useState<LeaderUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const MOCK_USER_ID = 1;
+  const [myTgId, setMyTgId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Ambil ID Telegram user asli dari WebApp
+    const tg = (window as any).Telegram?.WebApp;
+    const tid = tg?.initDataUnsafe?.user?.id?.toString();
+    if (tid) setMyTgId(tid);
+
+    // Fetch data real dari backend lu
     fetch("/api/leaderboard")
       .then((r) => r.json())
-      .then((data) => { setUsers(Array.isArray(data) ? data : []); setLoading(false); })
+      .then((data) => { 
+        setUsers(Array.isArray(data) ? data : []); 
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -96,7 +105,7 @@ export default function LeaderboardPage() {
           </div>
         ) : (
           <>
-            {top3.length === 3 && (
+            {top3.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -111,57 +120,31 @@ export default function LeaderboardPage() {
                     boxShadow: "0 0 40px rgba(255,215,0,0.08)",
                   }}
                 >
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      background: "radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.06) 0%, transparent 65%)",
-                    }}
-                  />
-
                   <div className="flex items-end justify-center gap-4 relative z-10">
                     {PODIUM_CONFIG.sort((a, b) => a.order - b.order).map((cfg) => {
                       const user = top3[cfg.pos - 1];
-                      if (!user) return null;
+                      if (!user) return <div key={cfg.pos} className="flex-1" />;
                       const isFirst = cfg.pos === 1;
                       return (
                         <div key={cfg.pos} className="flex flex-col items-center gap-1.5" style={{ flex: 1 }}>
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.2 + cfg.order * 0.1, type: "spring", stiffness: 200 }}
-                            className="text-xl"
-                          >
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-xl">
                             {cfg.crown}
                           </motion.div>
-                          <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.3 + cfg.order * 0.1, type: "spring" }}
-                          >
-                            <AvatarCircle
-                              user={user}
-                              size={isFirst ? 64 : 52}
-                              style={{
-                                border: `3px solid ${cfg.color}`,
-                                boxShadow: `0 0 16px ${cfg.glow}`,
-                                background: "rgba(20,15,5,0.8)",
-                              }}
-                            />
-                          </motion.div>
-                          <p
-                            className="text-xs font-black text-center w-full truncate leading-tight"
+                          <AvatarCircle
+                            user={user}
+                            size={isFirst ? 64 : 52}
                             style={{
-                              color: cfg.color,
-                              textShadow: `0 0 12px ${cfg.glow}`,
-                              fontSize: isFirst ? "0.75rem" : "0.65rem",
+                              border: `3px solid ${cfg.color}`,
+                              boxShadow: `0 0 16px ${cfg.glow}`,
+                              background: "rgba(20,15,5,0.8)",
                             }}
-                          >
-                            {user.name.split(" ")[0]}
+                          />
+                          <p className="text-xs font-black text-center w-full truncate leading-tight mt-1" style={{ color: cfg.color }}>
+                            {user.name?.split(" ")[0]}
                           </p>
                           <p className="text-[10px] font-semibold" style={{ color: cfg.color, opacity: 0.7 }}>
                             🪙 {formatNumber(user.coins)}
                           </p>
-
                           <div
                             className="w-full rounded-t-xl flex items-center justify-center"
                             style={{
@@ -171,10 +154,7 @@ export default function LeaderboardPage() {
                               borderBottom: "none",
                             }}
                           >
-                            <span
-                              className="font-black"
-                              style={{ color: cfg.color, fontSize: isFirst ? "1.5rem" : "1.1rem", opacity: 0.6 }}
-                            >
+                            <span className="font-black" style={{ color: cfg.color, fontSize: isFirst ? "1.5rem" : "1.1rem", opacity: 0.6 }}>
                               #{cfg.pos}
                             </span>
                           </div>
@@ -188,7 +168,7 @@ export default function LeaderboardPage() {
 
             <div className="flex flex-col gap-2">
               {rest.map((user, i) => {
-                const isMe = user.id === MOCK_USER_ID;
+                const isMe = user.id.toString() === myTgId;
                 return (
                   <motion.div
                     key={user.id}
@@ -199,44 +179,22 @@ export default function LeaderboardPage() {
                     style={{
                       background: isMe ? "rgba(255,215,0,0.08)" : "rgba(255,255,255,0.02)",
                       border: isMe ? "1px solid rgba(255,215,0,0.35)" : "1px solid rgba(255,255,255,0.06)",
-                      boxShadow: isMe ? "0 0 20px rgba(255,215,0,0.08)" : "none",
                     }}
                   >
-                    <div
-                      className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        color: isMe ? "#FFD700" : "rgba(255,255,255,0.4)",
-                      }}
-                    >
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
+                      style={{ background: "rgba(255,255,255,0.05)", color: isMe ? "#FFD700" : "rgba(255,255,255,0.4)" }}>
                       {user.position}
                     </div>
-                    <AvatarCircle
-                      user={user}
-                      size={36}
-                      style={{
-                        border: `1.5px solid ${isMe ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.1)"}`,
-                        background: "rgba(20,15,5,0.8)",
-                      }}
-                    />
+                    <AvatarCircle user={user} size={36} style={{ border: `1.5px solid ${isMe ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.1)"}` }} />
                     <div className="flex-1 min-w-0">
-                      <p
-                        className="font-bold text-sm truncate"
-                        style={{ color: isMe ? "#FFD700" : "rgba(255,255,255,0.85)" }}
-                      >
+                      <p className="font-bold text-sm truncate" style={{ color: isMe ? "#FFD700" : "rgba(255,255,255,0.85)" }}>
                         {user.name}
-                        {isMe && <span className="ml-1.5 text-xs font-normal" style={{ color: "rgba(255,215,0,0.6)" }}>(Kamu)</span>}
-                      </p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                        {user.username ?? ""}
+                        {isMe && <span className="ml-1.5 text-[10px] font-normal opacity-60">(Kamu)</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <span className="text-sm">🪙</span>
-                      <span
-                        className="text-sm font-black tabular-nums"
-                        style={{ color: isMe ? "#FFD700" : "rgba(255,255,255,0.7)" }}
-                      >
+                      <span className="text-sm font-black tabular-nums" style={{ color: isMe ? "#FFD700" : "rgba(255,255,255,0.7)" }}>
                         {formatNumber(user.coins)}
                       </span>
                     </div>

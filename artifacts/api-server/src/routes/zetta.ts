@@ -27,17 +27,43 @@ function weightedRandom(prizes: typeof PRIZES) {
   return 0;
 }
 
-async function getUser(telegramId: string) {
+async function getOrCreateUser(telegramId: string, userData?: any) {
   if (!telegramId) return null;
+  
+  
   const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
-  return user ?? null;
+  if (user) return user;
+
+  if (userData) {
+    const [newUser] = await db.insert(users).values({
+      telegramId: telegramId,
+      name: userData.first_name || "Zetta Player",
+      username: userData.username || "",
+      avatar: userData.photo_url || "",
+      coins: 0,
+      rank: "Bronze"
+    }).returning();
+
+    
+    await db.insert(spinRecords).values({ userId: newUser.id });
+    
+    return newUser;
+  }
+  return null;
 }
 
 router.get("/user", async (req, res) => {
   try {
-    const telegramId = req.query.telegramId as string;
-    const user = await getUser(telegramId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const { telegramId, firstName, username, photoUrl } = req.query;
+    
+    // Panggil fungsi baru kita
+    const user = await getOrCreateUser(telegramId as string, {
+      first_name: firstName,
+      username: username,
+      photo_url: photoUrl
+    });
+
+    if (!user) return res.status(404).json({ error: "User data missing" });
     res.json(user);
   } catch (e) {
     res.status(500).json({ error: String(e) });

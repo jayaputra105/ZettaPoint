@@ -12,8 +12,8 @@ const PRIZES = [
   { label: "100 Koin", coins: 100, usdt: 0, weight: 25 },
   { label: "200 Koin", coins: 200, usdt: 0, weight: 18 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 12 },
-  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 7 },
-  { label: "0.1 USDT", coins: 0, usdt: 0.1, weight: 3 },
+  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
+  { label: "10 USDT", coins: 0, usdt: 10, weight: 0 },
 ];
 
 function weightedRandom(prizes: typeof PRIZES) {
@@ -26,9 +26,16 @@ function weightedRandom(prizes: typeof PRIZES) {
   return 0;
 }
 
-export async function GET() {
+// ... imports tetap sama ...
+
+export async function GET(req: Request) { // Tambah parameter req
   try {
-    const [user] = await db.select().from(users).where(eq(users.telegramId, MOCK_TELEGRAM_ID)).limit(1);
+    const { searchParams } = new URL(req.url);
+    const tid = searchParams.get("telegramId"); // Ambil ID asli dari URL
+
+    if (!tid) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, tid)).limit(1);
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const [spin] = await db.select().from(spinRecords).where(eq(spinRecords.userId, user.id)).limit(1);
