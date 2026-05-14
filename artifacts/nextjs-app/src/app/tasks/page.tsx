@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNav";
 import { ExternalLink, CheckCircle, Clock, Upload, ChevronRight, Coins } from "lucide-react";
+import { useApp } from "@/context/AppProvider";
 
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
@@ -16,42 +17,33 @@ interface Task {
   rewardCoins: number;
   link: string | null;
   active: boolean;
-  completion: { status: string; screenshotUrl?: string } | null;
+  completion: { status: string;screenshotUrl ? : string } | null;
 }
-
-function formatNumber(n: number): string {
-  if (n >= 1000) return (n / 1000).toFixed(1) + "K";
-  return n.toString();
-}
-
-const TYPE_ICONS: Record<string, string> = {
-  social: "📣",
-  screenshot: "📸",
-};
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { setCoins } = useApp();
+  const [tasks, setTasks] = useState < Task[] > ([]);
   const [loading, setLoading] = useState(true);
-  const [activeUpload, setActiveUpload] = useState<number | null>(null);
+  const [activeUpload, setActiveUpload] = useState < number | null > (null);
   const [uploadUrl, setUploadUrl] = useState("");
-  const [submitting, setSubmitting] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
+  const [submitting, setSubmitting] = useState < number | null > (null);
+  const [toast, setToast] = useState < { msg: string;type: "success" | "error" } | null > (null);
+  const fileRef = useRef < HTMLInputElement > (null);
+  
   const getTelegramId = () => {
     const tg = (window as any).Telegram?.WebApp;
     return tg?.initDataUnsafe?.user?.id?.toString();
   };
-
+  
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
-
+  
   useEffect(() => {
     const tid = getTelegramId();
     if (!tid) return;
-
+    
     fetch(`/api/tasks?telegramId=${tid}`)
       .then((r) => r.json())
       .then((data) => {
@@ -60,7 +52,7 @@ export default function TasksPage() {
       })
       .catch(() => setLoading(false));
   }, []);
-
+  
   const handleVerify = async (task: Task) => {
     const tid = getTelegramId();
     if (task.completion || !tid) return;
@@ -75,7 +67,10 @@ export default function TasksPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      showToast(`+${formatNumber(data.rewardCoins)} Coins claimed successfully!`);
+      // Update Global State Koin
+      setCoins((prev: number) => prev + data.rewardCoins);
+      
+      showToast(`+${data.rewardCoins.toLocaleString()} Coins claimed!`);
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, completion: { status: "completed" } } : t
@@ -87,35 +82,26 @@ export default function TasksPage() {
       setSubmitting(null);
     }
   };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setUploadUrl(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
-
+  
   const handleScreenshotSubmit = async (task: Task) => {
     const tid = getTelegramId();
-    if (!uploadUrl) { showToast("Please select a screenshot first", "error"); return; }
+    if (!uploadUrl) return showToast("Select a screenshot", "error");
     if (!tid) return;
-
+    
     setSubmitting(task.id);
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          taskId: task.id, 
+        body: JSON.stringify({
+          taskId: task.id,
           screenshotUrl: uploadUrl,
-          telegramId: tid 
+          telegramId: tid
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error("Upload failed");
       
-      showToast("Screenshot submitted! Awaiting admin verification.");
+      showToast("Submitted! Awaiting verification.");
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, completion: { status: "pending" } } : t
@@ -124,174 +110,172 @@ export default function TasksPage() {
       setActiveUpload(null);
       setUploadUrl("");
     } catch (e: any) {
-      showToast(e.message || "Submission failed", "error");
+      showToast(e.message, "error");
     } finally {
       setSubmitting(null);
     }
   };
-
+  
   const social = tasks.filter((t) => t.type === "social");
   const screenshot = tasks.filter((t) => t.type === "screenshot");
   const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
-
+  
   return (
-    <div
-      className="relative min-h-screen w-full overflow-x-hidden flex flex-col"
-      style={{ background: "radial-gradient(ellipse at 50% 0%, #0d0d1a 0%, #050508 60%, #000 100%)" }}
-    >
+    <div className="relative min-h-screen w-full bg-[#050508] text-white flex flex-col overflow-x-hidden">
       <ShootingStars />
-      <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 pb-28">
-        <header className="pt-5 pb-4">
-          <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="font-black text-2xl uppercase tracking-tight" style={{ color: "#FFD700", textShadow: "0 0 20px rgba(255,215,0,0.5)" }}>
-              Daily Quests
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
-              Complete missions to earn rewards
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-3 rounded-2xl p-3 flex items-center gap-3"
-            style={{ background: "rgba(255,215,0,0.07)", border: "1px solid rgba(255,215,0,0.2)" }}
-          >
-            <div className="text-2xl">🎯</div>
-            <div className="flex-1">
-              <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>Progress</p>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: tasks.length > 0 ? `${(completedCount / tasks.length) * 100}%` : "0%",
-                      background: "linear-gradient(90deg, #FFD700, #FF8C00)",
-                      boxShadow: "0 0 8px rgba(255,215,0,0.5)",
-                      transition: "width 0.5s ease",
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-bold" style={{ color: "#FFD700" }}>
-                  {completedCount}/{tasks.length}
-                </span>
-              </div>
+      
+      <div className="relative z-10 flex-1 max-w-md mx-auto w-full px-6 pt-8 pb-32">
+        <header className="mb-8">
+          <h1 className="text-3xl font-black italic tracking-tighter text-[#FFD700] uppercase">Missions</h1>
+          <p className="text-[10px] opacity-40 uppercase tracking-[0.3em] mb-4">Complete & Earn Rewards</p>
+          
+          <div className="p-5 rounded-[28px] bg-white/5 border border-white/10 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-[10px] font-black opacity-50 uppercase tracking-widest">Daily Progress</span>
+              <span className="text-xs font-black text-[#FFD700]">{completedCount}/{tasks.length}</span>
             </div>
-          </motion.div>
+            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }} 
+                animate={{ width: tasks.length > 0 ? `${(completedCount/tasks.length)*100}%` : "0%" }} 
+                className="h-full bg-gradient-to-r from-[#FFD700] to-[#FFA500]"
+              />
+            </div>
+          </div>
         </header>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-10 h-10 rounded-full"
-              style={{ border: "3px solid rgba(255,215,0,0.15)", borderTop: "3px solid #FFD700" }}
-            />
+          <div className="py-20 flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-2 border-[#FFD700] border-t-transparent rounded-full animate-spin" />
+            <p className="text-[10px] font-bold opacity-20 uppercase tracking-widest">Loading Tasks...</p>
           </div>
         ) : (
-          <>
-            {[{ label: "📣 Social Missions", items: social }, { label: "📸 Proof Upload", items: screenshot }].map(({ label, items }) => (
-              <section key={label} className="mb-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: "rgba(255,215,0,0.6)" }}>
-                  {label}
-                </p>
-                <div className="flex flex-col gap-3">
-                  {items.map((task, i) => {
-                    const isDone = task.completion?.status === "completed";
-                    const isPending = task.completion?.status === "pending";
-                    const isOpen = activeUpload === task.id;
+          <div className="flex flex-col gap-8">
+            {/* SOCIAL SECTION */}
+            <section>
+              <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.4em] mb-4 px-2">Social Channels</h3>
+              <div className="flex flex-col gap-3">
+                {social.map(task => (
+                  <div key={task.id} className="p-4 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">📣</div>
+                      <div>
+                        <p className="text-sm font-black tracking-tight">{task.title}</p>
+                        <div className="flex items-center gap-1">
+                          <Coins size={10} className="text-yellow-500" />
+                          <p className="text-[10px] text-yellow-500 font-black">+{task.rewardCoins.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {task.completion?.status === "completed" ? (
+                      <CheckCircle size={22} className="text-[#4ade80]" />
+                    ) : (
+                      <div className="flex gap-2">
+                        {task.link && (
+                          <a href={task.link} target="_blank" className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                            <ExternalLink size={16} className="text-[#FFD700]"/>
+                          </a>
+                        )}
+                        <button 
+                          onClick={() => handleVerify(task)} 
+                          disabled={submitting === task.id}
+                          className="px-5 py-2.5 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 transition-transform disabled:opacity-50"
+                        >
+                          {submitting === task.id ? "..." : "Verify"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
 
-                    return (
-                      <motion.div
-                        key={task.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="rounded-2xl overflow-hidden"
-                        style={{
-                          background: isDone ? "rgba(74,222,128,0.05)" : isPending ? "rgba(251,191,36,0.05)" : "rgba(255,255,255,0.03)",
-                          border: `1px solid ${isDone ? "rgba(74,222,128,0.3)" : isPending ? "rgba(251,191,36,0.3)" : "rgba(255,215,0,0.15)"}`,
-                        }}
-                      >
-                        <div className="flex items-center gap-3 p-3.5">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.15)" }}>
-                            {TYPE_ICONS[task.type] ?? "✅"}
+            {/* SCREENSHOT SECTION */}
+            <section>
+              <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.4em] mb-4 px-2">Proof Verification</h3>
+              <div className="flex flex-col gap-3">
+                {screenshot.map(task => (
+                  <div key={task.id} className="rounded-[30px] bg-white/5 border border-white/5 overflow-hidden">
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">📸</div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight">{task.title}</p>
+                          <div className="flex items-center gap-1">
+                            <Coins size={10} className="text-yellow-500" />
+                            <p className="text-[10px] text-yellow-500 font-black">+{task.rewardCoins.toLocaleString()}</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate" style={{ color: isDone ? "#4ade80" : "#fff" }}>
-                              {task.title}
-                            </p>
-                            <p className="text-[11px] truncate opacity-50">{task.description}</p>
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <Coins size={11} className="text-yellow-500" />
-                              <span className="text-xs font-black text-yellow-500">+{formatNumber(task.rewardCoins)}</span>
-                            </div>
-                          </div>
-
-                          {!isDone && !isPending && (
-                            task.type === "social" ? (
-                              <div className="flex items-center gap-2">
-                                {task.link && (
-                                  <a href={task.link} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/5 border border-white/10">
-                                    <ExternalLink size={14} className="text-yellow-500" />
-                                  </a>
-                                )}
-                                <button onClick={() => handleVerify(task)} disabled={submitting === task.id} className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-yellow-500 text-black disabled:opacity-50">
-                                  {submitting === task.id ? "..." : "Verify"}
-                                </button>
+                        </div>
+                      </div>
+                      {task.completion?.status === "completed" ? <CheckCircle size={22} className="text-[#4ade80]" /> : 
+                       task.completion?.status === "pending" ? <Clock size={22} className="text-amber-400 animate-pulse" /> :
+                       <button onClick={() => setActiveUpload(activeUpload === task.id ? null : task.id)} className="p-2 bg-white/5 rounded-xl">
+                         <ChevronRight size={20} className={`transition-transform duration-300 ${activeUpload === task.id ? "rotate-90 text-[#FFD700]" : "opacity-30"}`} />
+                       </button>}
+                    </div>
+                    
+                    <AnimatePresence>
+                      {activeUpload === task.id && (
+                        <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+                          <div className="px-5 pb-5 border-t border-white/5 bg-white/[0.02]">
+                            <p className="text-[9px] font-bold opacity-30 uppercase my-3 tracking-widest text-center">Required: Upload image proof</p>
+                            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if(f) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => setUploadUrl(ev.target?.result as string);
+                                reader.readAsDataURL(f);
+                              }
+                            }} />
+                            {uploadUrl ? (
+                              <div className="relative mb-4">
+                                <img src={uploadUrl} className="w-full h-40 object-cover rounded-2xl border border-white/10" />
+                                <button onClick={() => setUploadUrl("")} className="absolute top-2 right-2 w-8 h-8 bg-black/80 rounded-full flex items-center justify-center border border-white/10 text-xs">✕</button>
                               </div>
                             ) : (
-                              <button onClick={() => { setActiveUpload(isOpen ? null : task.id); setUploadUrl(""); }} className="w-8 h-8 rounded-xl flex items-center justify-center bg-yellow-500/10 border border-yellow-500/20">
-                                <ChevronRight size={16} className={`text-yellow-500 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                              <button 
+                                onClick={() => fileRef.current?.click()} 
+                                className="w-full py-8 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/5 transition-colors"
+                              >
+                                <Upload size={20} className="opacity-20" />
+                                <span className="text-[10px] uppercase font-black opacity-20">Browse Screenshot</span>
                               </button>
-                            )
-                          )}
-                          {(isDone || isPending) && (
-                            isDone ? <CheckCircle size={20} className="text-green-400" /> : <Clock size={20} className="text-amber-400" />
-                          )}
-                        </div>
-
-                        <AnimatePresence>
-                          {isOpen && (
-                            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
-                              <div className="px-3.5 pb-3.5 border-t border-white/5">
-                                <p className="text-[10px] my-2 opacity-50">Upload screenshot to verify completion:</p>
-                                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                                {uploadUrl ? (
-                                  <div className="relative mb-2">
-                                    <img src={uploadUrl} alt="preview" className="w-full h-28 object-cover rounded-xl" />
-                                    <button onClick={() => setUploadUrl("")} className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full text-[10px]">×</button>
-                                  </div>
-                                ) : (
-                                  <button onClick={() => fileRef.current?.click()} className="w-full h-20 rounded-xl flex flex-col items-center justify-center gap-1 border-1.5 border-dashed border-yellow-500/30 bg-yellow-500/5">
-                                    <Upload size={18} className="opacity-30" />
-                                    <span className="text-[10px] opacity-30 uppercase font-bold">Select Screenshot</span>
-                                  </button>
-                                )}
-                                <button onClick={() => handleScreenshotSubmit(task)} disabled={submitting === task.id || !uploadUrl} className="w-full py-2.5 rounded-xl font-black text-[10px] uppercase bg-yellow-500 text-black disabled:opacity-20">
-                                  {submitting === task.id ? "Uploading..." : "Submit for Review"}
-                                </button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </>
+                            )}
+                            <button 
+                              onClick={() => handleScreenshotSubmit(task)} 
+                              disabled={!uploadUrl || submitting === task.id} 
+                              className="w-full py-4 bg-[#FFD700] text-black font-black rounded-2xl text-[10px] uppercase shadow-lg disabled:opacity-20"
+                            >
+                              {submitting === task.id ? "Uploading..." : "Submit for Approval"}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
         )}
       </div>
 
+      {/* TOAST NOTIFICATION */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl px-5 py-3 text-xs font-bold backdrop-blur-xl" style={{ background: toast.type === "success" ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)", border: `1px solid ${toast.type === "success" ? "#4ade80" : "#f87171"}`, color: toast.type === "success" ? "#4ade80" : "#f87171" }}>
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }} 
+            animate={{ y: 0, opacity: 1 }} 
+            exit={{ y: 50, opacity: 0 }}
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl ${
+              toast.type === "success" ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400"
+            }`}
+          >
             {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>
+
       <BottomNav />
     </div>
   );
