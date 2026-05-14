@@ -21,7 +21,7 @@ interface Task {
 }
 
 export default function TasksPage() {
-  const { setCoins } = useApp();
+  const { coins, setCoins } = useApp();
   const [tasks, setTasks] = useState < Task[] > ([]);
   const [loading, setLoading] = useState(true);
   const [activeUpload, setActiveUpload] = useState < number | null > (null);
