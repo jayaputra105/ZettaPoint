@@ -15,15 +15,19 @@ interface LeaderUser {
   avatar: string | null;
   zp: number; 
   position: number;
+}
+
+interface RoomData {
+  id: string;
   prizePool: number;
   resetAt: string;
 }
 
 const ROOMS = [
-  { id: "bronze", name: "Bronze", icon: "♦️", color: "#CD7F32", prize: 20 },
-  { id: "silver", name: "Silver", icon: "♦️", color: "#C0C0C0", prize: 50 },
-  { id: "gold", name: "Gold", icon: "♦️", color: "#FFD700", prize: 100 },
-  { id: "diamond", name: "Diamond", icon: "💎", color: "#00E5FF", prize: 500 },
+  { id: "bronze", name: "Bronze", icon: "♦️", color: "#CD7F32" },
+  { id: "silver", name: "Silver", icon: "♦️", color: "#C0C0C0" },
+  { id: "gold", name: "Gold", icon: "♦️", color: "#FFD700" },
+  { id: "diamond", name: "Diamond", icon: "💎", color: "#00E5FF" },
 ];
 
 function formatNumber(n: number): string {
@@ -33,7 +37,7 @@ function formatNumber(n: number): string {
 }
 
 export default function LeaderboardPage() {
-  const { zp, currentRoom, setCurrentRoom } = useApp();
+  const { currentRoom, setCurrentRoom } = useApp();
   const [users, setUsers] = useState<LeaderUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [myTgId, setMyTgId] = useState<string | null>(null);
@@ -42,65 +46,59 @@ export default function LeaderboardPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 1. Fetch User ID & Leaderboard Data
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     if (tid) setMyTgId(tid);
 
     setLoading(true);
+    fetch(`/api/leaderboard?room=${currentRoom}`)
+      .then((r) => r.json())
+      .then((data) => { 
+        setUsers(Array.isArray(data) ? data : []); 
+        setLoading(false); 
+      })
+      .catch(() => setLoading(false));
+  }, [currentRoom]);
+
+  // 2. Fetch Room Information (Prize & Reset)
+  useEffect(() => {
     fetch(`/api/rooms?id=${currentRoom}`)
-  .then(res => res.json())
-  .then(data => setRoomInfo(data));
-}, [currentRoom]);
+      .then(res => res.json())
+      .then(data => setRoomInfo(data))
+      .catch(err => console.error("Room fetch error:", err));
+  }, [currentRoom]);
 
-  const activeRoomData = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
-  TypeScript
-// Tambahin interface buat data room dari DB
-interface RoomData {
-  id: string;
-  prizePool: number;
-  resetAt: string;
-}
+  // 3. Countdown Logic (Standard 00:00 UTC)
+  useEffect(() => {
+    if (!roomInfo?.resetAt) return;
 
-// Di dalam fungsi LeaderboardPage:
-const [roomInfo, setRoomInfo] = useState<RoomData | null>(null);
-const [timeLeft, setTimeLeft] = useState("");
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const target = new Date(roomInfo.resetAt).getTime();
+      const diff = target - now;
 
-useEffect(() => {
-  // Fetch info prize pool dan reset time dari API
-  fetch(`/api/rooms?id=${currentRoom}`)
-    .then(res => res.json())
-    .then(data => setRoomInfo(data));
-}, [currentRoom]);
+      if (diff <= 0) {
+        setTimeLeft("Resetting...");
+        return;
+      }
 
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      if (days >= 1) {
+        setTimeLeft(`${days + 1} Days`);
+      } else {
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft(`${h}h ${m}m ${s}s`);
+      }
+    }, 1000);
 
-useEffect(() => {
-  if (!roomInfo?.resetAt) return;
+    return () => clearInterval(timer);
+  }, [roomInfo]);
 
-  const timer = setInterval(() => {
-    const now = new Date().getTime();
-    const target = new Date(roomInfo.resetAt).getTime();
-    const diff = target - now;
-
-    if (diff <= 0) {
-      setTimeLeft("Resetting...");
-      return;
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days >= 1) {
-      setTimeLeft(`${days + 1} Days`); // Pembulatan hari ke atas
-    } else {
-      // Countdown jam:menit:detik
-      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const s = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeLeft(`${h}h ${m}m ${s}s`);
-    }
-  }, 1000);
-
-  return () => clearInterval(timer);
-}, [roomInfo]);
+  const activeRoomStatic = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col" style={{ background: "#000" }}>
@@ -108,35 +106,31 @@ useEffect(() => {
       
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full pb-28">
         
-        {/* HEADER SECTION */}
         <header className="pt-6 px-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            {/* Nama Room di Kiri Atas */}
             <div className="flex items-center gap-2">
-              <span className="text-xl">{activeRoomData.icon}</span>
-              <h1 className="text-2xl font-black italic tracking-tight" style={{ color: activeRoomData.color, textShadow: `0 0 15px ${activeRoomData.color}66` }}>
-                {activeRoomData.name.toUpperCase()}
+              <span className="text-xl">{activeRoomStatic.icon}</span>
+              <h1 className="text-2xl font-black italic tracking-tight" style={{ color: activeRoomStatic.color, textShadow: `0 0 15px ${activeRoomStatic.color}66` }}>
+                {activeRoomStatic.name.toUpperCase()}
               </h1>
             </div>
-            
-            {/* Leaderboard Title */}
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 text-white">Ranking</span>
+            <div className="text-right">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 text-white block">Reset In</span>
+              <span className="text-sm font-black text-white">{timeLeft || "--:--:--"}</span>
+            </div>
           </div>
 
-          {/* Prize Pool di Tengah */}
-          <div className="flex flex-col items-center justify-center py-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+          <div className="flex flex-col items-center justify-center py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
             <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Prize Pool</p>
             <h2 className="text-3xl font-black text-[#4ade80]" style={{ textShadow: "0 0 20px rgba(74,222,128,0.4)" }}>
-              ${activeRoomData.prize} <span className="text-sm">USDT</span>
+              ${roomInfo?.prizePool || "0"} <span className="text-sm">USDT</span>
             </h2>
             <p className="text-[9px] font-medium text-white/60 mt-1 italic">Distributed to Top 3 players</p>
           </div>
 
-          {/* Horizontal Room Selector (Bisa digeser) */}
           <div 
             ref={scrollRef}
             className="flex gap-3 overflow-x-auto no-scrollbar py-2"
-            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {ROOMS.map((r) => (
               <button
@@ -154,10 +148,11 @@ useEffect(() => {
           </div>
         </header>
 
-        {/* LIST SECTION */}
         <div className="px-4 mt-4 flex flex-col gap-2">
           {loading ? (
-            <div className="py-20 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
+            <div className="py-20 flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
           ) : (
             users.map((user, i) => {
               const isMe = user.id.toString() === myTgId;
@@ -168,9 +163,9 @@ useEffect(() => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className="flex items-center gap-4 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]"
-                  style={isMe ? { background: `${activeRoomData.color}15`, borderColor: `${activeRoomData.color}44` } : {}}
+                  style={isMe ? { background: `${activeRoomStatic.color}15`, borderColor: `${activeRoomStatic.color}44` } : {}}
                 >
-                  <div className="w-8 font-black text-center text-sm opacity-40" style={isMe ? { color: activeRoomData.color, opacity: 1 } : {}}>
+                  <div className="w-8 font-black text-center text-sm opacity-40" style={isMe ? { color: activeRoomStatic.color, opacity: 1 } : {}}>
                     #{user.position}
                   </div>
                   
@@ -187,7 +182,7 @@ useEffect(() => {
 
                   <div className="text-right">
                     <p className="text-sm font-black text-white">{formatNumber(user.zp)}</p>
-                    <p className="text-[9px] font-bold uppercase opacity-40 tracking-tighter" style={{ color: activeRoomData.color }}>ZP Points</p>
+                    <p className="text-[9px] font-bold uppercase opacity-40 tracking-tighter" style={{ color: activeRoomStatic.color }}>ZP Points</p>
                   </div>
                 </motion.div>
               );
