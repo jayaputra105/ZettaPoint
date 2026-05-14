@@ -67,8 +67,9 @@ export default function TasksPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      // Update Global State Koin
-      setCoins((prev: number) => prev + data.rewardCoins);
+      // Update Global State Koin tanpa fungsi updater
+      const currentCoins = Number(coins) || 0; 
+      setCoins(currentCoins + data.rewardCoins);
       
       showToast(`+${data.rewardCoins.toLocaleString()} Coins claimed!`);
       setTasks((prev) =>
@@ -81,7 +82,7 @@ export default function TasksPage() {
     } finally {
       setSubmitting(null);
     }
-  };
+  }; 
   
   const handleScreenshotSubmit = async (task: Task) => {
     const tid = getTelegramId();
