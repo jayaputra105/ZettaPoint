@@ -10,7 +10,31 @@ export const users = pgTable("users", {
   usdtBalance: bigint("usdt_balance", { mode: "number" }).default(0).notNull(),
   zp: bigint("zp", { mode: "number" }).default(0).notNull(),
   rank: integer("rank").default(0).notNull(),
+  
+  
+  
+  qualifiedSilver: boolean("qualified_silver").default(false).notNull(),
+  qualifiedGold: boolean("qualified_gold").default(false).notNull(),
+  qualifiedDiamond: boolean("qualified_diamond").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+
+export const rooms = pgTable("rooms", {
+  id: text("id").primaryKey(), // 'bronze', 'silver', 'gold', 'diamond'
+  prizePool: integer("prize_pool").notNull(),
+  resetAt: timestamp("reset_at").notNull(),
+  durationDays: integer("duration_days").notNull(),
+});
+
+// Tabel History Pemenang (Untuk transparansi hadiah USDT)
+export const leaderboardWinners = pgTable("leaderboard_winners", {
+  id: serial("id").primaryKey(),
+  roomId: text("room_id").notNull(),
+  userId: integer("user_id").notNull(),
+  rank: integer("rank").notNull(),
+  prizeAmount: text("prize_amount").notNull(), 
+  wonAt: timestamp("won_at").defaultNow().notNull(),
 });
 
 export const tasks = pgTable("tasks", {

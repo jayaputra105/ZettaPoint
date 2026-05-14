@@ -15,6 +15,8 @@ interface LeaderUser {
   avatar: string | null;
   zp: number; 
   position: number;
+  prizePool: number;
+  resetAt: string;
 }
 
 const ROOMS = [
@@ -35,8 +37,9 @@ export default function LeaderboardPage() {
   const [users, setUsers] = useState<LeaderUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [myTgId, setMyTgId] = useState<string | null>(null);
+  const [roomInfo, setRoomInfo] = useState<RoomData | null>(null);
+  const [timeLeft, setTimeLeft] = useState("");
   
-  // Refs untuk horizontal scroll room
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,17 +48,59 @@ export default function LeaderboardPage() {
     if (tid) setMyTgId(tid);
 
     setLoading(true);
-    // Fetch data berdasarkan room yang dipilih
-    fetch(`/api/leaderboard?room=${currentRoom}`)
-      .then((r) => r.json())
-      .then((data) => { 
-        setUsers(Array.isArray(data) ? data : []); 
-        setLoading(false); 
-      })
-      .catch(() => setLoading(false));
-  }, [currentRoom]);
+    fetch(`/api/rooms?id=${currentRoom}`)
+  .then(res => res.json())
+  .then(data => setRoomInfo(data));
+}, [currentRoom]);
 
   const activeRoomData = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
+  TypeScript
+// Tambahin interface buat data room dari DB
+interface RoomData {
+  id: string;
+  prizePool: number;
+  resetAt: string;
+}
+
+// Di dalam fungsi LeaderboardPage:
+const [roomInfo, setRoomInfo] = useState<RoomData | null>(null);
+const [timeLeft, setTimeLeft] = useState("");
+
+useEffect(() => {
+  // Fetch info prize pool dan reset time dari API
+  fetch(`/api/rooms?id=${currentRoom}`)
+    .then(res => res.json())
+    .then(data => setRoomInfo(data));
+}, [currentRoom]);
+
+
+useEffect(() => {
+  if (!roomInfo?.resetAt) return;
+
+  const timer = setInterval(() => {
+    const now = new Date().getTime();
+    const target = new Date(roomInfo.resetAt).getTime();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      setTimeLeft("Resetting...");
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days >= 1) {
+      setTimeLeft(`${days + 1} Days`); // Pembulatan hari ke atas
+    } else {
+      // Countdown jam:menit:detik
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft(`${h}h ${m}m ${s}s`);
+    }
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [roomInfo]);
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col" style={{ background: "#000" }}>
