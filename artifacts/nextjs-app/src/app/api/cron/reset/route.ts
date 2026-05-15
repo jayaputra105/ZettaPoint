@@ -15,10 +15,9 @@ export async function GET(req: Request) {
     const now = new Date();
 
     for (const room of allRooms) {
-      // Cek apakah room ini sudah jatuh tempo reset
       if (now >= new Date(room.resetAt)) {
         
-        // Pilih kolom ZP yang sesuai dengan room id
+        // Mapping kolom ZP
         const zpColumnMap: Record<string, any> = {
           bronze: users.zpBronze,
           silver: users.zpSilver,
@@ -27,7 +26,6 @@ export async function GET(req: Request) {
         };
         const activeZpCol = zpColumnMap[room.id];
 
-        // 1. Ambil Top 150 di room ini saja
         const topPlayers = await db
           .select()
           .from(users)
@@ -36,25 +34,26 @@ export async function GET(req: Request) {
           .limit(150);
 
         if (topPlayers.length > 0) {
-          // 2. Bagi Payout USDT buat Top 3
-          const prizes = [0.5, 0.3, 0.2]; // 50%, 30%, 20%
+          const prizes = [0.5, 0.3, 0.2];
           for (let i = 0; i < Math.min(3, topPlayers.length); i++) {
             const winner = topPlayers[i];
             const prizeAmount = room.prizePool * prizes[i];
 
-            await db.update(users)
-              .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
-              .where(eq(users.telegramId, winner.telegramId));
+            // FIX TYPE ERROR: Pastikan telegramId tidak null sebelum update
+            if (winner.telegramId) {
+              await db.update(users)
+                .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
+                .where(eq(users.telegramId, winner.telegramId));
 
-            await db.insert(leaderboardWinners).values({
-              roomId: room.id,
-              userId: winner.id,
-              rank: i + 1,
-              prizeAmount: prizeAmount.toString(),
-            });
+              await db.insert(leaderboardWinners).values({
+                roomId: room.id,
+                userId: winner.id,
+                rank: i + 1,
+                prizeAmount: prizeAmount.toString(),
+              });
+            }
           }
 
-          // 3. Update Kualifikasi ke Room Selanjutnya
           const nextRoomMap: Record<string, any> = {
             bronze: "qualifiedSilver",
             silver: "qualifiedGold",
@@ -62,17 +61,23 @@ export async function GET(req: Request) {
           };
           const nextCol = nextRoomMap[room.id];
           if (nextCol) {
-            const topIds = topPlayers.map(p => p.telegramId);
-            await db.update(users)
-              .set({ [nextCol]: true })
-              .where(sql`telegram_id IN ${topIds}`);
+            // Filter hanya ID yang valid (bukan null)
+            const topIds = topPlayers
+              .map(p => p.telegramId)
+              .filter((id): id is string => id !== null);
+
+            if (topIds.length > 0) {
+              await db.update(users)
+                .set({ [nextCol]: true })
+                .where(sql`telegram_id IN ${topIds}`);
+            }
           }
         }
 
-        // 4. RESET ZP HANYA UNTUK ROOM INI
+        // Reset ZP room terkait
         await db.update(users).set({ [activeZpCol.name]: 0 });
 
-        // 5. Update Waktu Reset Berikutnya
+        // Set reset baru
         const nextReset = new Date();
         nextReset.setUTCDate(nextReset.getUTCDate() + room.durationDays);
         nextReset.setUTCHours(0, 0, 0, 0);
@@ -80,13 +85,12 @@ export async function GET(req: Request) {
         await db.update(rooms)
           .set({ resetAt: nextReset })
           .where(eq(rooms.id, room.id));
-
-        console.log(`[CRON] Room ${room.id} reset success.`);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (e) {
+    console.error("Reset Error:", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
