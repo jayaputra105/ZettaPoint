@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { spinRecords, users, transactions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
-const MOCK_TELEGRAM_ID = "mock_001";
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_ADS_SPINS = 5;
 
 const PRIZES = [
-  { label: "50 Koin", coins: 50, usdt: 0, weight: 35 },
+  { label: "50 Koin", coins: 50, usdt: 0, weight: 15 },
   { label: "100 Koin", coins: 100, usdt: 0, weight: 25 },
-  { label: "200 Koin", coins: 200, usdt: 0, weight: 18 },
-  { label: "500 Koin", coins: 500, usdt: 0, weight: 12 },
+  { label: "200 Koin", coins: 200, usdt: 0, weight: 35 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 25 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
   { label: "10 USDT", coins: 0, usdt: 10, weight: 0 },
 ];
@@ -26,12 +25,10 @@ function weightedRandom(prizes: typeof PRIZES) {
   return 0;
 }
 
-// ... imports tetap sama ...
-
-export async function GET(req: Request) { // Tambah parameter req
+export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const tid = searchParams.get("telegramId"); // Ambil ID asli dari URL
+    const tid = searchParams.get("telegramId");
 
     if (!tid) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
 
@@ -64,9 +61,11 @@ export async function GET(req: Request) { // Tambah parameter req
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { useAd } = body as { useAd: boolean };
+    const { useAd, telegramId } = body;
 
-    const [user] = await db.select().from(users).where(eq(users.telegramId, MOCK_TELEGRAM_ID)).limit(1);
+    if (!telegramId) return NextResponse.json({ error: "No telegram ID" }, { status: 400 });
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const [spin] = await db.select().from(spinRecords).where(eq(spinRecords.userId, user.id)).limit(1);
@@ -80,31 +79,32 @@ export async function POST(req: Request) {
     const adsSpinsToday = adsReset ? 0 : (spin?.adsSpinsToday ?? 0);
     const adsRemaining = MAX_ADS_SPINS - adsSpinsToday;
 
-    if (!useAd && !isFreeAvailable) {
-      return NextResponse.json({ error: "Free spin not available yet" }, { status: 400 });
-    }
-    if (useAd && adsRemaining <= 0) {
-      return NextResponse.json({ error: "No ads spins left today" }, { status: 400 });
-    }
+    if (!useAd && !isFreeAvailable) return NextResponse.json({ error: "Free spin not available" }, { status: 400 });
+    if (useAd && adsRemaining <= 0) return NextResponse.json({ error: "No ads left" }, { status: 400 });
 
     const prizeIndex = weightedRandom(PRIZES);
     const prize = PRIZES[prizeIndex];
 
+    // UPDATE SPIN RECORDS
     if (useAd) {
-      await db
-        .update(spinRecords)
+      await db.update(spinRecords)
         .set({ adsSpinsToday: adsReset ? 1 : adsSpinsToday + 1, adsResetAt: adsReset ? new Date() : undefined })
         .where(eq(spinRecords.userId, user.id));
     } else {
-      await db
-        .update(spinRecords)
+      await db.update(spinRecords)
         .set({ lastFreeSpinAt: new Date() })
         .where(eq(spinRecords.userId, user.id));
     }
 
-    const newCoins = user.coins + prize.coins;
-    await db.update(users).set({ coins: newCoins }).where(eq(users.id, user.id));
+    // UPDATE USER ASSETS (Sync naming: usdtBalance)
+    await db.update(users)
+      .set({ 
+        coins: sql`${users.coins} + ${prize.coins}`,
+        usdtBalance: sql`${users.usdtBalance} + ${prize.usdt}` 
+      })
+      .where(eq(users.id, user.id));
 
+    // RECORD TRANSACTION
     await db.insert(transactions).values({
       userId: user.id,
       type: "spin_reward",
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
       status: "completed",
     });
 
-    return NextResponse.json({ prize, prizeIndex, newCoins });
+    return NextResponse.json({ prize, prizeIndex });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
