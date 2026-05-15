@@ -4,19 +4,20 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 interface AppContextType {
   coins: number;
-  // ZP dipisah per Room (Logic sinkron dengan database ZP kolom utama)
   zp: Record<string, number>; 
-  usdt: number;
+  usdtBalance: number; // Sesuaikan dengan nama di DB: usdtBalance
   currentRoom: string;
-  // Status Kualifikasi (Hasil dari Reset Global/Top 150)
   qualifiedSilver: boolean;
   qualifiedGold: boolean;
   qualifiedDiamond: boolean;
   loading: boolean;
   setCoins: (val: number) => void;
   setZp: (room: string, val: number) => void;
-  setUsdt: (val: number) => void;
+  setUsdtBalance: (val: number) => void;
   setCurrentRoom: (room: string) => void;
+  setQualifiedSilver: (val: boolean) => void;
+  setQualifiedGold: (val: boolean) => void;
+  setQualifiedDiamond: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,44 +30,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     gold: 0,
     diamond: 0,
   });
-  const [usdt, setUsdtState] = useState(0);
+  const [usdtBalance, setUsdtBalanceState] = useState(0);
   const [currentRoom, setCurrentRoom] = useState("bronze");
   const [qualifiedSilver, setQualifiedSilver] = useState(false);
   const [qualifiedGold, setQualifiedGold] = useState(false);
   const [qualifiedDiamond, setQualifiedDiamond] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Sync dengan Database pas aplikasi dibuka
+  // Sync awal dengan Database
   useEffect(() => {
     const fetchUserData = async () => {
       const tg = (window as any).Telegram?.WebApp;
-      const tid = tg?.initDataUnsafe?.user?.id?.toString();
+      const tid = tg?.initDataUnsafe?.user?.id?.toString() || "12345"; // fallback dev
 
-      if (tid) {
-        try {
-          const res = await fetch(`/api/user?telegramId=${tid}`);
-          const data = await res.json();
-          if (res.ok) {
-            setCoinsState(data.coins || 0);
-            setUsdtState(data.usdtBalance || 0);
-            // Sementara mapping ZP dari database ke room yang aktif
-            setZpState((prev) => ({ ...prev, [currentRoom]: data.zp || 0 }));
-            setQualifiedSilver(data.qualifiedSilver || false);
-            setQualifiedGold(data.qualifiedGold || false);
-            setQualifiedDiamond(data.qualifiedDiamond || false);
-          }
-        } catch (e) {
-          console.error("Sync Error:", e);
+      try {
+        const res = await fetch(`/api/user?telegramId=${tid}`);
+        const data = await res.json();
+        
+        if (res.ok && !data.error) {
+          setCoinsState(Number(data.coins || 0));
+          setUsdtBalanceState(Number(data.usdtBalance || 0));
+          
+          // SINKRONISASI SEMUA KOLOM ZP SEKALIGUS
+          setZpState({
+            bronze: Number(data.zpBronze || 0),
+            silver: Number(data.zpSilver || 0),
+            gold: Number(data.zpGold || 0),
+            diamond: Number(data.zpDiamond || 0),
+          });
+
+          // SINKRONISASI KUALIFIKASI ROOM
+          setQualifiedSilver(!!data.qualifiedSilver);
+          setQualifiedGold(!!data.qualifiedGold);
+          setQualifiedDiamond(!!data.qualifiedDiamond);
         }
+      } catch (e) {
+        console.error("Initial Sync Error:", e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchUserData();
-  }, [currentRoom]); // Re-fetch kalau pindah room buat sinkron data ZP
+  }, []); // Cukup running sekali pas mount
 
   const setCoins = (val: number) => setCoinsState(val);
-  const setUsdt = (val: number) => setUsdtState(val);
+  const setUsdtBalance = (val: number) => setUsdtBalanceState(val);
   const setZp = (room: string, val: number) => {
     setZpState((prev) => ({ ...prev, [room]: val }));
   };
@@ -76,7 +85,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         coins,
         zp,
-        usdt,
+        usdtBalance,
         currentRoom,
         qualifiedSilver,
         qualifiedGold,
@@ -84,8 +93,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loading,
         setCoins,
         setZp,
-        setUsdt,
+        setUsdtBalance,
         setCurrentRoom,
+        setQualifiedSilver,
+        setQualifiedGold,
+        setQualifiedDiamond
       }}
     >
       {children}
