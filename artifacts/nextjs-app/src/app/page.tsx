@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
-import { useApp } from "@/context/AppProvider"; // Pastikan path & case-sensitive benar
+import RoomSelector from "@/components/RoomSelector";
+import { useApp } from "@/context/AppProvider";
 
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
   ssr: false,
@@ -15,10 +16,11 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
+// --- UTILS ---
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n.toString();
+  return n?.toString() ?? "0";
 }
 
 function formatCountdown(ms: number): string {
@@ -30,107 +32,103 @@ function formatCountdown(ms: number): string {
 }
 
 export default function Home() {
-  // AMBIL DATA DARI BRANKAS PUSAT (AppProvider)
-  const { coins, setCoins, zp, setZp, usdt, currentRoom } = useApp();
+  // --- GLOBAL STATE (AppProvider) ---
+  const { coins, setCoins, zp, setZp, currentRoom } = useApp();
   
-  // Ambil ZP spesifik untuk room saat ini (default: bronze)
+  // ZP spesifik untuk room yang sedang dipilih di selector
   const currentZp = zp[currentRoom] || 0;
-
+  
+  // --- LOCAL STATE ---
   const [userProfile, setUserProfile] = useState({
-    name: "Loading...",
-    username: "...",
+    name: "Zetta Hunter",
+    username: "@zetta",
     avatar: "",
     rank: 0
   });
-
-  const [lastFreeClick, setLastFreeClick] = useState<number | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [lastFreeClick, setLastFreeClick] = useState < number | null > (null);
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
-
-  // 1. Sinkronisasi Data dari Database ke Brankas Pusat
+  
+  // 1. SINKRONISASI DATABASE (Biar nama gak loading & ZP gak reset)
   useEffect(() => {
     const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
       const user = tg?.initDataUnsafe?.user;
-
-      if (user) {
-        try {
-          const params = new URLSearchParams({
-            telegramId: user.id.toString(),
-            firstName: user.first_name,
-            username: user.username || "",
-            photoUrl: user.photo_url || ""
-          });
-
-          const res = await fetch(`/api/user?${params.toString()}`);
-          const data = await res.json();
+      const tid = user?.id?.toString() || "12345"; // fallback buat dev
+      
+      try {
+        const res = await fetch(`/api/user?telegramId=${tid}`);
+        const data = await res.json();
+        
+        if (data && !data.error) {
+          setCoins(Number(data.coins || 0));
           
-          if (data) {
-            setCoins(Number(data.coins));
-            // Set ZP ke room yang sedang aktif
-            setZp(currentRoom, Number(data.zp_score || 0)); 
-            
-            setUserProfile({
-              name: data.name,
-              username: data.username ? `@${data.username}` : "User",
-              avatar: data.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${data.id}`,
-              rank: data.rank || 0
-            });
-          }
-        } catch (err) {
-          console.error("Database connection failed:", err);
+          // Masukin ZP dari DB ke room perunggu sebagai awal
+          setZp("bronze", Number(data.zp || 0));
+          
+          setUserProfile({
+            name: data.name || user?.first_name || "Zetta Hunter",
+            username: data.username ? `@${data.username}` : (user?.username ? `@${user.username}` : "@player"),
+            avatar: data.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${tid}`,
+            rank: data.rank || 0
+          });
         }
+      } catch (err) {
+        console.error("Database connection failed:", err);
+      } finally {
+        setLoading(false);
       }
     };
-
+    
     syncData();
-  }, [currentRoom, setCoins, setZp]);
-
+  }, [setCoins, setZp]);
+  
+  // 2. TIMER & LOCAL STORAGE LOGIC
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
     if (stored) setLastFreeClick(Number(stored));
     if (storedAds) setAdsUsed(Number(storedAds));
-  }, []);
-
-  useEffect(() => {
+    
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
+  
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   const currentAdsUsed = isFreeAvailable ? 0 : adsUsed;
   const adsRemaining = MAX_ADS - currentAdsUsed;
   const isLocked = !isFreeAvailable && adsRemaining <= 0;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
-
-  // 2. Fungsi Update Koin & ZP (Global)
+  
+  // 3. FUNGSI UPDATE GLOBAL (Frontend + Backend)
   const giveRewards = useCallback(async (amount: number) => {
-    // Update di Frontend (Global State)
-    const newZp = currentZp + amount;
-    setZp(currentRoom, newZp);
-
+    // Update State Global (Biar ZP nambah di UI seketika)
+    const newTotalZp = currentZp + amount;
+    setZp(currentRoom, newTotalZp);
+    
+    // Kirim ke Neon Database (Biar gak reset pas refresh)
     const tg = (window as any).Telegram?.WebApp;
-    const telegramId = tg?.initDataUnsafe?.user?.id;
-
-    if (telegramId) {
-      try {
-        await fetch('/api/user', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegramId: telegramId.toString(),
-            addZp: amount // Asumsi backend lu terima addZp
-          })
-        });
-      } catch (err) {
-        console.error("Failed to sync rewards to DB:", err);
-      }
+    const tid = tg?.initDataUnsafe?.user?.id?.toString() || "12345";
+    
+    try {
+      await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegramId: tid,
+          addZp: amount,
+          room: currentRoom
+        })
+      });
+    } catch (err) {
+      console.error("Gagal sinkron reward ke DB:", err);
     }
   }, [currentRoom, currentZp, setZp]);
-
+  
   const handleCoinClick = useCallback(() => {
     if (isFreeAvailable) {
       const ts = Date.now();
@@ -138,12 +136,12 @@ export default function Home() {
       setAdsUsed(0);
       localStorage.setItem("zetta_last_free", String(ts));
       localStorage.setItem("zetta_ads_used", "0");
-      giveRewards(100); // Sesuai teks lu +100 per klik
+      giveRewards(100);
     } else if (adsRemaining > 0) {
       setShowAd(true);
     }
   }, [isFreeAvailable, adsRemaining, giveRewards]);
-
+  
   const handleAdComplete = useCallback(() => {
     const newAds = currentAdsUsed + 1;
     setAdsUsed(newAds);
@@ -151,8 +149,8 @@ export default function Home() {
     setShowAd(false);
     giveRewards(100);
   }, [currentAdsUsed, giveRewards]);
-
-  // UI Status Labels (English)
+  
+  // --- UI LABELS ---
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
@@ -160,116 +158,76 @@ export default function Home() {
     statusColor = "#4ade80";
   } else if (isLocked) {
     statusLabel = (
-      <>
-        🔒 Locked — reset in{" "}
-        <span style={{ color: "#FFD700", fontWeight: 900 }}>
-          {formatCountdown(timeUntilReset)}
-        </span>
-      </>
+      <>🔒 Locked — reset in <span className="font-black" style={{ color: "#FFD700" }}>{formatCountdown(timeUntilReset)}</span></>
     );
     statusColor = "rgba(255,100,100,0.85)";
   } else {
     statusLabel = (
-      <>
-        🎬 Ads available:{" "}
-        <span style={{ color: "#FFD700", fontWeight: 900 }}>
-          {adsRemaining}/{MAX_ADS}
-        </span>{" "}
-        | reset in{" "}
-        <span style={{ color: "rgba(255,215,0,0.7)", fontWeight: 700 }}>
-          {formatCountdown(timeUntilReset)}
-        </span>
-      </>
+      <>🎬 Ads: <span className="font-black" style={{ color: "#FFD700" }}>{adsRemaining}/{MAX_ADS}</span> | reset: {formatCountdown(timeUntilReset)}</>
     );
     statusColor = "rgba(255,215,0,0.75)";
   }
-
+  
   return (
-    <div
-      className="relative min-h-screen w-full overflow-hidden flex flex-col"
-      style={{
-        background: "radial-gradient(ellipse at 50% 0%, #0d0d1a 0%, #050508 60%, #000000 100%)",
-      }}
-    >
+    <div className="relative min-h-screen w-full overflow-hidden flex flex-col bg-black">
       <ShootingStars />
 
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4">
-        <header className="pt-5 pb-3">
+        
+        {/* HEADER: USER INFO & COINS */}
+        <header className="pt-6 pb-2">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between rounded-2xl px-4 py-3"
-            style={{
-              background: "rgba(10,8,2,0.75)",
-              border: "1.5px solid rgba(255,215,0,0.45)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-            }}
+            className="flex items-center justify-between rounded-3xl px-4 py-3 bg-zinc-900/80 border border-yellow-500/20 backdrop-blur-xl"
           >
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden" style={{ border: "2px solid rgba(255,215,0,0.7)" }}>
-                <img src={userProfile?.avatar} alt="avatar" className="w-full h-full object-cover" />
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-500/50">
+                <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="font-bold text-sm" style={{ color: "#FFD700" }}>{userProfile?.name}</p>
-                <p className="text-xs" style={{ color: "rgba(255,215,0,0.5)" }}>{userProfile?.username}</p>
+                <p className="font-black text-sm text-yellow-500">{userProfile.name}</p>
+                <p className="text-[10px] text-white/30 font-bold uppercase tracking-tighter">{userProfile.username}</p>
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg">🪙</span>
-                <span className="font-black text-base tabular-nums" style={{ color: "#FFD700" }}>
-                  {formatNumber(coins)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 rounded-full px-2 py-0.5" style={{ background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.3)" }}>
-                <span className="text-xs">🏆</span>
-                <span className="text-xs font-bold" style={{ color: "rgba(255,215,0,0.85)" }}>
-                  Rank #{userProfile.rank}
-                </span>
-              </div>
+            <div className="flex items-center gap-2 bg-yellow-500/10 px-3 py-2 rounded-2xl border border-yellow-500/20">
+              <span className="text-base">🪙</span>
+              <span className="font-black text-sm text-white tabular-nums">
+                {formatNumber(coins)}
+              </span>
             </div>
           </motion.div>
         </header>
 
-        <div className="flex items-center justify-between px-1 mt-1 mb-2">
-          {[
-            { label: "Zetta Points", value: formatNumber(currentZp), icon: "⚡" },
-            { label: "Ads Remaining", value: isFreeAvailable ? "–" : `${adsRemaining}/${MAX_ADS}`, icon: "🎬" },
-          ].map((stat) => (
-            <div key={stat.label} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "rgba(10,10,15,0.7)", border: "1px solid rgba(255,215,0,0.18)", flex: 1, marginInline: 4 }}>
-              <span className="text-base">{stat.icon}</span>
-              <div>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{stat.label}</p>
-                <p className="text-sm font-black" style={{ color: "rgba(255,255,255,0.9)" }}>{stat.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* ROOM SELECTOR (Sesuai IMG_20260514_235047.jpg) */}
+        <RoomSelector />
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 py-4">
-          <p className="text-sm font-semibold tracking-widest uppercase" style={{ color: "rgba(255,215,0,0.55)" }}>
-            Tap to Earn
-          </p>
+        {/* CLICKER SECTION */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4">
+          
+          <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
+             <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] flex items-center gap-2">
+               🎬 Iklan tersedia: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
+             </p>
+          </div>
 
           <CoinClicker
             onCoin={handleCoinClick}
             pointsPerClick={100}
             locked={isLocked}
-            needsAd={!isFreeAvailable && !isLocked}
           />
 
-          <div className="rounded-2xl px-4 py-2.5 text-center" style={{ background: "rgba(10,10,15,0.7)", border: `1px solid ${isLocked ? "rgba(255,80,80,0.25)" : "rgba(255,215,0,0.2)"}`, maxWidth: 280 }}>
-            <p className="text-xs font-medium" style={{ color: statusColor }}>{statusLabel}</p>
+          <div className="rounded-2xl px-5 py-3 text-center bg-zinc-900/80 border border-white/10">
+            <p className="text-xs font-bold" style={{ color: statusColor }}>{statusLabel}</p>
           </div>
 
-          <p className="text-xs font-medium" style={{ color: "rgba(255,215,0,0.5)" }}>
-            +100 Zetta Points per click
+          <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
+            +100 Zetta Points Per Click
           </p>
         </div>
 
-        <div className="pb-24" />
+        <div className="pb-28" />
       </div>
 
       <BottomNav />

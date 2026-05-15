@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
-// GET USER DATA (Untuk Sync ke AppProvider)
+// 1. GET USER DATA (Untuk Sync ke AppProvider)
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   }
 }
 
-// REGISTER / LOGIN
+// 2. REGISTER / LOGIN (POST)
 export async function POST(req: Request) {
   try {
     const { telegramId, name, username } = await req.json();
@@ -36,7 +36,11 @@ export async function POST(req: Request) {
         username: username || "",
         coins: 0,
         usdtBalance: 0,
-        zp: 0,
+        // Inisialisasi kolom ZP baru
+        zpBronze: 0,
+        zpSilver: 0,
+        zpGold: 0,
+        zpDiamond: 0,
         // Default kualifikasi
         qualifiedSilver: false,
         qualifiedGold: false,
@@ -50,25 +54,40 @@ export async function POST(req: Request) {
   }
 }
 
-
+// 3. UPDATE DATA (PATCH)
 export async function PATCH(req: Request) {
   try {
-    const { telegramId, addCoins } = await req.json();
-
+    const body = await req.json();
+    const { telegramId, addZp, addCoins, room } = body;
+    
     if (!telegramId) return NextResponse.json({ error: "No Telegram ID" }, { status: 400 });
-
-    const updated = await db
+    
+    // Mapping kolom ZP berdasarkan room
+    const zpColumnMap: Record < string, any > = {
+      bronze: users.zpBronze,
+      silver: users.zpSilver,
+      gold: users.zpGold,
+      diamond: users.zpDiamond
+    };
+    
+    // Tentukan kolom target, default ke bronze kalau room tidak valid
+    const targetZpCol = zpColumnMap[room] || users.zpBronze;
+    
+    // Update koin dan ZP sekaligus
+    const [updated] = await db
       .update(users)
-      .set({ 
-        coins: sql`${users.coins} + ${addCoins ?? 0}` 
+      .set({
+        coins: sql`${users.coins} + ${addCoins ?? 0}`,
+        [targetZpCol.name]: sql`${targetZpCol} + ${addZp ?? 0}`
       })
       .where(eq(users.telegramId, telegramId.toString()))
       .returning();
-
-    if (updated.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-    return NextResponse.json(updated[0]);
+    
+    if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    
+    return NextResponse.json(updated);
   } catch (e) {
+    console.error("PATCH Error:", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

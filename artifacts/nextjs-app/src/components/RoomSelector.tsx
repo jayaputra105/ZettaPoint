@@ -1,0 +1,140 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { Zap } from "lucide-react";
+import { useApp } from "@/context/AppProvider";
+
+export type Room = {
+  id: string;
+  name: string;       
+  short: string;      
+  minCoins: number;
+  prizeUsdt: number;
+  accent: string;     
+};
+
+export const ROOMS: Room[] = [
+  { id: "bronze",  name: "BRONZE",  short: "Bronze", minCoins: 0,       prizeUsdt: 20,   accent: "#C97A2B" },
+  { id: "silver",  name: "SILVER",  short: "Silver", minCoins: 1000,    prizeUsdt: 100,  accent: "#B8B8C8" },
+  { id: "gold",    name: "GOLD",    short: "Gold",   minCoins: 10000,   prizeUsdt: 500,  accent: "#FFD24A" },
+  { id: "diamond", name: "DIAMOND", short: "Diamond",minCoins: 100000,  prizeUsdt: 1000, accent: "#7DE3FF" },
+];
+
+function fmtCountdown(ms: number) {
+  if (ms <= 0) return "00 jam 00 menit 00 detik";
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h} jam ${m} menit ${sec} detik`;
+}
+
+export default function RoomSelector() {
+  // AMBIL DATA PUSAT DARI CONTEXT
+  const { 
+    coins, 
+    zp, 
+    currentRoom, 
+    setCurrentRoom, 
+    qualifiedSilver, 
+    qualifiedGold, 
+    qualifiedDiamond 
+  } = useApp();
+
+  // Mapping status kualifikasi dari database
+  const qualificationMap: Record<string, boolean> = {
+    bronze: true, // Bronze selalu terbuka
+    silver: qualifiedSilver,
+    gold: qualifiedGold,
+    diamond: qualifiedDiamond
+  };
+
+  const active = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
+
+  // TIMER LOGIC
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Timer target (default 00:00 UTC)
+  const target = useMemo(() => {
+    const d = new Date();
+    d.setUTCHours(24, 0, 0, 0); // Reset jam 00:00 UTC besok
+    return d.getTime();
+  }, [currentRoom]);
+
+  const remain = target - now;
+
+  return (
+    <div
+      className="mt-3 rounded-2xl px-4 py-4"
+      style={{
+        background: "rgba(10,8,2,0.85)",
+        border: `1.5px solid ${active.accent}88`,
+        boxShadow: `0 0 24px -4px ${active.accent}44, inset 0 0 18px -10px ${active.accent}aa`,
+        backdropFilter: "blur(20px)",
+        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <h2
+            className="font-black tracking-wider text-xl leading-none italic"
+            style={{
+              color: active.accent,
+              textShadow: `0 0 15px ${active.accent}aa`,
+            }}
+          >
+            {active.name}
+          </h2>
+          <p className="text-[10px] mt-1.5 text-emerald-400 font-black uppercase tracking-tighter">
+            {fmtCountdown(remain)}
+          </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 font-black text-sm">
+            <Zap size={14} className="text-yellow-400 fill-yellow-400" />
+            <span className="text-white/50 text-[10px] uppercase">ZP:</span>
+            <span className="text-white text-base">{(zp[currentRoom] || 0).toLocaleString("id-ID")}</span>
+          </div>
+          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Prize: ${active.prizeUsdt} USDT</span>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-2">
+        {ROOMS.map((r) => {
+          // Syarat Unlocked: Koin Cukup DAN Lolos Kualifikasi Top 150 (kecuali Bronze)
+          const isUnlocked = coins >= r.minCoins && qualificationMap[r.id];
+          const isActive = r.id === currentRoom;
+
+          return (
+            <button
+              key={r.id}
+              disabled={!isUnlocked}
+              onClick={() => setCurrentRoom(r.id)}
+              className="flex-1 py-2 rounded-xl text-[10px] font-black transition-all duration-300 disabled:opacity-20 disabled:grayscale"
+              style={{
+                color: isActive ? "#000" : r.accent,
+                background: isActive ? r.accent : "rgba(255,255,255,0.03)",
+                border: `1px solid ${isActive ? r.accent : "rgba(255,255,255,0.08)"}`,
+                boxShadow: isActive ? `0 0 20px ${r.accent}66` : "none",
+              }}
+            >
+              {isActive ? "SELECTED" : r.short}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* LOCK HINT */}
+      {!qualificationMap[currentRoom === 'bronze' ? 'silver' : currentRoom] && (
+        <p className="text-[8px] text-white/30 text-center mt-3 font-bold uppercase tracking-widest">
+          Locked: reach top 150 leaderboard to unlock next room
+        </p>
+      )}
+    </div>
+  );
+}
