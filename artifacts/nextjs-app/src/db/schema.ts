@@ -31,7 +31,7 @@ export const rooms = pgTable("rooms", {
 });
 
 
-export const leaderboardWinners = pgTable("leaderboard_winners", {
+export const leaderboardWinners = pgTable("leaderboardWinners", {
   id: serial("id").primaryKey(),
   roomId: text("room_id").notNull(),
   userId: integer("user_id").notNull(),

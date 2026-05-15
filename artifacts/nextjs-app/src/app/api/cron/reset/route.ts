@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, rooms, leaderboard_winners } from "@/db/schema";
+import { users, rooms, leaderboardWinners } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 export async function GET(req: Request) {
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
               .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
               .where(eq(users.telegramId, winner.telegramId));
 
-            await db.insert(leaderboard_winners).values({
+            await db.insert(leaderboardWinners).values({
               roomId: room.id,
               userId: winner.id,
               rank: i + 1,
