@@ -27,9 +27,10 @@ function weightedRandom(prizes: typeof PRIZES) {
   return 0;
 }
 
+// GANTI BAGIAN INI DI zetta.ts
+
 async function getOrCreateUser(telegramId: string, userData?: any) {
   if (!telegramId) return null;
-  
   
   const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
   if (user) return user;
@@ -41,51 +42,51 @@ async function getOrCreateUser(telegramId: string, userData?: any) {
       username: userData.username || "",
       avatar: userData.photo_url || "",
       coins: 0,
-      rank: "Bronze"
+      // INISIALISASI SEMUA KOLOM ZP
+      zpBronze: 0,
+      zpSilver: 0,
+      zpGold: 0,
+      zpDiamond: 0,
+      qualifiedSilver: false,
+      qualifiedGold: false,
+      qualifiedDiamond: false
     }).returning();
 
-    
     await db.insert(spinRecords).values({ userId: newUser.id });
-    
     return newUser;
   }
   return null;
 }
 
-router.get("/user", async (req, res) => {
-  try {
-    const { telegramId, firstName, username, photoUrl } = req.query;
-    
-    // Panggil fungsi baru kita
-    const user = await getOrCreateUser(telegramId as string, {
-      first_name: firstName,
-      username: username,
-      photo_url: photoUrl
-    });
-
-    if (!user) return res.status(404).json({ error: "User data missing" });
-    res.json(user);
-  } catch (e) {
-    res.status(500).json({ error: String(e) });
-  }
-});
-
+// UPDATE PATCH USER (ZP PER ROOM & COINS)
 router.patch("/user", async (req, res) => {
   try {
-    const { telegramId, addCoins = 0 } = req.body;
-    const user = await getUser(telegramId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const { telegramId, addCoins = 0, addZp = 0, room = "bronze" } = req.body;
+    
+    // Map room ID ke nama kolom di database
+    const zpMap: Record<string, any> = {
+      bronze: "zpBronze",
+      silver: "zpSilver",
+      gold: "zpGold",
+      diamond: "zpDiamond"
+    };
+
+    const targetCol = zpMap[room] || "zpBronze";
+
     const [updated] = await db
       .update(users)
-      .set({ coins: user.coins + addCoins })
+      .set({ 
+        coins: sql`${users.coins} + ${addCoins}`,
+        [targetCol]: sql`${users[targetCol]} + ${addZp}`
+      })
       .where(eq(users.telegramId, telegramId))
       .returning();
+
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
 });
-
 router.get("/tasks", async (req, res) => {
   try {
     const telegramId = req.query.telegramId as string;
