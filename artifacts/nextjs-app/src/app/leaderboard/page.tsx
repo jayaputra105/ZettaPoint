@@ -10,6 +10,7 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr:
 
 interface LeaderUser {
   id: number;
+  telegramId: string;
   name: string;
   username: string | null;
   avatar: string | null;
@@ -33,7 +34,7 @@ const ROOMS = [
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n?.toString() ?? "0";
+  return n?.toLocaleString("id-ID") ?? "0";
 }
 
 export default function LeaderboardPage() {
@@ -46,12 +47,15 @@ export default function LeaderboardPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch User ID & Leaderboard Data
+  // 1. Sinkron ID User dari Telegram
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     if (tid) setMyTgId(tid);
+  }, []);
 
+  // 2. Fetch Leaderboard (Otomatis panggil tiap ganti room)
+  useEffect(() => {
     setLoading(true);
     fetch(`/api/leaderboard?room=${currentRoom}`)
       .then((r) => r.json())
@@ -62,7 +66,7 @@ export default function LeaderboardPage() {
       .catch(() => setLoading(false));
   }, [currentRoom]);
 
-  // 2. Fetch Room Information (Prize & Reset)
+  // 3. Fetch Info Room (Prize & Reset)
   useEffect(() => {
     fetch(`/api/rooms?id=${currentRoom}`)
       .then(res => res.json())
@@ -70,28 +74,22 @@ export default function LeaderboardPage() {
       .catch(err => console.error("Room fetch error:", err));
   }, [currentRoom]);
 
-  // 3. Countdown Logic (Standard 00:00 UTC)
+  // 4. Timer Logic
   useEffect(() => {
-    if (!roomInfo?.resetAt) return;
-
     const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const target = new Date(roomInfo.resetAt).getTime();
-      const diff = target - now;
+      const now = new Date();
+      const target = new Date();
+      target.setUTCHours(24, 0, 0, 0); // Reset standar jam 00:00 UTC
+      
+      const diff = target.getTime() - now.getTime();
 
       if (diff <= 0) {
         setTimeLeft("Resetting...");
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      if (days >= 1) {
-        setTimeLeft(`${days + 1} Days`);
       } else {
-        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const h = Math.floor(diff / (1000 * 60 * 60));
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeLeft(`${h}h ${m}m ${s}s`);
+        setTimeLeft(`${h}j ${m}m ${s}d`);
       }
     }, 1000);
 
@@ -101,7 +99,7 @@ export default function LeaderboardPage() {
   const activeRoomStatic = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col" style={{ background: "#000" }}>
+    <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col bg-black">
       <ShootingStars />
       
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full pb-28">
@@ -110,28 +108,27 @@ export default function LeaderboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">{activeRoomStatic.icon}</span>
-              <h1 className="text-2xl font-black italic tracking-tight" style={{ color: activeRoomStatic.color, textShadow: `0 0 15px ${activeRoomStatic.color}66` }}>
-                {activeRoomStatic.name.toUpperCase()}
+              <h1 className="text-2xl font-black italic tracking-tight" style={{ color: activeRoomStatic.color }}>
+                {activeRoomStatic.name.toUpperCase()} RANK
               </h1>
             </div>
             <div className="text-right">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 text-white block">Reset In</span>
-              <span className="text-sm font-black text-white">{timeLeft || "--:--:--"}</span>
+              <span className="text-[10px] font-bold uppercase opacity-40 text-white block">Reset In</span>
+              <span className="text-sm font-black text-white tabular-nums">{timeLeft || "--:--:--"}</span>
             </div>
           </div>
 
+          {/* Prize Display */}
           <div className="flex flex-col items-center justify-center py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Prize Pool</p>
-            <h2 className="text-3xl font-black text-[#4ade80]" style={{ textShadow: "0 0 20px rgba(74,222,128,0.4)" }}>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Room Prize Pool</p>
+            <h2 className="text-3xl font-black text-[#4ade80]">
               ${roomInfo?.prizePool || "0"} <span className="text-sm">USDT</span>
             </h2>
-            <p className="text-[9px] font-medium text-white/60 mt-1 italic">Distributed to Top 3 players</p>
+            <p className="text-[9px] font-medium text-white/60 mt-1 italic">Top 3 will share the rewards</p>
           </div>
 
-          <div 
-            ref={scrollRef}
-            className="flex gap-3 overflow-x-auto no-scrollbar py-2"
-          >
+          {/* Room Tabs */}
+          <div ref={scrollRef} className="flex gap-3 overflow-x-auto no-scrollbar py-2">
             {ROOMS.map((r) => (
               <button
                 key={r.id}
@@ -139,7 +136,7 @@ export default function LeaderboardPage() {
                 className={`flex-shrink-0 px-5 py-2 rounded-xl border transition-all duration-300 ${
                   currentRoom === r.id 
                   ? "bg-white/10 border-white/30 scale-105" 
-                  : "bg-transparent border-white/5 opacity-40"
+                  : "bg-transparent border-white/5 opacity-40 grayscale"
                 }`}
               >
                 <span className="text-sm font-bold" style={{ color: r.color }}>{r.icon} {r.name}</span>
@@ -148,20 +145,18 @@ export default function LeaderboardPage() {
           </div>
         </header>
 
+        {/* List Leaderboard */}
         <div className="px-4 mt-4 flex flex-col gap-2">
           {loading ? (
-            <div className="py-20 flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            </div>
+            <div className="py-20 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
           ) : (
             users.map((user, i) => {
-              const isMe = user.id.toString() === myTgId;
+              const isMe = user.telegramId === myTgId;
               return (
                 <motion.div
                   key={user.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
                   className="flex items-center gap-4 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]"
                   style={isMe ? { background: `${activeRoomStatic.color}15`, borderColor: `${activeRoomStatic.color}44` } : {}}
                 >
@@ -169,13 +164,11 @@ export default function LeaderboardPage() {
                     #{user.position}
                   </div>
                   
-                  <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden border border-white/10">
-                    <img src={user.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.id}`} alt="avatar" className="w-full h-full object-cover" />
-                  </div>
+                  <img src={user.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.id}`} alt="avatar" className="w-10 h-10 rounded-full bg-white/10 border border-white/10 object-cover" />
 
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate text-white">
-                      {user.name} {isMe && <span className="text-[10px] opacity-50 ml-1">(You)</span>}
+                      {user.name} {isMe && <span className="text-[10px] text-yellow-500 ml-1">(You)</span>}
                     </p>
                     <p className="text-[10px] opacity-40 truncate">@{user.username || 'player'}</p>
                   </div>
@@ -192,11 +185,6 @@ export default function LeaderboardPage() {
       </div>
 
       <BottomNav />
-      
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 }
