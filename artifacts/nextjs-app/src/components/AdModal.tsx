@@ -16,14 +16,20 @@ const AD_DURATION = 5;
 export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }: AdModalProps) {
   const [timeLeft, setTimeLeft] = useState(AD_DURATION);
   const [done, setDone] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const intervalRef = useRef < ReturnType < typeof setInterval > | null > (null);
+  
   useEffect(() => {
     if (!open) {
       setTimeLeft(AD_DURATION);
       setDone(false);
       return;
     }
+    
+    // ==========================================
+    // PLACE TO TRIGGER SPONSOR AD SCRIPT (SDK)
+    // ==========================================
+    // Contoh: window.AdsGram?.showAd().then(() => setDone(true))
+    
     setTimeLeft(AD_DURATION);
     setDone(false);
     intervalRef.current = setInterval(() => {
@@ -38,9 +44,9 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
     }, 1000);
     return () => clearInterval(intervalRef.current!);
   }, [open]);
-
+  
   const progress = ((AD_DURATION - timeLeft) / AD_DURATION) * 100;
-
+  
   return (
     <AnimatePresence>
       {open && (
@@ -70,13 +76,13 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   className="text-xs font-semibold uppercase tracking-widest"
                   style={{ color: "rgba(255,215,0,0.5)" }}
                 >
-                  Iklan Sponsor
+                  Sponsored Content
                 </p>
                 <p
                   className="font-black text-lg"
                   style={{ color: "#FFD700", textShadow: "0 0 10px rgba(255,215,0,0.5)" }}
                 >
-                  Nonton & Klaim Koin
+                  Watch to Unlock Coin
                 </p>
               </div>
               <div
@@ -90,7 +96,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   {adNumber}/{maxAds}
                 </span>
                 <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                  iklan
+                  ads
                 </span>
               </div>
             </div>
@@ -115,7 +121,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                     }}
                   />
                   <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
-                    Iklan berjalan...
+                    Streaming advertisement...
                   </p>
                   <p
                     className="text-2xl font-black tabular-nums"
@@ -133,7 +139,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                 >
                   <span className="text-4xl">✅</span>
                   <p className="font-bold text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
-                    Iklan selesai!
+                    Verification Completed!
                   </p>
                 </motion.div>
               )}
@@ -166,7 +172,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   color: "rgba(255,255,255,0.4)",
                 }}
               >
-                Batal
+                Cancel
               </button>
               <motion.button
                 onClick={done ? onComplete : undefined}
@@ -186,7 +192,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   cursor: done ? "pointer" : "not-allowed",
                 }}
               >
-                {done ? "🪙klaim Koin!" : `Tunggu ${timeLeft}s...`}
+                {done ? "Verify Coin Unlock" : `Wait ${timeLeft}s...`}
               </motion.button>
             </div>
           </motion.div>

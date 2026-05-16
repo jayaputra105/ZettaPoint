@@ -32,7 +32,7 @@ export default function Home() {
     coins, 
     zp, setZp, 
     currentRoom,
-    loading: appLoading // Gunakan loading terpusat dari AppProvider
+    loading: appLoading 
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
@@ -47,6 +47,9 @@ export default function Home() {
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
+  
+  // State baru untuk verifikasi iklan (User sudah nonton tapi belum nge-tap koin buat klaim)
+  const [isAdVerified, setIsAdVerified] = useState(false);
 
   // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM (TANPA TEMBAK API GET LAGI)
   useEffect(() => {
@@ -76,10 +79,20 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
+  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
-  const adsRemaining = MAX_ADS - (isFreeAvailable ? 0 : adsUsed);
-  const isLocked = !isFreeAvailable && adsRemaining <= 0;
+  
+  // Koin mode claim kalau free click ada ATAU user baru kelar nonton iklan
+  const canEarnPoints = isFreeAvailable || isAdVerified;
+  
+  // Koin mode nonton iklan (🎬) kalau free click abis, belum verifikasi iklan, dan kuota ad masih ada
+  const needsAd = !isFreeAvailable && !isAdVerified && adsUsed < MAX_ADS;
+  
+  // Koin mode total locked (🔒) kalau free abis, belum ad-verify, dan kuota harian ludes
+  const isLocked = !isFreeAvailable && !isAdVerified && adsUsed >= MAX_ADS;
+  
+  const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
   // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
@@ -89,11 +102,9 @@ export default function Home() {
     
     if (!tid) return;
 
-    // Langkah 1: Kunci angka baru di state global (AppProvider)
     setZp(currentRoom, currentZp + amount);
     
     try {
-      // Langkah 2: Kirim data ke DB lewat PATCH (biarkan berjalan di background)
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -105,20 +116,30 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      // Rollback jika beneran gagal total koneksinya
       setZp(currentRoom, currentZp);
     }
   }, [currentRoom, currentZp, setZp]);
   
+  // ALUR KLIK BARU
   const handleCoinClick = () => {
-    if (isFreeAvailable) {
-      const ts = Date.now();
-      setLastFreeClick(ts);
-      setAdsUsed(0);
-      localStorage.setItem("zetta_last_free", String(ts));
-      localStorage.setItem("zetta_ads_used", "0");
+    if (isLocked) return;
+
+    if (canEarnPoints) {
+      if (isFreeAvailable) {
+        // Klik gratisan jam baru
+        const ts = Date.now();
+        setLastFreeClick(ts);
+        setAdsUsed(0);
+        localStorage.setItem("zetta_last_free", String(ts));
+        localStorage.setItem("zetta_ads_used", "0");
+      } else {
+        // Klik hasil klaim setelah nonton iklan
+        setIsAdVerified(false); // Kunci kembali statusnya biar jadi mode 🎬 lagi
+      }
+      
       giveRewards(100);
-    } else if (adsRemaining > 0) {
+    } else if (needsAd) {
+      // Buka modal iklan untuk verifikasi terlebih dahulu
       setShowAd(true);
     }
   };
@@ -128,23 +149,28 @@ export default function Home() {
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    giveRewards(100);
+    
+    // Iklan tontonan selesai: Buka gembok koin (Jangan langsung tembak koin/ZP)
+    setIsAdVerified(true);
   };
   
+  // PANDUAN STATUS BAHASA INGGRIS
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
     statusLabel = "✅ Free click available!";
     statusColor = "#4ade80";
+  } else if (isAdVerified) {
+    statusLabel = "🔥 Coin Unlocked! Tap to claim +100 ZP";
+    statusColor = "#f59e0b";
   } else if (isLocked) {
-    statusLabel = <>🔒 Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
+    statusLabel = <>🔒 Limit Reached! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
     statusColor = "rgba(255,100,100,0.85)";
   } else {
-    statusLabel = <>🎬 Ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span> | {formatCountdown(timeUntilReset)}</>;
+    statusLabel = <>🎬 Ads Available: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap Coin to Watch</>;
     statusColor = "rgba(255,215,0,0.75)";
   }
   
-  // Menggunakan loading terpusat dari AppProvider agar tidak flashing saat pindah page
   if (appLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -184,11 +210,17 @@ export default function Home() {
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-               🎬 ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
+               🎬 Remaining Ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
              </p>
           </div>
 
-          <CoinClicker onCoin={giveRewards} pointsPerClick={100} locked={isLocked} />
+          {/* Kirim status state alur baru ke komponen visual coin */}
+          <CoinClicker 
+            onCoin={handleCoinClick} 
+            pointsPerClick={100} 
+            locked={isLocked} 
+            needsAd={needsAd} 
+          />
 
           <div className="rounded-2xl px-5 py-3 text-center bg-zinc-900/80 border border-white/10">
             <p className="text-xs font-bold" style={{ color: statusColor }}>{statusLabel}</p>
@@ -201,6 +233,15 @@ export default function Home() {
       </div>
 
       <BottomNav />
+      
+      {/* ADMODAL DI SINI BIAR KAGA KETINGGALAN LAGI 🗿 */}
+      <AdModal 
+        open={showAd} 
+        adNumber={adsUsed + 1} 
+        maxAds={MAX_ADS} 
+        onComplete={handleAdComplete} 
+        onClose={() => setShowAd(false)} 
+      />
     </div>
   );
 }

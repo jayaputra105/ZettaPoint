@@ -42,16 +42,18 @@ export default function CoinClicker({
       const id = nextId;
       setNextId((n) => n + 1);
       
-      // Munculin angka melayang (+100)
-      const offsetX = (Math.random() - 0.5) * 40;
-      setFloaters((prev) => [...prev, { id, x: x + offsetX, y }]);
-      setTimeout(() => {
-        setFloaters((prev) => prev.filter((f) => f.id !== id));
-      }, 950);
+      // Munculin angka melayang (+100) jika bukan mode nonton iklan
+      if (!needsAd) {
+        const offsetX = (Math.random() - 0.5) * 40;
+        setFloaters((prev) => [...prev, { id, x: x + offsetX, y }]);
+        setTimeout(() => {
+          setFloaters((prev) => prev.filter((f) => f.id !== id));
+        }, 950);
+      }
       
       onCoin(pointsPerClick);
     },
-    [nextId, onCoin, locked, pointsPerClick]
+    [nextId, onCoin, locked, pointsPerClick, needsAd]
   );
   
   return (
@@ -72,6 +74,7 @@ export default function CoinClicker({
         ))}
       </AnimatePresence>
 
+      {/* Button pembungkus utama (Gak dikasih scale, melainkan diatur shake-nya aja) */}
       <motion.button
         onMouseDown={() => !locked && setIsPressed(true)}
         onMouseUp={() => setIsPressed(false)}
@@ -79,12 +82,8 @@ export default function CoinClicker({
         onTouchStart={() => !locked && setIsPressed(true)}
         onTouchEnd={() => setIsPressed(false)}
         onClick={handleClick}
-        animate={
-          shake
-            ? { x: [-6, 6, -6, 6, 0] }
-            : { scale: isPressed ? 0.92 : 1 }
-        }
-        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none transition-all duration-150 ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
+        animate={shake ? { x: [-6, 6, -6, 6, 0] } : {}}
+        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
         {/* ===== Ambient glow ===== */}
@@ -98,11 +97,11 @@ export default function CoinClicker({
           }}
         />
 
-        {/* ===== Floating side props 🧩 ===== */}
+        {/* ===== Floating side props 🧩 (ANTENG NGAMBANG GAK IKUT KE-TAP) ===== */}
         {!locked && (
           <>
-            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity }} className="absolute -left-2 top-10 text-3xl">🧩</motion.div>
-            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity }} className="absolute -right-2 top-16 text-3xl">🧩</motion.div>
+            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 top-10 text-3xl">🧩</motion.div>
+            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 top-16 text-3xl">🧩</motion.div>
           </>
         )}
 
@@ -120,7 +119,7 @@ export default function CoinClicker({
           }}
         />
 
-        {/* ===== THE MAIN COIN ===== */}
+        {/* ===== THE MAIN COIN (CUMA BULATAN INI YANG MENDEM PAS DI-TAP) ===== */}
         <motion.div
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
@@ -129,8 +128,11 @@ export default function CoinClicker({
               : "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 25%, #E89A12 60%, #7A4A08 100%)",
             boxShadow: "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,220,0.55)",
           }}
-          animate={!locked ? { y: [0, -6, 0] } : {}}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          animate={isPressed ? { scale: 0.92 } : !locked ? { y: [0, -6, 0] } : {}}
+          transition={{ 
+            scale: { duration: 0.08 },
+            y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+          }}
         >
           {/* Outer rim ticks */}
           <div className="absolute inset-2 rounded-full" style={{ background: "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" }} />
