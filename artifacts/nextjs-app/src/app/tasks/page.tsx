@@ -132,7 +132,7 @@ export default function TasksPage() {
   const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
   
   return (
-    <div className="relative min-h-screen w-full bg-black text-white flex flex-col overflow-hidden">
+    <div className="relative min-h-screen w-full bg-black text-white flex flex-col overflow-y-auto">
       <ShootingStars />
       
       <div className="relative z-10 flex-1 max-w-md mx-auto w-full px-6 pt-8 pb-32">
