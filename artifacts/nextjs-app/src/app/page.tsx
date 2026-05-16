@@ -35,7 +35,8 @@ export default function Home() {
     currentRoom,
     setQualifiedSilver,
     setQualifiedGold,
-    setQualifiedDiamond
+    setQualifiedDiamond,
+    loading: appLoading // Ambil status loading dari AppProvider
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
@@ -47,22 +48,18 @@ export default function Home() {
     rank: 0
   });
   
-  const [loading, setLoading] = useState(true);
+  const [internalLoading, setInternalLoading] = useState(true);
   const [lastFreeClick, setLastFreeClick] = useState<number | null>(null);
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  // 1. SINKRONISASI TOTAL (DIPAKSA PAKAI ID ASLI)
+  // 1. SINKRONISASI PROFILE (Ambil data dari Telegram)
   useEffect(() => {
     let checkCount = 0;
     
-      const syncData = async () => {
-      if (typeof window === "undefined") return;
-      
+    const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
-      
-      
       if (tg) {
         tg.ready();
         tg.expand();
@@ -70,13 +67,13 @@ export default function Home() {
 
       const user = tg?.initDataUnsafe?.user;
       
-      
+      // Tunggu ID Telegram muncul (Retry 10x)
       if (!user?.id) {
         if (checkCount < 10) {
           checkCount++;
           setTimeout(syncData, 500); 
         } else {
-          setLoading(false);
+          setInternalLoading(false);
           setUserProfile(prev => ({ ...prev, name: "Telegram Not Found" }));
         }
         return;
@@ -88,11 +85,13 @@ export default function Home() {
       const photoUrl = user.photo_url || "";
 
       try {
+        // Panggil API GET (yang sekarang sudah pake logic UPSERT di backend)
         const url = `/api/user?telegramId=${tid}&firstName=${encodeURIComponent(firstName)}&username=${username}&photoUrl=${encodeURIComponent(photoUrl)}`;
         const res = await fetch(url);
         const data = await res.json();
         
         if (data && !data.error) {
+          // Update Global State di AppProvider
           setCoins(Number(data.coins || 0));
           setZp("bronze", Number(data.zpBronze || 0));
           setZp("silver", Number(data.zpSilver || 0));
@@ -102,6 +101,7 @@ export default function Home() {
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
           
+          // Update Profil Lokal
           setUserProfile({
             name: data.name || firstName,
             username: data.username ? `@${data.username}` : `@${username}`,
@@ -112,12 +112,12 @@ export default function Home() {
       } catch (err) {
         console.error("Sync Error:", err);
       } finally {
-        setLoading(false);
+        setInternalLoading(false);
       }
     };
     
     syncData();
-  }, [setCoins, setZp, setQualifiedSilver, setQualifiedGold, setQualifiedDiamond]);
+  }, []); // Cukup running sekali pas mounting
 
   // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
@@ -135,16 +135,18 @@ export default function Home() {
   const isLocked = !isFreeAvailable && adsRemaining <= 0;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI REWARD (Gak boleh ada ID 12345 di sini!)
+  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
-    if (!tid) return; // JANGAN KIRIM KALAU ID GAK ADA
+    if (!tid) return;
 
+    // STEP 1: Update UI secara instan (Gak nunggu API)
     setZp(currentRoom, currentZp + amount);
     
     try {
+      // STEP 2: Kirim ke database di latar belakang
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -156,6 +158,8 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
+      // Kalau gagal banget, balikin angkanya biar user gak curang
+      setZp(currentRoom, currentZp);
     }
   }, [currentRoom, currentZp, setZp]);
   
@@ -193,6 +197,17 @@ export default function Home() {
     statusColor = "rgba(255,215,0,0.75)";
   }
   
+  // Tampilkan loading screen yang lebih rapi
+  if (internalLoading || appLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-yellow-500 font-black animate-pulse tracking-[0.5em] uppercase text-xs">
+          Identifying Player...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-black overflow-hidden">
       <ShootingStars />
@@ -233,7 +248,7 @@ export default function Home() {
           </div>
 
           <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
-            +100 ZP Per Click ({currentRoom.toUpperCase()})
+            +100 ZP ({currentRoom.toUpperCase()})
           </p>
         </div>
       </div>

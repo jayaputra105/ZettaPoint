@@ -186,7 +186,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   cursor: done ? "pointer" : "not-allowed",
                 }}
               >
-                {done ? "🪙 Klaim +10 Koin!" : `Tunggu ${timeLeft}s...`}
+                {done ? "🪙klaim Koin!" : `Tunggu ${timeLeft}s...`}
               </motion.button>
             </div>
           </motion.div>
