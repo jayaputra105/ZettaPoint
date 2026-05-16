@@ -90,7 +90,7 @@ export default function SpinPage() {
       return;
     }
 
-    // Reset posisi ke 0 secara instan biar itungan derajat berikutnya gak melenceng
+  
     setResetAnimation(true);
     setTotalRotation(0);
     setShowResult(false);
@@ -113,9 +113,9 @@ export default function SpinPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
 
-        // Hitung target derajat presisi jam 12
+        
         const segmentCenter = (data.prizeIndex * SEG_ANGLE) + (SEG_ANGLE / 2);
-        const targetDegrees = (360 - segmentCenter) % 360;
+        const targetDegrees = (360 - segmentCenter- 90 + 360 ) % 360;
         const finalAngle = (360 * 5) + targetDegrees;
         
         setTotalRotation(finalAngle);
