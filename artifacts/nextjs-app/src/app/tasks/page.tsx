@@ -30,7 +30,6 @@ export default function TasksPage() {
   const [toast, setToast] = useState < { msg: string;type: "success" | "error" } | null > (null);
   const fileRef = useRef < HTMLInputElement > (null);
   
-  // FUNGSI AMBIL ID YANG LEBIH AKURAT
   const getTelegramId = () => {
     if (typeof window === "undefined") return "12345";
     const tg = (window as any).Telegram?.WebApp;
@@ -42,7 +41,6 @@ export default function TasksPage() {
     setTimeout(() => setToast(null), 3000);
   };
   
-  // SINKRONISASI DATA TASK
   useEffect(() => {
     const fetchTasks = async () => {
       const tid = getTelegramId();
@@ -79,10 +77,9 @@ export default function TasksPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      // Sinkronisasi Koin Global ke AppProvider
       setCoins(coins + data.rewardCoins);
-      
       showToast(`+${data.rewardCoins.toLocaleString()} Coins claimed!`);
+      
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, completion: { status: "completed" } } : t
@@ -189,7 +186,7 @@ export default function TasksPage() {
                       ) : (
                         <div className="flex gap-2">
                           {task.link && (
-                            <a href={task.link} target="_blank" className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:scale-90 transition-transform">
+                            <a href={task.link} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:scale-90 transition-transform">
                               <ExternalLink size={16} className="text-[#FFD700]"/>
                             </a>
                           )}
@@ -247,7 +244,7 @@ export default function TasksPage() {
                               }} />
                               {uploadUrl ? (
                                 <div className="relative">
-                                  <img src={uploadUrl} className="w-full h-44 object-cover rounded-2xl border border-white/10" />
+                                  <img src={uploadUrl} alt="Preview" className="w-full h-44 object-cover rounded-2xl border border-white/10" />
                                   <button onClick={() => setUploadUrl("")} className="absolute top-2 right-2 w-8 h-8 bg-black/80 rounded-full flex items-center justify-center border border-white/10">✕</button>
                                 </div>
                               ) : (
@@ -281,7 +278,7 @@ export default function TasksPage() {
 
       <BottomNav />
       
-      {/* Toast Notificatjion */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
           <motion.div 
