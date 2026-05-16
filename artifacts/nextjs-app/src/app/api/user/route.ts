@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
-// 1. GET USER DATA (Untuk Sync ke AppProvider)
+// 1. GET USER DATA (Auto-Register if not found)
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -11,50 +11,42 @@ export async function GET(req: Request) {
     
     if (!telegramId) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
     
-    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
-    if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Cari user
+    let [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
     
-    return NextResponse.json(user);
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
-  }
-}
-
-// 2. REGISTER / LOGIN (POST)
-export async function POST(req: Request) {
-  try {
-    const { telegramId, name, username } = await req.json();
-    
-    if (!telegramId) return NextResponse.json({ error: "Missing Telegram ID" }, { status: 400 });
-    
-    let [user] = await db.select().from(users).where(eq(users.telegramId, telegramId.toString())).limit(1);
-    
+    // --- LOGIC PENYELAMAT: Kalau gak ada, kita buatin sekarang juga ---
     if (!user) {
+      const name = searchParams.get("firstName") || "Zetta Player";
+      const username = searchParams.get("username") || "";
+      const avatar = searchParams.get("photoUrl") || "";
+      
       const inserted = await db.insert(users).values({
         telegramId: telegramId.toString(),
-        name: name || "Zetta Player",
-        username: username || "",
+        name: name,
+        username: username,
+        avatar: avatar,
         coins: 0,
         usdtBalance: 0,
-        // Inisialisasi kolom ZP baru
         zpBronze: 0,
         zpSilver: 0,
         zpGold: 0,
         zpDiamond: 0,
-        // Default kualifikasi
         qualifiedSilver: false,
         qualifiedGold: false,
         qualifiedDiamond: false
       }).returning();
+      
       user = inserted[0];
     }
+    
     return NextResponse.json(user);
   } catch (e) {
+    console.error("GET User Error:", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 
-// 3. UPDATE DATA (PATCH)
+// 2. UPDATE DATA (PATCH) - Tetap seperti ini, sudah bagus
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
@@ -62,7 +54,6 @@ export async function PATCH(req: Request) {
     
     if (!telegramId) return NextResponse.json({ error: "No Telegram ID" }, { status: 400 });
     
-    // Mapping kolom ZP berdasarkan room
     const zpColumnMap: Record < string, any > = {
       bronze: users.zpBronze,
       silver: users.zpSilver,
@@ -70,10 +61,8 @@ export async function PATCH(req: Request) {
       diamond: users.zpDiamond
     };
     
-    // Tentukan kolom target, default ke bronze kalau room tidak valid
     const targetZpCol = zpColumnMap[room] || users.zpBronze;
     
-    // Update koin dan ZP sekaligus
     const [updated] = await db
       .update(users)
       .set({
