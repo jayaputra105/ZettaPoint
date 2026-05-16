@@ -11,6 +11,10 @@ import { useApp } from "@/context/AppProvider";
 
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
+const MAX_ADS = 15;
+const COOLDOWN_MS = 60 * 60 * 1000;
+
+
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
@@ -50,7 +54,7 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  // --- SINKRONISASI ANTI-DUMMY (RETRY LOGIC) ---
+  
   useEffect(() => {
     let retryCount = 0;
     const maxRetries = 5;
@@ -62,14 +66,13 @@ export default function Home() {
 
       const user = tg?.initDataUnsafe?.user;
       
-      // Jika ID tidak ada, tunggu 800ms lalu coba lagi (sampai 5x)
+      
       if (!user?.id && retryCount < maxRetries) {
         retryCount++;
         setTimeout(syncData, 800);
         return;
       }
 
-      // Gunakan ID asli Telegram. Kalau tetap gak ada (dev mode), baru pake 12345
       const tid = user?.id?.toString() || "12345";
       const firstName = user?.first_name || "Zetta Player";
       const username = user?.username || "player";

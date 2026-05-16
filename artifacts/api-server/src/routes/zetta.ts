@@ -13,7 +13,7 @@ const PRIZES = [
   { label: "200 Koin", coins: 200, usdt: 0, weight: 23 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 17 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
-  { label: "10 USDT", coins: 0, usdt: 10, weight: 2 }, // Kasih weight biar ada tantangan
+  { label: "10 USDT", coins: 0, usdt: 10, weight: 0 }, 
 ];
 
 function weightedRandom(prizes: typeof PRIZES) {
