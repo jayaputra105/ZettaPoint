@@ -9,12 +9,7 @@ import AdModal from "@/components/AdModal";
 import RoomSelector from "@/components/RoomSelector";
 import { useApp } from "@/context/AppProvider";
 
-const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
-  ssr: false,
-});
-
-const MAX_ADS = 15;
-const COOLDOWN_MS = 60 * 60 * 1000;
+const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -43,7 +38,7 @@ export default function Home() {
   const currentZp = zp[currentRoom] || 0;
   
   const [userProfile, setUserProfile] = useState({
-    name: "Loading...",
+    name: "Syncing...",
     username: "@...",
     avatar: "",
     rank: 0
@@ -54,30 +49,39 @@ export default function Home() {
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
-  
-  // 1. SINKRONISASI UTAMA (Ini yang benerin Nama & Reset Data)
+
+  // --- SINKRONISASI ANTI-DUMMY (RETRY LOGIC) ---
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 5;
+
     const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
-      tg?.expand(); // Biar tampilan penuh di HP
+      tg?.ready();
+      tg?.expand();
 
       const user = tg?.initDataUnsafe?.user;
-      const tid = user?.id?.toString() || "12345"; // 12345 hanya untuk ngetes di laptop
       
-      // Ambil data user asli dari Telegram
-      const firstName = user?.first_name || "Zetta Hunter";
+      // Jika ID tidak ada, tunggu 800ms lalu coba lagi (sampai 5x)
+      if (!user?.id && retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(syncData, 800);
+        return;
+      }
+
+      // Gunakan ID asli Telegram. Kalau tetap gak ada (dev mode), baru pake 12345
+      const tid = user?.id?.toString() || "12345";
+      const firstName = user?.first_name || "Zetta Player";
       const username = user?.username || "player";
       const photoUrl = user?.photo_url || "";
 
       try {
-        // Kirim semua info ke API biar Database bisa bikin akun pake nama asli lu
         const url = `/api/user?telegramId=${tid}&firstName=${encodeURIComponent(firstName)}&username=${username}&photoUrl=${encodeURIComponent(photoUrl)}`;
         const res = await fetch(url);
         const data = await res.json();
         
         if (data && !data.error) {
           setCoins(Number(data.coins || 0));
-          
           setZp("bronze", Number(data.zpBronze || 0));
           setZp("silver", Number(data.zpSilver || 0));
           setZp("gold", Number(data.zpGold || 0));
@@ -87,7 +91,6 @@ export default function Home() {
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
           
-          // SET NAMA ASLI TELEGRAM LU DISINI
           setUserProfile({
             name: data.name || firstName,
             username: data.username ? `@${data.username}` : `@${username}`,
@@ -96,16 +99,16 @@ export default function Home() {
           });
         }
       } catch (err) {
-        console.error("Gagal sinkron data:", err);
+        console.error("Sync Error:", err);
       } finally {
         setLoading(false);
       }
     };
     
     syncData();
-  }, []); // Cukup sekali aja pas aplikasi dibuka
+  }, [setCoins, setZp, setQualifiedSilver, setQualifiedGold, setQualifiedDiamond]);
 
-  // 2. TIMER & LOCAL STORAGE
+  // --- TIMER & LOCAL STORAGE ---
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -137,7 +140,7 @@ export default function Home() {
         })
       });
     } catch (err) {
-      console.error("Gagal simpan poin:", err);
+      console.error("Save error:", err);
     }
   }, [currentRoom, currentZp, setZp]);
   
@@ -185,7 +188,7 @@ export default function Home() {
            <div className="flex items-center justify-between rounded-3xl px-4 py-3 bg-zinc-900/80 border border-yellow-500/20 backdrop-blur-xl">
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-500/50">
-                {userProfile.avatar && <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />}
+                <img src={userProfile.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=fallback`} alt="avatar" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="font-black text-sm text-yellow-500">{userProfile.name}</p>
