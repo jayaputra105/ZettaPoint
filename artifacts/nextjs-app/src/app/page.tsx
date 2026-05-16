@@ -14,11 +14,10 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr:
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
-
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return n?.toString() ?? "0";
+  return n?.toLocaleString() ?? "0";
 }
 
 function formatCountdown(ms: number): string {
@@ -42,7 +41,7 @@ export default function Home() {
   const currentZp = zp[currentRoom] || 0;
   
   const [userProfile, setUserProfile] = useState({
-    name: "Syncing...",
+    name: "Identifying...",
     username: "@...",
     avatar: "",
     rank: 0
@@ -54,11 +53,10 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  
+  // 1. SINKRONISASI TOTAL (DIPAKSA PAKAI ID ASLI)
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 5;
-
+    let checkCount = 0;
+    
     const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
       tg?.ready();
@@ -66,17 +64,22 @@ export default function Home() {
 
       const user = tg?.initDataUnsafe?.user;
       
-      
-      if (!user?.id && retryCount < maxRetries) {
-        retryCount++;
-        setTimeout(syncData, 800);
+      // JIKA ID BELUM ADA, JANGAN TEMBAK API, TUNGGU DULU!
+      if (!user?.id) {
+        if (checkCount < 10) {
+          checkCount++;
+          setTimeout(syncData, 500); 
+        } else {
+          setLoading(false);
+          setUserProfile(prev => ({ ...prev, name: "Telegram Not Found" }));
+        }
         return;
       }
 
-      const tid = user?.id?.toString() || "12345";
-      const firstName = user?.first_name || "Zetta Player";
-      const username = user?.username || "player";
-      const photoUrl = user?.photo_url || "";
+      const tid = user.id.toString();
+      const firstName = user.first_name || "Zetta Player";
+      const username = user.username || "player";
+      const photoUrl = user.photo_url || "";
 
       try {
         const url = `/api/user?telegramId=${tid}&firstName=${encodeURIComponent(firstName)}&username=${username}&photoUrl=${encodeURIComponent(photoUrl)}`;
@@ -89,7 +92,6 @@ export default function Home() {
           setZp("silver", Number(data.zpSilver || 0));
           setZp("gold", Number(data.zpGold || 0));
           setZp("diamond", Number(data.zpDiamond || 0));
-
           setQualifiedSilver(!!data.qualifiedSilver);
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
@@ -111,7 +113,7 @@ export default function Home() {
     syncData();
   }, [setCoins, setZp, setQualifiedSilver, setQualifiedGold, setQualifiedDiamond]);
 
-  // --- TIMER & LOCAL STORAGE ---
+  // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -127,10 +129,14 @@ export default function Home() {
   const isLocked = !isFreeAvailable && adsRemaining <= 0;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
+  // 3. FUNGSI REWARD (Gak boleh ada ID 12345 di sini!)
   const giveRewards = useCallback(async (amount: number) => {
-    setZp(currentRoom, currentZp + amount);
     const tg = (window as any).Telegram?.WebApp;
-    const tid = tg?.initDataUnsafe?.user?.id?.toString() || "12345";
+    const tid = tg?.initDataUnsafe?.user?.id?.toString();
+    
+    if (!tid) return; // JANGAN KIRIM KALAU ID GAK ADA
+
+    setZp(currentRoom, currentZp + amount);
     
     try {
       await fetch('/api/user', {
@@ -228,13 +234,7 @@ export default function Home() {
 
       <BottomNav />
 
-      <AdModal
-        open={showAd}
-        adNumber={adsUsed + 1}
-        maxAds={MAX_ADS}
-        onComplete={handleAdComplete}
-        onClose={() => setShowAd(false)}
-      />
+      <AdModal open={showAd} adNumber={adsUsed + 1} maxAds={MAX_ADS} onComplete={handleAdComplete} onClose={() => setShowAd(false)} />
     </div>
   );
 }
