@@ -17,18 +17,18 @@ interface Task {
   rewardCoins: number;
   link: string | null;
   active: boolean;
-  completion: { status: string;screenshotUrl ? : string } | null;
+  completion: { status: string; screenshotUrl?: string } | null;
 }
 
 export default function TasksPage() {
   const { coins, setCoins } = useApp();
-  const [tasks, setTasks] = useState < Task[] > ([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeUpload, setActiveUpload] = useState < number | null > (null);
+  const [activeUpload, setActiveUpload] = useState<number | null>(null);
   const [uploadUrl, setUploadUrl] = useState("");
-  const [submitting, setSubmitting] = useState < number | null > (null);
-  const [toast, setToast] = useState < { msg: string;type: "success" | "error" } | null > (null);
-  const fileRef = useRef < HTMLInputElement > (null);
+  const [submitting, setSubmitting] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   
   const getTelegramId = () => {
     if (typeof window === "undefined") return "12345";
@@ -125,7 +125,9 @@ export default function TasksPage() {
     }
   };
   
+  // Pemisahan Kategori Tugas
   const social = tasks.filter((t) => t.type === "social");
+  const gameGoals = tasks.filter((t) => t.type === "system");
   const screenshot = tasks.filter((t) => t.type === "screenshot");
   const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
   
@@ -164,7 +166,7 @@ export default function TasksPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-10">
-            {/* SOCIAL */}
+            {/* SOCIAL NETWORKS */}
             {social.length > 0 && (
               <section>
                 <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">Social Networks</h3>
@@ -205,7 +207,43 @@ export default function TasksPage() {
               </section>
             )}
 
-            {/* SCREENSHOT */}
+            {/* IN-GAME GOALS (Tipe System) */}
+            {gameGoals.length > 0 && (
+              <section>
+                <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">In-Game Goals</h3>
+                <div className="flex flex-col gap-3">
+                  {gameGoals.map(task => (
+                    <div key={task.id} className="p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/10 text-xl">⚡</div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight">{task.title}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Coins size={10} className="text-[#FFD700]" />
+                            <p className="text-[10px] text-[#FFD700] font-black">+{task.rewardCoins.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                      {task.completion?.status === "completed" ? (
+                        <CheckCircle size={24} className="text-green-500" />
+                      ) : (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleVerify(task)} 
+                            disabled={submitting === task.id}
+                            className="px-4 py-2 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 disabled:opacity-30"
+                          >
+                            {submitting === task.id ? "..." : "Claim"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* MANUAL VERIFICATION */}
             {screenshot.length > 0 && (
               <section>
                 <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">Manual Verification</h3>
