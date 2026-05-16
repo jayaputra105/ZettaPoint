@@ -132,10 +132,10 @@ export default function TasksPage() {
   const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
   
   return (
-    <div className="relative min-h-screen w-full bg-black text-white flex flex-col overflow-y-auto">
+    <div className="relative h-screen w-full bg-black text-white flex flex-col overflow-hidden">
       <ShootingStars />
       
-      <div className="relative z-10 flex-1 max-w-md mx-auto w-full px-6 pt-8 pb-32">
+      <div className="relative z-10 h-full w-full max-w-md mx-auto px-6 pt-8 pb-40 overflow-y-auto scrollbar-none">
         <header className="mb-8">
           <h1 className="text-4xl font-black italic tracking-tighter text-[#FFD700] uppercase">Missions</h1>
           <p className="text-[10px] opacity-30 uppercase tracking-[0.4em] font-bold mb-6">Earn coins by finishing tasks</p>
