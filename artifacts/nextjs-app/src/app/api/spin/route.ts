@@ -46,10 +46,10 @@ export async function GET(req: Request) {
     
     const now = Date.now();
     const lastFree = spin?.lastFreeSpinAt ? new Date(spin.lastFreeSpinAt).getTime() : 0;
-    const isFreeAvailable = now - lastFree >= FREE_SPIN_COOLDOWN_MS;
+    const isFreeAvailable = !spin || (now - lastFree >= FREE_SPIN_COOLDOWN_MS);
     
     const adsResetAt = spin?.adsResetAt ? new Date(spin.adsResetAt).getTime() : 0;
-    const adsReset = now - adsResetAt >= FREE_SPIN_COOLDOWN_MS;
+    const adsReset = !spin || (now - adsResetAt >= FREE_SPIN_COOLDOWN_MS);
     const adsSpinsToday = adsReset ? 0 : (spin?.adsSpinsToday ?? 0);
     const adsRemaining = MAX_ADS_SPINS - adsSpinsToday;
     
@@ -79,13 +79,14 @@ export async function POST(req: Request) {
     
     const now = Date.now();
     const lastFree = spin?.lastFreeSpinAt ? new Date(spin.lastFreeSpinAt).getTime() : 0;
-    const isFreeAvailable = now - lastFree >= FREE_SPIN_COOLDOWN_MS;
+    const isFreeAvailable = !spin || (now - lastFree >= FREE_SPIN_COOLDOWN_MS);
     
     const adsResetAt = spin?.adsResetAt ? new Date(spin.adsResetAt).getTime() : 0;
-    const adsReset = now - adsResetAt >= FREE_SPIN_COOLDOWN_MS;
+    const adsReset = !spin || (now - adsResetAt >= FREE_SPIN_COOLDOWN_MS);
     const adsSpinsToday = adsReset ? 0 : (spin?.adsSpinsToday ?? 0);
     const adsRemaining = MAX_ADS_SPINS - adsSpinsToday;
     
+    // BARIKADE UTAMA: Pengecekan ketat di sisi server
     if (spinType === "premium" && user.coins < 200) {
       return NextResponse.json({ error: "Insufficient coins! Premium spin costs 200 Coins." }, { status: 400 });
     }
@@ -100,20 +101,39 @@ export async function POST(req: Request) {
     const prize = PRIZES[prizeIndex];
     
     await db.transaction(async (tx) => {
-      if (spinType === "ads") {
-        await tx.update(spinRecords)
-          .set({ adsSpinsToday: adsReset ? 1 : adsSpinsToday + 1, adsResetAt: adsReset ? new Date() : undefined })
-          .where(eq(spinRecords.userId, user.id));
-      } else if (spinType === "free") {
-        await tx.update(spinRecords).set({ lastFreeSpinAt: new Date() }).where(eq(spinRecords.userId, user.id));
+      // FIX UTAMA: Kunci baris data spinRecords dengan logic Upsert terbarikade
+      if (spin) {
+        // Jika data spin milik user sudah terdaftar di database, lakukan update biasa
+        if (spinType === "ads") {
+          await tx.update(spinRecords)
+            .set({
+              adsSpinsToday: adsReset ? 1 : adsSpinsToday + 1,
+              adsResetAt: adsReset ? new Date() : undefined
+            })
+            .where(eq(spinRecords.userId, user.id));
+        } else if (spinType === "free") {
+          await tx.update(spinRecords)
+            .set({ lastFreeSpinAt: new Date() })
+            .where(eq(spinRecords.userId, user.id));
+        }
+      } else {
+        // Jika user baru pertama kali spin seumur hidup (data baris kosong), buat row baru (INSERT)
+        await tx.insert(spinRecords).values({
+          userId: user.id,
+          lastFreeSpinAt: spinType === "free" ? new Date() : undefined,
+          adsSpinsToday: spinType === "ads" ? 1 : 0,
+          adsResetAt: spinType === "ads" ? new Date() : undefined,
+        });
       }
       
+      // Mutasi potongan koin premium dan bonus hadiah gacha
       const premiumCost = spinType === "premium" ? 200 : 0;
       await tx.update(users).set({
         coins: sql`${users.coins} - ${premiumCost} + ${prize.coins}`,
         usdtBalance: sql`${users.usdtBalance} + ${prize.usdt}`
       }).where(eq(users.id, user.id));
       
+      // Catat mutasi riwayat transaksi
       await tx.insert(transactions).values({
         userId: user.id,
         type: "spin_reward",

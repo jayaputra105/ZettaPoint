@@ -74,80 +74,64 @@ export default function SpinPage() {
   };
 
   const doSpin = async (type: "premium" | "free" | "ads") => {
-    const tid = getTelegramId();
-    if (isSpinning || !tid) return;
-
-    if (type === "premium" && coins < 200) {
-      alert("Koin tidak cukup! Premium spin butuh 200 Koin.");
-      return;
-    }
-    if (type === "free" && !spinState?.isFreeAvailable) {
-      alert("Free spin harian belum tersedia!");
-      return;
-    }
-    if (type === "ads" && spinState?.adsRemaining <= 0) {
-      alert("Jatah spin iklan kamu hari ini sudah habis!");
-      return;
-    }
-
+  const tid = getTelegramId(); // 📝 WAJIB: Ambil Telegram ID dulu di paling atas fungsi
+  if (isSpinning || !tid) return;
   
-    setResetAnimation(true);
-    setTotalRotation(0);
-    setShowResult(false);
-
-    setTimeout(async () => {
-      setResetAnimation(false); 
-      setIsSpinning(true);
-
-      try {
-        // FIX SINKRONISASI PAYLOAD BACKEND: Kirim parameter useAd & spinType sekaligus
-        const res = await fetch("/api/spin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            spinType: type, 
-            useAd: type === "ads", // Backend lu ngebaca field boolean ini!
-            telegramId: tid 
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-
-        
-        const segmentCenter = (data.prizeIndex * SEG_ANGLE) + (SEG_ANGLE / 2);
-        const targetDegrees = (360 - segmentCenter + 270 + 360 ) % 360;
-        const finalAngle = (360 * 5) + targetDegrees;
-        
-        setTotalRotation(finalAngle);
-        setLastPrize(data.prize);
-
-        // Potong saldo koin di AppProvider global pas klik premium
-        if (type === "premium") {
-          setCoins(coins - 200);
-        }
-
-        setTimeout(() => {
-          setIsSpinning(false);
-          setShowResult(true);
-          
-          // Sinkronisasi mutasi hadiah ke global state
-          if (type === "premium") {
-            if (data.prize.coins > 0) setCoins(coins - 200 + data.prize.coins);
-          } else {
-            if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
-          }
-          if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
-          
-          // Tarik data state terbaru untuk otomatis nge-lock tombol di UI harian
-          fetchSpinState();
-        }, 2500); 
-      } catch (e: any) {
-        setIsSpinning(false);
-        alert(e.message);
-        fetchSpinState();
+  setIsSpinning(true);
+  setShowResult(false);
+  
+  try {
+    const res = await fetch("/api/spin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        spinType: type,
+        useAd: type === "ads",
+        telegramId: tid
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    
+    // =========================================================
+    // 🏎️ JALUR AKUMULASI SPIN (ANCANG-ANCANG KE NOL BARU LANJUT)
+    // =========================================================
+    const currentDegrees = totalRotation % 360;
+    const degreesToReset = (360 - currentDegrees) % 360;
+    
+    const baseAngle = (NUM_SEG - data.prizeIndex) % NUM_SEG * SEG_ANGLE;
+    const segmentCenter = baseAngle - (SEG_ANGLE / 2);
+    const targetDegrees = (segmentCenter + 270 + 360) % 360;
+    
+    const finalAngle = totalRotation + degreesToReset + (360 * 5) + targetDegrees;
+    
+    setTotalRotation(finalAngle);
+    setLastPrize(data.prize);
+    // =========================================================
+    
+    if (type === "premium") {
+      setCoins(coins - 200);
+    }
+    
+    setTimeout(() => {
+      setIsSpinning(false);
+      setShowResult(true);
+      
+      if (type === "premium") {
+        if (data.prize.coins > 0) setCoins(coins - 200 + data.prize.coins);
+      } else {
+        if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
       }
-    }, 50);
-  };
+      if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
+      
+      fetchSpinState();
+    }, 3500);
+  } catch (e: any) {
+    setIsSpinning(false);
+    alert(e.message);
+    fetchSpinState();
+  }
+}; // 📝 Tutup kurung fungsi doSpin
 
   const handleAdSpin = () => {
     if (spinState?.adsRemaining <= 0 || isSpinning) return;
@@ -218,7 +202,7 @@ export default function SpinPage() {
                 width: 300, 
                 height: 300, 
                 rotate: totalRotation, 
-                transition: resetAnimation ? "none" : isSpinning ? "transform 2.5s cubic-bezier(0.1, 0, 0.1, 1)" : "none" 
+                transition: isSpinning ? "transform 2.5s cubic-bezier(0.1, 0, 0.1, 1)" : "none" 
               }}
               className="relative rounded-full border-4 border-zinc-950 overflow-hidden"
             >
