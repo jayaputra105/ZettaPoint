@@ -8,13 +8,21 @@ import { useApp } from "@/context/AppProvider";
 
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
+
 const SEGMENTS = [
-  { label: "50 COINS", color: "rgba(255, 215, 0, 0.8)", textColor: "#000", type: "coin", value: 50 },
-  { label: "100 COINS", color: "rgba(255, 140, 0, 0.8)", textColor: "#000", type: "coin", value: 100 },
-  { label: "200 COINS", color: "rgba(65, 105, 225, 0.8)", textColor: "#fff", type: "coin", value: 200 },
-  { label: "500 COINS", color: "rgba(155, 89, 182, 0.8)", textColor: "#fff", type: "coin", value: 500 },
-  { label: "1000 COINS", color: "rgba(231, 76, 60, 0.8)", textColor: "#fff", type: "coin", value: 1000 },
-  { label: "10 USDT", color: "rgba(39, 174, 96, 0.8)", textColor: "#fff", type: "usdt", value: 10 },
+  { label: "50 COINS", color: "rgba(239, 68, 68, 0.45)", textColor: "#fff", type: "coin", value: 50 },
+  { label: "150 COINS", color: "rgba(59, 130, 246, 0.45)", textColor: "#fff", type: "coin", value: 150 },
+  { label: "300 COINS", color: "rgba(168, 85, 247, 0.45)", textColor: "#fff", type: "coin", value: 300 },
+  { label: "500 COINS", color: "rgba(234, 179, 8, 0.45)", textColor: "#000", type: "coin", value: 500 },
+  { label: "1000 COINS", color: "rgba(249, 115, 22, 0.45)", textColor: "#fff", type: "coin", value: 1000 },
+  { label: "1 USDT", color: "rgba(34, 197, 94, 0.65)", textColor: "#fff", type: "usdt", value: 1 },
+  { label: "5 USDT", color: "rgba(219, 39, 119, 0.65)", textColor: "#fff", type: "usdt", value: 5 },
+  { label: "25 USDT", color: "rgba(255, 215, 0, 0.85)", textColor: "#000", type: "usdt", value: 25 }, // Pajangan 0%
+  { label: "5 USDT", color: "rgba(219, 39, 119, 0.65)", textColor: "#fff", type: "usdt", value: 5 },
+  { label: "1 USDT", color: "rgba(34, 197, 94, 0.65)", textColor: "#fff", type: "usdt", value: 1 },
+  { label: "1000 COINS", color: "rgba(249, 115, 22, 0.45)", textColor: "#fff", type: "coin", value: 1000 },
+  { label: "500 COINS", color: "rgba(234, 179, 8, 0.45)", textColor: "#000", type: "coin", value: 500 },
+  { label: "300 COINS", color: "rgba(168, 85, 247, 0.45)", textColor: "#fff", type: "coin", value: 300 },
 ];
 
 const NUM_SEG = SEGMENTS.length;
@@ -60,9 +68,15 @@ export default function SpinPage() {
       .then(setSpinState);
   };
 
-  const doSpin = async (type: "free" | "ads") => {
+  const doSpin = async (type: "premium" | "free" | "ads") => {
     const tid = getTelegramId();
     if (isSpinning || !tid) return;
+
+    // Proteksi validasi saldo lokal khusus koin berbayar premium
+    if (type === "premium" && coins < 200) {
+      alert("Insufficient coins! Premium spin costs 200 Coins.");
+      return;
+    }
 
     setIsSpinning(true);
     setShowResult(false);
@@ -71,13 +85,14 @@ export default function SpinPage() {
       const res = await fetch("/api/spin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ useAd: type === "ads", telegramId: tid }),
+        body: JSON.stringify({ spinType: type, telegramId: tid }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      // Hitung derajat mendarat tepat di tengah-tengah juring target index
       const landingAngle = (360 - (data.prizeIndex * SEG_ANGLE + SEG_ANGLE / 2)) % 360;
-      const newRotation = totalRotation + (360 * 10) + landingAngle; // Tambah putaran biar lebih dramatis
+      const newRotation = totalRotation + (360 * 10) + landingAngle;
       setTotalRotation(newRotation);
       setLastPrize(data.prize);
 
@@ -85,8 +100,12 @@ export default function SpinPage() {
         setIsSpinning(false);
         setShowResult(true);
         
-        // SINKRONISASI COIN & USDT KE STATE GLOBAL (Biar gak reset)
-        if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
+        // SINKRONISASI UPDATE STATE GLOBAL USER ASSET
+        if (type === "premium") {
+          setCoins(coins - 200 + data.prize.coins);
+        } else {
+          if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
+        }
         if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
         
         fetchSpinState();
@@ -121,58 +140,109 @@ export default function SpinPage() {
       <ShootingStars />
       
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 pb-32">
-        {/* HEADER GAK NUMPUK */}
         <header className="pt-10 pb-6 text-center">
           <h1 className="text-4xl font-black italic tracking-tighter text-[#FFD700] drop-shadow-[0_0_15px_rgba(255,215,0,0.3)]">LUCKY WHEEL</h1>
           <p className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-30 mt-1 text-white">Win Coins or Real USDT</p>
         </header>
 
-        {/* BAGIAN RODA: Pake justify-start biar gak numpuk di tengah */}
         <div className="flex-1 flex flex-col items-center justify-start pt-4 gap-12">
+          {/* PEMBUNGKUS UTAMA DENGAN ANIMASI BORDER NEON BERPUTAR */}
           <div className="relative p-6 rounded-full border border-white/5 bg-zinc-900/10 shadow-[0_0_50px_rgba(255,255,255,0.02)]">
+            
+            {/* AMBIENT GLOW ANIMASI BORDER NEON */}
+            <div className="absolute inset-2 rounded-full border-2 border-dashed border-gradient-to-r from-purple-500 via-cyan-500 to-[#FFD700] opacity-40 animate-[spin_12s_linear_infinite]" />
+            
             {/* PIN POINTER */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-30 w-0 h-0 border-l-[20px] border-r-[20px] border-t-[40px] border-t-[#FFD700] drop-shadow-[0_5px_10px_rgba(0,0,0,0.5)]" />
             
             <motion.div 
               style={{ 
-                width: 300, 
-                height: 300, 
+                width: 320, 
+                height: 320, 
                 rotate: totalRotation, 
                 transition: isSpinning ? "transform 4.5s cubic-bezier(0.15, 0, 0.15, 1)" : "none" 
               }}
               className="relative rounded-full border-[10px] border-zinc-800 overflow-hidden shadow-2xl"
             >
               <div className="absolute inset-0" style={{ background: `conic-gradient(${conicGradient})` }} />
-              {SEGMENTS.map((seg, i) => (
-                <div key={i} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-full py-6 flex justify-start items-center" style={{ transform: `rotate(${i * SEG_ANGLE + SEG_ANGLE / 2}deg)`, width: "2px" }}>
-                   <span className="font-black text-[10px] uppercase tracking-tighter" style={{ color: seg.textColor, transform: "rotate(-90deg)" }}>{seg.label}</span>
-                </div>
-              ))}
+              
+              {/* LOGIC DAN CSS MATANG: Teks juring melingkar rapi di pinggir busur lingkaran roda */}
+              {SEGMENTS.map((seg, i) => {
+                const currentRotation = i * SEG_ANGLE + SEG_ANGLE / 2;
+                return (
+                  <div 
+                    key={i} 
+                    className="absolute top-1/2 left-1/2 origin-center flex justify-end items-center" 
+                    style={{ 
+                      transform: `translate(-50%, -50%) rotate(${currentRotation}deg)`, 
+                      width: "280px",
+                      height: "20px"
+                    }}
+                  >
+                    <span 
+                      className="font-black text-[9px] uppercase tracking-tighter pr-2 select-none" 
+                      style={{ 
+                        color: seg.textColor, 
+                        transform: "rotate(180deg)",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {seg.label}
+                    </span>
+                  </div>
+                );
+              })}
             </motion.div>
           </div>
 
-          {/* BUTTON SECTION */}
+          {/* GRID BUTTON SECTION: Layout Tombol Samping-Sampingan Horizontal */}
           <div className="w-full flex flex-col gap-4 px-2">
             <div className="flex justify-between px-2 mb-1">
-               <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Available Options</span>
-               <span className="text-[10px] font-black text-[#FFD700] uppercase">1 Free Daily</span>
+               <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Premium & Task Wheel</span>
+               <span className="text-[10px] font-black text-[#FFD700] uppercase">
+                 {spinState?.isFreeAvailable ? "1 Free Ready" : "Ads Available"}
+               </span>
             </div>
             
-            <button
-              onClick={() => doSpin("free")}
-              disabled={!spinState?.isFreeAvailable || isSpinning}
-              className="w-full py-5 rounded-[24px] font-black text-xs uppercase tracking-widest disabled:opacity-20 bg-[#FFD700] text-black shadow-[0_10px_25px_rgba(255,215,0,0.2)] active:scale-95 transition-all"
-            >
-              {spinState?.isFreeAvailable ? "🎰 Instant Free Spin" : `Next: ${formatCountdown(spinState?.nextFreeIn - (Date.now() - now))}`}
-            </button>
+            {/* BARIS UTAMA GRID TOMBOL HORIZONTAL */}
+            <div className="grid grid-cols-2 gap-3 w-full">
+              {/* TOMBOL PREMIUM (KIRI) */}
+              <button
+                onClick={() => doSpin("premium")}
+                disabled={isSpinning}
+                className="py-4 rounded-2xl border border-[#FFD700]/30 bg-zinc-950 text-[#FFD700] font-black text-[10px] uppercase tracking-widest hover:bg-[#FFD700]/5 active:scale-95 transition-all disabled:opacity-20"
+              >
+                🔥 Premium Spin <br/>
+                <span className="text-[9px] opacity-60 font-normal text-white">Cost: 200 Coins</span>
+              </button>
 
-            <button
-              onClick={handleAdSpin}
-              disabled={spinState?.adsRemaining <= 0 || isSpinning}
-              className="w-full py-4 rounded-[20px] border border-white/10 bg-white/5 text-[#FFD700] font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
-            >
-              🎬 Bonus Spin ({spinState?.adsRemaining}/{spinState?.maxAds})
-            </button>
+              {/* TOMBOL FREE / ADS COMPONENT (KANAN) */}
+              {spinState?.isFreeAvailable ? (
+                <button
+                  onClick={() => doSpin("free")}
+                  disabled={isSpinning}
+                  className="py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-[#FFD700] text-black shadow-[0_5px_15px_rgba(255,215,0,0.15)] active:scale-95 transition-all"
+                >
+                  🎰 Instant <br/> Free Spin
+                </button>
+              ) : (
+                <button
+                  onClick={handleAdSpin}
+                  disabled={spinState?.adsRemaining <= 0 || isSpinning}
+                  className="py-4 rounded-2xl border border-white/10 bg-white/5 text-[#FFD700] font-black text-[10px] uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all disabled:opacity-20"
+                >
+                  🎬 Bonus Spin <br/>
+                  <span className="text-[9px] opacity-50 text-white font-normal">Ads: {spinState?.adsRemaining}/{spinState?.maxAds}</span>
+                </button>
+              )}
+            </div>
+
+            {/* TIMER HITUNG MUNDUR JIKA FREE SPIN SUDAH DIAMBIL */}
+            {!spinState?.isFreeAvailable && spinState?.nextFreeIn > 0 && (
+              <p className="text-center text-[9px] font-bold uppercase tracking-widest opacity-20">
+                Next Free Daily Wheel In {formatCountdown(spinState?.nextFreeIn - (Date.now() - now))}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -201,7 +271,7 @@ export default function SpinPage() {
         )}
       </AnimatePresence>
 
-      {/* AD MODAL */}
+      
       <AnimatePresence>
         {showAdModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/98 backdrop-blur-2xl">

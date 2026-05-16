@@ -7,13 +7,21 @@ const router = Router();
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_ADS_SPINS = 5;
 
+
 const PRIZES = [
-  { label: "50 Koin", coins: 50, usdt: 0, weight: 15 },
-  { label: "100 Koin", coins: 100, usdt: 0, weight: 35 },
-  { label: "200 Koin", coins: 200, usdt: 0, weight: 23 },
-  { label: "500 Koin", coins: 500, usdt: 0, weight: 17 },
-  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 10 },
-  { label: "10 USDT", coins: 0, usdt: 10, weight: 0 }, 
+  { label: "50 Koin", coins: 50, usdt: 0, weight: 15.0 },
+  { label: "150 Koin", coins: 150, usdt: 0, weight: 20.0 },
+  { label: "300 Koin", coins: 300, usdt: 0, weight: 25.0 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 18.0 },
+  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
+  { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
+  { label: "5 USDT", coins: 0, usdt: 5, weight: 0.2 },
+  { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, // Jimat Pajangan Kasino 0%
+  { label: "5 USDT", coins: 0, usdt: 5, weight: 0.0 },
+  { label: "1 USDT", coins: 0, usdt: 1, weight: 0.0 },
+  { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 5.8 },
+  { label: "300 Koin", coins: 300, usdt: 0, weight: 5.0 },
 ];
 
 function weightedRandom(prizes: typeof PRIZES) {
@@ -146,9 +154,10 @@ router.post("/tasks", async (req, res) => {
   }
 });
 
+// MODIFIKASI OPERASI POST SPIN DI API SERVER EXPRESS LU
 router.post("/spin", async (req, res) => {
   try {
-    const { telegramId, useAd } = req.body;
+    const { telegramId, spinType } = req.body; // Mengambil spinType ("premium" | "free" | "ads")
     const user = await getUser(telegramId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -157,20 +166,37 @@ router.post("/spin", async (req, res) => {
     const lastFree = spin?.lastFreeSpinAt ? new Date(spin.lastFreeSpinAt).getTime() : 0;
     const isFreeAvailable = now - lastFree >= FREE_SPIN_COOLDOWN_MS;
 
-    if (!useAd && !isFreeAvailable) return res.status(400).json({ error: "Free spin not available" });
+    const adsResetAt = spin?.adsResetAt ? new Date(spin.adsResetAt).getTime() : 0;
+    const adsReset = now - adsResetAt >= FREE_SPIN_COOLDOWN_MS;
+    const adsSpinsToday = adsReset ? 0 : (spin?.adsSpinsToday ?? 0);
+    const adsRemaining = MAX_ADS_SPINS - adsSpinsToday;
+
+    // VALIDASI GUARD SERVER EXPRESS
+    if (spinType === "premium" && user.coins < 200) {
+      return res.status(400).json({ error: "Insufficient coins" });
+    }
+    if (spinType === "free" && !isFreeAvailable) {
+      return res.status(400).json({ error: "Free spin not available" });
+    }
+    if (spinType === "ads" && adsRemaining <= 0) {
+      return res.status(400).json({ error: "No ads left" });
+    }
 
     const prizeIndex = weightedRandom(PRIZES);
     const prize = PRIZES[prizeIndex];
 
     await db.transaction(async (tx) => {
-      if (useAd) {
-        await tx.update(spinRecords).set({ adsSpinsToday: sql`ads_spins_today + 1` }).where(eq(spinRecords.userId, user.id));
-      } else {
+      if (spinType === "ads") {
+        await tx.update(spinRecords)
+          .set({ adsSpinsToday: adsReset ? 1 : adsSpinsToday + 1, adsResetAt: adsReset ? new Date() : undefined })
+          .where(eq(spinRecords.userId, user.id));
+      } else if (spinType === "free") {
         await tx.update(spinRecords).set({ lastFreeSpinAt: new Date() }).where(eq(spinRecords.userId, user.id));
       }
 
+      const premiumCost = spinType === "premium" ? 200 : 0;
       await tx.update(users).set({ 
-        coins: sql`${users.coins} + ${prize.coins}`,
+        coins: sql`${users.coins} - ${premiumCost} + ${prize.coins}`,
         usdtBalance: sql`${users.usdtBalance} + ${prize.usdt}` 
       }).where(eq(users.id, user.id));
 
@@ -209,7 +235,6 @@ router.get("/wallet", async (req, res) => {
   }
 });
 
-// WD HANYA UNTUK USDT
 router.post("/wallet", async (req, res) => {
   try {
     const { telegramId, method, amount, walletAddress } = req.body;
