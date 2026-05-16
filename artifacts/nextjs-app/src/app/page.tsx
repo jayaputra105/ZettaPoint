@@ -57,7 +57,7 @@ export default function Home() {
   useEffect(() => {
     let checkCount = 0;
     
-    const syncData = async () => {
+      const syncData = async () => {
       if (typeof window === "undefined") return;
       
       const tg = (window as any).Telegram?.WebApp;
@@ -67,7 +67,10 @@ export default function Home() {
         tg.ready();
         tg.expand();
       }
-    
+
+      const user = tg?.initDataUnsafe?.user;
+      
+      
       if (!user?.id) {
         if (checkCount < 10) {
           checkCount++;
