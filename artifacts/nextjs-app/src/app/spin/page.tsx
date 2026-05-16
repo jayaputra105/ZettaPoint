@@ -37,6 +37,7 @@ function formatCountdown(ms: number): string {
 }
 
 export default function SpinPage() {
+  // SINKRONISASI MURNI VIA APP PROVIDER GLOBAL
   const { coins, setCoins, usdtBalance, setUsdtBalance } = useApp();
   
   const [spinState, setSpinState] = useState<any>(null);
@@ -103,41 +104,43 @@ export default function SpinPage() {
       if (!res.ok) throw new Error(data.error);
 
       // =========================================================
-      // 🎯 RUMUS MATEMATIKA ANTI-NGANGLO (KUNCI PAS JAM 12)
+      // 🎯 RUMUS MATEMATIKA REVISI AKURAT PAS JAM 12
       // =========================================================
-      // Karena roda CSS muter searah jarum jam (kanan), urutan array malah mundur ke kiri.
-      // Kita hitung sisa sudut dari target index, lalu dikurang setengah juring (15 deg) biar pas di TENGAH potongan.
       const baseAngle = (NUM_SEG - data.prizeIndex) % NUM_SEG * SEG_ANGLE;
       const targetDegrees = (baseAngle - (SEG_ANGLE / 2) + 360) % 360;
       
-      // Tambah putaran minimum 5 lap (360 * 5) biar muter kencang berenergi
+      // Lap putaran dramatis
       const newRotation = totalRotation + (360 * 5) + targetDegrees;
-      
       setTotalRotation(newRotation);
       setLastPrize(data.prize);
       // =========================================================
 
-      // Langsung kunci & kurangi data di sisi client saat roda mulai berputar biar gak bisa di-spam click
+      // FIXED: Potong koin instant di AppProvider global pas klik premium biar sinkron!
       if (type === "premium") {
-        setCoins((prev) => prev - 200);
+        setCoins(coins - 200);
       }
 
-      // Animasi muter dipercepat 2.5 detik biar asik
       setTimeout(() => {
         setIsSpinning(false);
         setShowResult(true);
         
-        // Sinkronisasi update total hadiah yang dimenangkan ke saldo global
-        if (data.prize.coins > 0) setCoins((prev) => prev + data.prize.coins);
-        if (data.prize.usdt > 0) setUsdtBalance((prev) => prev + data.prize.usdt);
+        // FIXED: Sinkronisasi mutasi hadiah roda masuk lewat AppProvider global
+        if (type === "premium") {
+          // Kalau premium berarti (coins - 200) sudah dilakukan di atas, tinggal ditambah hadiahnya
+          if (data.prize.coins > 0) setCoins(coins - 200 + data.prize.coins);
+        } else {
+          if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
+        }
         
-        // Tarik data state terbaru dari backend untuk mengunci tombol Free/Ads secara mutlak
+        if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
+        
+        // Tarik data lock harian & ads state terbaru dari backend
         fetchSpinState();
       }, 2500); 
     } catch (e: any) {
       setIsSpinning(false);
       alert(e.message);
-      fetchSpinState(); // Reset state jika gagal server
+      fetchSpinState(); // Tarik balik state koin aslinya jika error request
     }
   };
 
@@ -170,7 +173,7 @@ export default function SpinPage() {
           <p className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-40 mt-1">Spin & Win Big Rewards</p>
         </header>
 
-        {/* SINGLE COINS BALANCE */}
+        {/* DISPLAY SINGLE COINS BALANCE (SINKRON DENGAN PROVIDER) */}
         <div className="w-full flex justify-center mb-6">
             <div className="flex items-center gap-3 px-6 py-2.5 rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
                 <Coins size={16} className="text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]" />
@@ -182,10 +185,10 @@ export default function SpinPage() {
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-start pt-2 gap-8">
-          {/* WHEEL SHADOW NEON GLOW CONTAINER */}
+          {/* WHEEL CONTAINER DENGAN HIGHLIGHT BORDER EMAS GLOSSY NYALA */}
           <div className="relative p-6 rounded-full border-[6px] border-zinc-900 bg-black shadow-[0_0_40px_rgba(255,215,0,0.25)]">
             
-            {/* LED STRIP CHROME LIGHTS MUTER */}
+            {/* GRADIENT STRIP NYALA BERPUTAR */}
             <div className="absolute inset-1 rounded-full animate-[spin_5s_linear_infinite]" 
                  style={{
                    border: "6px solid transparent",
@@ -195,10 +198,10 @@ export default function SpinPage() {
                    WebkitMaskImage: "radial-gradient(black, transparent)"
                  }}/>
 
-            {/* 3D EMBOSS DEPTH OVERLAY */}
+            {/* EFFECT OVERLAY 3D INNER DEPTH */}
             <div className="absolute inset-6 z-20 rounded-full pointer-events-none shadow-[inset_0_0_30px_rgba(0,0,0,0.85)] border border-black/30" />
             
-            {/* POINTER JARUM UTAMA JAM 12 */}
+            {/* POINTER MEWAH ATAS JAM 12 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-5 z-30 flex flex-col items-center">
                 <div className="w-0 h-0 border-l-[15px] border-r-[15px] border-t-[30px] border-t-[#FFD700] drop-shadow-[0_0_15px_rgba(255,215,0,1)]" />
                 <div className="w-5 h-5 rounded-full bg-zinc-900 border-4 border-[#FFD700] -mt-1 shadow-2xl flex items-center justify-center">
@@ -206,7 +209,7 @@ export default function SpinPage() {
                 </div>
             </div>
             
-            {/* BOARD RODA */}
+            {/* BADAN RODA UTAMA */}
             <motion.div 
               style={{ 
                 width: 300, 
@@ -218,13 +221,13 @@ export default function SpinPage() {
             >
               <div className="absolute inset-0 scale-[1.02]" style={{ background: `conic-gradient(${conicGradient})` }} />
               
-              {/* LINE SEPARATOR */}
+              {/* SEKAT HITAM TEGAS ANTAR JURING */}
               {SEGMENTS.map((_, i) => (
                 <div key={`line-${i}`} className="absolute top-1/2 left-1/2 w-[2px] h-[150px] bg-black/80 origin-top -translate-x-1/2" 
                      style={{ transform: `rotate(${i * SEG_ANGLE}deg)` }} />
               ))}
 
-              {/* TEXT LABELS */}
+              {/* TEXT JURING MENYALA PUTIH */}
               {SEGMENTS.map((seg, i) => {
                 const currentRotation = i * SEG_ANGLE + SEG_ANGLE / 2;
                 return (
@@ -251,16 +254,16 @@ export default function SpinPage() {
               })}
             </motion.div>
 
-            {/* POROS AS METALIK TENGAH */}
+            {/* POROS AS TENGAH METALIK */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-900 border-4 border-zinc-950 shadow-2xl flex items-center justify-center">
                 <div className="w-5 h-5 rounded-full border border-[#FFD700]/40 bg-black/80 shadow-inner" />
             </div>
           </div>
 
-          {/* CONTROL INTERACTION SYSTEM */}
+          {/* SIDE-BY-SIDE ARCADE BUTTON CONTROL */}
           <div className="w-full flex flex-col gap-4 px-2 mt-4">
             <div className="grid grid-cols-2 gap-4 w-full px-1">
-              {/* PREMIUM COIN SPIN BUTTON */}
+              {/* TOMBOL KIRI (PREMIUM 200 COIN) */}
               <button
                 onClick={() => doSpin("premium")}
                 disabled={isSpinning}
@@ -272,7 +275,7 @@ export default function SpinPage() {
                 </div>
               </button>
 
-              {/* DINAMIS BUTTON KANAN: LOCK TOTAL SETELAH DICLICK */}
+              {/* TOMBOL KANAN (DILOCK INSTAN SETELAH DIGUNAKAN) */}
               {spinState?.isFreeAvailable ? (
                 <button
                   onClick={() => doSpin("free")}
@@ -295,7 +298,7 @@ export default function SpinPage() {
               )}
             </div>
 
-            {/* COUNTDOWN TIMER DAILY RESETS */}
+            {/* TIMER RESETS */}
             {!spinState?.isFreeAvailable && spinState?.nextFreeIn > 0 && (
               <p className="text-center text-[9px] font-black uppercase tracking-widest opacity-20 mt-1">
                 Next Free Wheel In {formatCountdown(spinState?.nextFreeIn - (Date.now() - now))}
@@ -305,7 +308,7 @@ export default function SpinPage() {
         </div>
       </div>
 
-      {/* POPUP REWARD CLAIMS */}
+      {/* POPUP RESULT CLAIMS */}
       <AnimatePresence>
         {showResult && lastPrize && (
           <motion.div 
@@ -328,7 +331,7 @@ export default function SpinPage() {
         )}
       </AnimatePresence>
 
-      {/* ADS MODAL TIMER CONTROL */}
+      {/* ADS LOADING CONTROLLER */}
       <AnimatePresence>
         {showAdModal && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/98 backdrop-blur-2xl">
