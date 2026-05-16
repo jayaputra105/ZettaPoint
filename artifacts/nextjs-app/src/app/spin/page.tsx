@@ -115,7 +115,7 @@ export default function SpinPage() {
 
         
         const segmentCenter = (data.prizeIndex * SEG_ANGLE) + (SEG_ANGLE / 2);
-        const targetDegrees = (360 - segmentCenter- 90 + 360 ) % 360;
+        const targetDegrees = (360 - segmentCenter + 270 + 360 ) % 360;
         const finalAngle = (360 * 5) + targetDegrees;
         
         setTotalRotation(finalAngle);
