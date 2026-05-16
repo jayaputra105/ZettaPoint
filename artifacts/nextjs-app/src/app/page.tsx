@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
@@ -30,13 +29,10 @@ function formatCountdown(ms: number): string {
 
 export default function Home() {
   const { 
-    coins, setCoins, 
+    coins, 
     zp, setZp, 
     currentRoom,
-    setQualifiedSilver,
-    setQualifiedGold,
-    setQualifiedDiamond,
-    loading: appLoading // Ambil status loading dari AppProvider
+    loading: appLoading // Gunakan loading terpusat dari AppProvider
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
@@ -44,80 +40,31 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState({
     name: "Identifying...",
     username: "@...",
-    avatar: "",
-    rank: 0
+    avatar: ""
   });
   
-  const [internalLoading, setInternalLoading] = useState(true);
   const [lastFreeClick, setLastFreeClick] = useState<number | null>(null);
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  // 1. SINKRONISASI PROFILE (Ambil data dari Telegram)
+  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM (TANPA TEMBAK API GET LAGI)
   useEffect(() => {
-    let checkCount = 0;
-    
-    const syncData = async () => {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand();
-      }
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
 
-      const user = tg?.initDataUnsafe?.user;
-      
-      // Tunggu ID Telegram muncul (Retry 10x)
-      if (!user?.id) {
-        if (checkCount < 10) {
-          checkCount++;
-          setTimeout(syncData, 500); 
-        } else {
-          setInternalLoading(false);
-          setUserProfile(prev => ({ ...prev, name: "Telegram Not Found" }));
-        }
-        return;
-      }
-
-      const tid = user.id.toString();
-      const firstName = user.first_name || "Zetta Player";
-      const username = user.username || "player";
-      const photoUrl = user.photo_url || "";
-
-      try {
-        // Panggil API GET (yang sekarang sudah pake logic UPSERT di backend)
-        const url = `/api/user?telegramId=${tid}&firstName=${encodeURIComponent(firstName)}&username=${username}&photoUrl=${encodeURIComponent(photoUrl)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && !data.error) {
-          // Update Global State di AppProvider
-          setCoins(Number(data.coins || 0));
-          setZp("bronze", Number(data.zpBronze || 0));
-          setZp("silver", Number(data.zpSilver || 0));
-          setZp("gold", Number(data.zpGold || 0));
-          setZp("diamond", Number(data.zpDiamond || 0));
-          setQualifiedSilver(!!data.qualifiedSilver);
-          setQualifiedGold(!!data.qualifiedGold);
-          setQualifiedDiamond(!!data.qualifiedDiamond);
-          
-          // Update Profil Lokal
-          setUserProfile({
-            name: data.name || firstName,
-            username: data.username ? `@${data.username}` : `@${username}`,
-            avatar: data.avatar || photoUrl || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${tid}`,
-            rank: data.rank || 0
-          });
-        }
-      } catch (err) {
-        console.error("Sync Error:", err);
-      } finally {
-        setInternalLoading(false);
-      }
-    };
-    
-    syncData();
-  }, []); // Cukup running sekali pas mounting
+    const user = tg?.initDataUnsafe?.user;
+    if (user) {
+      setUserProfile({
+        name: user.first_name || "Zetta Player",
+        username: user.username ? `@${user.username}` : "@player",
+        avatar: user.photo_url || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.id}`
+      });
+    }
+  }, []);
 
   // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
@@ -142,11 +89,11 @@ export default function Home() {
     
     if (!tid) return;
 
-    // STEP 1: Update UI secara instan (Gak nunggu API)
+    // Langkah 1: Kunci angka baru di state global (AppProvider)
     setZp(currentRoom, currentZp + amount);
     
     try {
-      // STEP 2: Kirim ke database di latar belakang
+      // Langkah 2: Kirim data ke DB lewat PATCH (biarkan berjalan di background)
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -158,7 +105,7 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      // Kalau gagal banget, balikin angkanya biar user gak curang
+      // Rollback jika beneran gagal total koneksinya
       setZp(currentRoom, currentZp);
     }
   }, [currentRoom, currentZp, setZp]);
@@ -197,8 +144,8 @@ export default function Home() {
     statusColor = "rgba(255,215,0,0.75)";
   }
   
-  // Tampilkan loading screen yang lebih rapi
-  if (internalLoading || appLoading) {
+  // Menggunakan loading terpusat dari AppProvider agar tidak flashing saat pindah page
+  if (appLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-yellow-500 font-black animate-pulse tracking-[0.5em] uppercase text-xs">
@@ -237,11 +184,11 @@ export default function Home() {
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-               🎬 Bonus ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
+               🎬 ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
              </p>
           </div>
 
-          <CoinClicker onCoin={handleCoinClick} pointsPerClick={100} locked={isLocked} />
+          <CoinClicker onCoin={giveRewards} pointsPerClick={100} locked={isLocked} />
 
           <div className="rounded-2xl px-5 py-3 text-center bg-zinc-900/80 border border-white/10">
             <p className="text-xs font-bold" style={{ color: statusColor }}>{statusLabel}</p>
@@ -254,8 +201,6 @@ export default function Home() {
       </div>
 
       <BottomNav />
-
-      <AdModal open={showAd} adNumber={adsUsed + 1} maxAds={MAX_ADS} onComplete={handleAdComplete} onClose={() => setShowAd(false)} />
     </div>
   );
 }
