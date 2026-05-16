@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const username = searchParams.get("username") || "";
     const photoUrl = searchParams.get("photoUrl") || "";
     
-    // LOGIC UPSERT: Jika belum ada -> INSERT. Jika sudah ada -> UPDATE Nama & Username.
+    // LOGIC UPSERT: Aman, tidak merusak data lama jika user sudah terdaftar
     const [user] = await db.insert(users)
       .values({
         telegramId: telegramId.toString(),
@@ -32,9 +32,8 @@ export async function GET(req: Request) {
         qualifiedDiamond: false
       })
       .onConflictDoUpdate({
-        target: users.telegramId, // Berdasarkan kolom telegramId yang unik
+        target: users.telegramId,
         set: {
-          // Update info profil setiap kali user login/sync 
           name: firstName,
           username: username,
           avatar: photoUrl
@@ -56,21 +55,33 @@ export async function PATCH(req: Request) {
     
     if (!telegramId) return NextResponse.json({ error: "No Telegram ID" }, { status: 400 });
     
-    const zpColumnMap: Record < string, any > = {
-      bronze: users.zpBronze,
-      silver: users.zpSilver,
-      gold: users.zpGold,
-      diamond: users.zpDiamond
+    // PERBAIKAN 1: Map langsung ke nama properti camelCase di schema TypeScript lu
+    const roomKeyMap: Record < string, "zpBronze" | "zpSilver" | "zpGold" | "zpDiamond" > = {
+      bronze: "zpBronze",
+      silver: "zpSilver",
+      gold: "zpGold",
+      diamond: "zpDiamond"
     };
     
-    const targetZpCol = zpColumnMap[room] || users.zpBronze;
+    const targetKey = roomKeyMap[room] || "zpBronze";
     
+    // PERBAIKAN 2: Map kolom Drizzle secara presisi untuk kebutuhan SQL statement
+    const dslColumnMap: Record < string, any > = {
+      zpBronze: users.zpBronze,
+      zpSilver: users.zpSilver,
+      zpGold: users.zpGold,
+      zpDiamond: users.zpDiamond
+    };
+    
+    const targetZpCol = dslColumnMap[targetKey];
     
     const [updated] = await db
       .update(users)
       .set({
         coins: sql`${users.coins} + ${addCoins ?? 0}`,
-        [targetZpCol.name]: sql`${targetZpCol} + ${addZp ?? 0}`
+        // Menggunakan key TypeScript ([targetKey]) untuk Drizzle, 
+        // dan referensi kolom asli (targetZpCol) di dalam raw SQL increment-nya
+        [targetKey]: sql`${targetZpCol} + ${addZp ?? 0}`
       })
       .where(eq(users.telegramId, telegramId.toString()))
       .returning();

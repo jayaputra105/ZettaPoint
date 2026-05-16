@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     if (status === "completed") {
       await db
         .update(users)
-        .set({ coins: sql`${users.coins} + ${task.rewardCoins}` }) // Pake SQL atomic update
+        .set({ coins: sql`${users.coins} + ${task.rewardCoins}` }) // Pake SQL stomic update
         .where(eq(users.id, user.id));
     }
     
