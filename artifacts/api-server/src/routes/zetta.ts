@@ -9,7 +9,7 @@ const MAX_ADS_SPINS = 5;
 
 
 const PRIZES = [
-  { label: "50 Koin", coins: 50, usdt: 0, weight: 15.0 },
+  { label: "50 Koin", coins: 50, usdt: 0, weight: 14.2 },
   { label: "150 Koin", coins: 150, usdt: 0, weight: 20.0 },
   { label: "300 Koin", coins: 300, usdt: 0, weight: 25.0 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 18.0 },
@@ -17,10 +17,9 @@ const PRIZES = [
   { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "5 USDT", coins: 0, usdt: 5, weight: 0.2 },
   { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, // Jimat Pajangan Kasino 0%
-  { label: "5 USDT", coins: 0, usdt: 5, weight: 0.0 },
-  { label: "1 USDT", coins: 0, usdt: 1, weight: 0.0 },
+  { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
-  { label: "500 Koin", coins: 500, usdt: 0, weight: 5.8 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 5.6 },
   { label: "300 Koin", coins: 300, usdt: 0, weight: 5.0 },
 ];
 

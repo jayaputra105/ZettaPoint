@@ -6,20 +6,19 @@ import { eq, sql } from "drizzle-orm";
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_ADS_SPINS = 5;
 
-
+// MATRIX 12 SEKTOR PAS DAN AKURAT DI BACKEND SINKRON 1:1 DENGAN FRONTEND
 const PRIZES = [
-  { label: "50 Koin", coins: 50, usdt: 0, weight: 15.0 },
+  { label: "50 Koin", coins: 50, usdt: 0, weight: 14.2 },
   { label: "150 Koin", coins: 150, usdt: 0, weight: 20.0 },
   { label: "300 Koin", coins: 300, usdt: 0, weight: 25.0 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 18.0 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
   { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "5 USDT", coins: 0, usdt: 5, weight: 0.2 },
-  { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, // Jimat Pajangan Murni 0% Rate!
-  { label: "5 USDT", coins: 0, usdt: 5, weight: 0.0 }, // Tambahan pancingan visual
-  { label: "1 USDT", coins: 0, usdt: 1, weight: 0.0 }, // Tambahan pancingan visual
+  { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, // Jimat Pajangan Kasino 0%
+  { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
-  { label: "500 Koin", coins: 500, usdt: 0, weight: 5.8 },
+  { label: "500 Koin", coins: 500, usdt: 0, weight: 5.6 },
   { label: "300 Koin", coins: 300, usdt: 0, weight: 5.0 },
 ];
 
@@ -69,7 +68,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { spinType, telegramId } = body; // Membaca data spinType ("premium" | "free" | "ads")
+    const { spinType, telegramId } = body;
     
     if (!telegramId) return NextResponse.json({ error: "No telegram ID" }, { status: 400 });
     
@@ -87,7 +86,6 @@ export async function POST(req: Request) {
     const adsSpinsToday = adsReset ? 0 : (spin?.adsSpinsToday ?? 0);
     const adsRemaining = MAX_ADS_SPINS - adsSpinsToday;
     
-    // VALIDATION GUARD: Cek kesiapan opsi putar roda
     if (spinType === "premium" && user.coins < 200) {
       return NextResponse.json({ error: "Insufficient coins! Premium spin costs 200 Coins." }, { status: 400 });
     }
@@ -102,7 +100,6 @@ export async function POST(req: Request) {
     const prize = PRIZES[prizeIndex];
     
     await db.transaction(async (tx) => {
-      // 1. UPDATE RECORD RODA PUTAR
       if (spinType === "ads") {
         await tx.update(spinRecords)
           .set({ adsSpinsToday: adsReset ? 1 : adsSpinsToday + 1, adsResetAt: adsReset ? new Date() : undefined })
@@ -111,14 +108,12 @@ export async function POST(req: Request) {
         await tx.update(spinRecords).set({ lastFreeSpinAt: new Date() }).where(eq(spinRecords.userId, user.id));
       }
       
-      // 2. POTONG KOIN JIKA PREMIUM, DAN ISI HADIAHNYA
       const premiumCost = spinType === "premium" ? 200 : 0;
       await tx.update(users).set({
         coins: sql`${users.coins} - ${premiumCost} + ${prize.coins}`,
         usdtBalance: sql`${users.usdtBalance} + ${prize.usdt}`
       }).where(eq(users.id, user.id));
       
-      // 3. MASUKKAN JALUR MUTASI TRANSAKSI
       await tx.insert(transactions).values({
         userId: user.id,
         type: "spin_reward",
