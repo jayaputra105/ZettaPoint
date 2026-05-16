@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { AppProvider } from "@/context/AppProvider"; // Import provider baru
+import { AppProvider } from "@/context/AppProvider";
+import Script from "next/script"; // 1. IMPORT SCRIPT NEXTJS
 
 export const metadata: Metadata = {
-  title: "Playzetta", // Update nama sesuai project
+  title: "Playzetta",
   description: "Tap to earn Zetta Points and USDT!",
 };
 
@@ -20,7 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 } > ) {
   return (
-    <html lang="en"> {/* Ganti ke English sesuai rencana */}
+    <html lang="en">
+      <head>
+        
+        <Script 
+          src="https://telegram.org/js/telegram-web-app.js" 
+          strategy="beforeInteractive" 
+        />
+      </head>
       <body
         style={{
           margin: 0,

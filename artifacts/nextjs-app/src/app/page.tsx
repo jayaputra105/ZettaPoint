@@ -58,13 +58,16 @@ export default function Home() {
     let checkCount = 0;
     
     const syncData = async () => {
-      const tg = (window as any).Telegram?.WebApp;
-      tg?.ready();
-      tg?.expand();
-
-      const user = tg?.initDataUnsafe?.user;
+      if (typeof window === "undefined") return;
       
-      // JIKA ID BELUM ADA, JANGAN TEMBAK API, TUNGGU DULU!
+      const tg = (window as any).Telegram?.WebApp;
+      
+      
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+    
       if (!user?.id) {
         if (checkCount < 10) {
           checkCount++;
