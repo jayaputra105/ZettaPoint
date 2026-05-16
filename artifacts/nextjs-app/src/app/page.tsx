@@ -16,7 +16,6 @@ const ShootingStars = dynamic(() => import("@/components/ShootingStars"), {
 const MAX_ADS = 15;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
-// --- UTILS ---
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
@@ -32,7 +31,6 @@ function formatCountdown(ms: number): string {
 }
 
 export default function Home() {
-  // --- GLOBAL STATE ---
   const { 
     coins, setCoins, 
     zp, setZp, 
@@ -42,13 +40,11 @@ export default function Home() {
     setQualifiedDiamond
   } = useApp();
   
-  // ZP spesifik untuk room yang sedang aktif di UI
   const currentZp = zp[currentRoom] || 0;
   
-  // --- LOCAL STATE ---
   const [userProfile, setUserProfile] = useState({
-    name: "Zetta Hunter",
-    username: "@zetta",
+    name: "Loading...",
+    username: "@...",
     avatar: "",
     rank: 0
   });
@@ -59,46 +55,56 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
   
-  // 1. SINKRONISASI DATABASE (Tarik data per-room & kualifikasi)
+  // 1. SINKRONISASI UTAMA (Ini yang benerin Nama & Reset Data)
   useEffect(() => {
     const syncData = async () => {
       const tg = (window as any).Telegram?.WebApp;
-      const tid = tg?.initDataUnsafe?.user?.id?.toString() || "12345";
+      tg?.expand(); // Biar tampilan penuh di HP
+
+      const user = tg?.initDataUnsafe?.user;
+      const tid = user?.id?.toString() || "12345"; // 12345 hanya untuk ngetes di laptop
       
+      // Ambil data user asli dari Telegram
+      const firstName = user?.first_name || "Zetta Hunter";
+      const username = user?.username || "player";
+      const photoUrl = user?.photo_url || "";
+
       try {
-        const res = await fetch(`/api/user?telegramId=${tid}`);
+        // Kirim semua info ke API biar Database bisa bikin akun pake nama asli lu
+        const url = `/api/user?telegramId=${tid}&firstName=${encodeURIComponent(firstName)}&username=${username}&photoUrl=${encodeURIComponent(photoUrl)}`;
+        const res = await fetch(url);
         const data = await res.json();
         
         if (data && !data.error) {
           setCoins(Number(data.coins || 0));
           
-          // SINKRON SEMUA KOLOM ZP KE CONTEXT
           setZp("bronze", Number(data.zpBronze || 0));
           setZp("silver", Number(data.zpSilver || 0));
           setZp("gold", Number(data.zpGold || 0));
           setZp("diamond", Number(data.zpDiamond || 0));
 
-          // UPDATE STATUS KUALIFIKASI ROOM
           setQualifiedSilver(!!data.qualifiedSilver);
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
           
+          // SET NAMA ASLI TELEGRAM LU DISINI
           setUserProfile({
-            name: data.name || "Zetta Hunter",
-            username: data.username ? `@${data.username}` : "@player",
-            avatar: data.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${tid}`,
+            name: data.name || firstName,
+            username: data.username ? `@${data.username}` : `@${username}`,
+            avatar: data.avatar || photoUrl || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${tid}`,
             rank: data.rank || 0
           });
         }
       } catch (err) {
-        console.error("Sync failed:", err);
+        console.error("Gagal sinkron data:", err);
       } finally {
         setLoading(false);
       }
     };
+    
     syncData();
-  }, [setCoins, setZp, setQualifiedSilver, setQualifiedGold, setQualifiedDiamond]);
-  
+  }, []); // Cukup sekali aja pas aplikasi dibuka
+
   // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
@@ -115,11 +121,8 @@ export default function Home() {
   const isLocked = !isFreeAvailable && adsRemaining <= 0;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI GIVE REWARDS (Sinkron Room di Database)
   const giveRewards = useCallback(async (amount: number) => {
-    // Update UI instan
     setZp(currentRoom, currentZp + amount);
-    
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString() || "12345";
     
@@ -130,11 +133,11 @@ export default function Home() {
         body: JSON.stringify({
           telegramId: tid,
           addZp: amount,
-          room: currentRoom // Parameter krusial biar DB tau kolom mana yg diisi
+          room: currentRoom
         })
       });
     } catch (err) {
-      console.error("Save failed:", err);
+      console.error("Gagal simpan poin:", err);
     }
   }, [currentRoom, currentZp, setZp]);
   
@@ -159,7 +162,6 @@ export default function Home() {
     giveRewards(100);
   };
   
-  // --- UI LABELS ---
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
@@ -179,12 +181,11 @@ export default function Home() {
 
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 pb-28">
         
-        {/* USER INFO */}
         <header className="pt-6 pb-2">
            <div className="flex items-center justify-between rounded-3xl px-4 py-3 bg-zinc-900/80 border border-yellow-500/20 backdrop-blur-xl">
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-500/50">
-                <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />
+                {userProfile.avatar && <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />}
               </div>
               <div>
                 <p className="font-black text-sm text-yellow-500">{userProfile.name}</p>
@@ -198,10 +199,8 @@ export default function Home() {
           </div>
         </header>
 
-        {/* ROOM SELECTOR SINKRON */}
         <RoomSelector />
 
-        {/* CLICKER BODY */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
