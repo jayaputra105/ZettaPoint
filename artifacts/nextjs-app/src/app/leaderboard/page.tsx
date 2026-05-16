@@ -25,9 +25,9 @@ interface RoomData {
 }
 
 const ROOMS = [
-  { id: "bronze", name: "Bronze", icon: "♦️", color: "#CD7F32" },
-  { id: "silver", name: "Silver", icon: "♦️", color: "#C0C0C0" },
-  { id: "gold", name: "Gold", icon: "♦️", color: "#FFD700" },
+  { id: "bronze", name: "Bronze", icon: "🔹", color: "#CD7F32" },
+  { id: "silver", name: "Silver", icon: "🔹", color: "#C0C0C0" },
+  { id: "gold", name: "Gold", icon: "🔹", color: "#FFD700" },
   { id: "diamond", name: "Diamond", icon: "💎", color: "#00E5FF" },
 ];
 
