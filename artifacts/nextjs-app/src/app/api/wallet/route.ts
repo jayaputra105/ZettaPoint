@@ -114,7 +114,7 @@ export async function POST(req: Request) {
         `💰 *Nominal WD:* $${wdAmount} USDT\n` +
         `🌐 *Jaringan:* ${method || "Unknown"}\n` +
         `📥 *Alamat Wallet:* \`${walletAddress || "N/A"}\`\n\n` +
-        `⚠️ *Tugas Lu:* Cek akunnya jujur/ngga, kopas alamat dompet di atas, transfer manual via dompet HP lu, terus klik tombol konfirmasi di bawah ini, Cok!`;
+        `⚠️ *Tugas Lu:* copas alamat nya trs bayar`;
 
       // Kirim ke Telegram beserta tombol Callback inline keyboard
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
