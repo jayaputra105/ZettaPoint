@@ -72,14 +72,28 @@ export default function LeaderboardPage() {
       .catch(err => console.error("Room fetch error:", err));
   }, [currentRoom]);
 
-  // TIMER LOGIC: REVISI STRATEGI HITUNG MUNDUR UTC & FORMAT BANNER HARI/JAM
+  // TIMER LOGIC: AMAN & AKURAT MENGGUNAKAN FALLBACK UTC TARGET 00:00
   useEffect(() => {
     const timer = setInterval(() => {
-      if (!roomInfo?.resetAt) return setTimeLeft("--:--:--");
-      
-      const now = new Date().getTime();
-      const target = new Date(roomInfo.resetAt).getTime();
-      const diff = target - now;
+      let targetTime = 0;
+
+      if (roomInfo?.resetAt) {
+        // Coba parsing ISO string / DB timestamp aman dengan membersihkan space jika ada
+        const sanitizedDateStr = roomInfo.resetAt.replace(" ", "T");
+        targetTime = new Date(sanitizedDateStr).getTime();
+      }
+
+      const now = new Date();
+      const nowTime = now.getTime();
+
+      // Jika data API bermasalah atau gagal parsing (NaN), pasang fallback hitungan jam sisa hari ini ke 00:00 UTC
+      if (!targetTime || isNaN(targetTime)) {
+        const fallbackTarget = new Date();
+        fallbackTarget.setUTCHours(24, 0, 0, 0);
+        targetTime = fallbackTarget.getTime();
+      }
+
+      const diff = targetTime - nowTime;
 
       if (diff <= 0) {
         setTimeLeft("Resetting...");
@@ -89,7 +103,6 @@ export default function LeaderboardPage() {
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
         
-        // Aturan Lu: Kalo >= 1 hari pake format days, kalo <= 1 hari pake jam menit detik
         if (d >= 1) {
           setTimeLeft(`${d}d ${h}j ${m}m`);
         } else {
@@ -157,7 +170,7 @@ export default function LeaderboardPage() {
           <div className="py-40 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
         ) : (
           <>
-            {/* 🏆 INTERFACE PODIUM 3D EMAS, PERAK, PERUNGGU SINKRON RESIKO */}
+          
             <div className="px-4 mt-6 flex justify-between items-end h-56 relative w-full mb-4">
               
               {/* JUARA 2 (PODIUM KIRI) */}
@@ -178,7 +191,6 @@ export default function LeaderboardPage() {
                 </AnimatePresence>
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-16 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-xl font-black text-zinc-400 italic tracking-tighter">#2</span>
-                  {roomInfo && top2 && <span className="text-[9px] font-black text-[#4ade80]">${formatNumber(roomInfo.prizePool * 0.30)}</span>}
                 </div>
               </div>
 
@@ -200,7 +212,6 @@ export default function LeaderboardPage() {
                 </AnimatePresence>
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900 border border-[#FFD700]/20 rounded-t-2xl h-24 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.05)]">
                   <span className="text-2xl font-black text-[#FFD700] italic tracking-tighter drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]">#1</span>
-                  {roomInfo && top1 && <span className="text-[9px] font-black text-[#4ade80]">${formatNumber(roomInfo.prizePool * 0.50)}</span>}
                 </div>
               </div>
 
@@ -222,12 +233,11 @@ export default function LeaderboardPage() {
                 </AnimatePresence>
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-12 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-lg font-black text-amber-600 italic tracking-tighter">#3</span>
-                  {roomInfo && top3 && <span className="text-[9px] font-black text-[#4ade80]">${formatNumber(roomInfo.prizePool * 0.20)}</span>}
                 </div>
               </div>
             </div>
 
-            {/* LIST RANKING LINE-UP */}
+            {/* LIST RANKING */}
             <div className="px-4 mt-2 flex flex-col gap-2">
               {regularPlayers.length === 0 ? (
                 <p className="text-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest py-10">No Contenders Left</p>
