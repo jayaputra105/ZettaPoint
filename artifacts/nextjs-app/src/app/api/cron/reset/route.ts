@@ -4,7 +4,7 @@ import { users, rooms, leaderboardWinners, transactions } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  // PROTECTION LAYER: Integrasi Vercel Automation Cron Security Check
+  // PROTECTION LAYER: Autentikasi sistem cron otomatis Vercel
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
@@ -17,10 +17,10 @@ export async function GET(req: Request) {
     for (const room of allRooms) {
       const roomTargetReset = new Date(room.resetAt);
 
-      // KUNCI COOLDOWN: Eksekusi jalan hanya jika jam server sudah menyentuh atau melewati target UTC 00:00
+      // Eksekusi jalan hanya jika jam server sudah menyentuh atau melewati target UTC 00:00
       if (now >= roomTargetReset) {
         
-        // Pemetaan String Nama Kolom murni Drizzle ORM (Pencegah Bug .name undefined)
+        // Pemetaan String Nama Kolom murni Drizzle ORM
         const zpStringMap: Record<string, string> = {
           bronze: "zp_bronze",
           silver: "zp_silver",
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         };
         const activeZpCol = zpColumnMap[room.id];
 
-        // Fetch barisan player yang berhak mendapatkan pembagian hasil
+        // Fetch top pemain teratas di season ini
         const topPlayers = await db
           .select()
           .from(users)
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
           .limit(150);
 
         if (topPlayers.length > 0) {
-          // HARGA MATI SESUAI ATURAN LU: 50% | 30% | 20%
+          // HARGA MATI: 50% | 30% | 20%
           const prizesRatio = [0.50, 0.30, 0.20];
           
           for (let i = 0; i < Math.min(3, topPlayers.length); i++) {
@@ -55,12 +55,12 @@ export async function GET(req: Request) {
 
             if (winner.telegramId && prizeAmount > 0) {
               await db.transaction(async (tx) => {
-                // 1. Suntik USDT murni ke saldo pemenang
+                // 1. Suntik USDT langsung ke dompet global pemenang
                 await tx.update(users)
                   .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
                   .where(eq(users.id, winner.id));
 
-                // 2. Kunci riwayat pemenang musiman
+                // 2. Catat sejarah juara di tabel pemenang season
                 await tx.insert(leaderboardWinners).values({
                   roomId: room.id,
                   userId: winner.id,
@@ -68,7 +68,7 @@ export async function GET(req: Request) {
                   prizeAmount: prizeAmount.toString(),
                 });
 
-                // 3. Masukkan ke log arus mutasi keuangan
+                // 3. Catat jalur transaksi mutasi wallet biar user tidak bingung
                 await tx.insert(transactions).values({
                   userId: winner.id,
                   type: "room_rewards",
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
             }
           }
 
-          // KUALIFIKASI PROMOSI KAMAR TOP 150 BESAR
+          // PROMOSI KAMAR OTOMATIS BAGI TOP 150 BESAR
           const nextRoomMap: Record<string, string> = {
             bronze: "qualified_silver",
             silver: "qualified_gold",
@@ -105,13 +105,23 @@ export async function GET(req: Request) {
         // BERSIHKAN POIN KAMAR TERKAIT (RESET TO ZERO)
         await db.update(users).set({ [activeZpString]: 0 });
 
-        // TARGET WAKTU RESCHEDULE JATUH TEMPO BERIKUTNYA PAS JAM 00:00 UTC SINKRON DURATION
+        // =========================================================
+        // 🛠️ FIX MATI ATURAN LU: KUNCI DURASI SINKRON SESUAI ROOM ID
+        // =========================================================
+        let durationDays = 1; // Default Bronze 1 hari
+        if (room.id === "silver") {
+          durationDays = 3;   // Silver 3 hari
+        } else if (room.id === "gold" || room.id === "diamond") {
+          durationDays = 7;   // Gold & Diamond 7 hari
+        }
+
+        // Target waktu reschedule jatuh tempo berikutnya pas jam 00:00 UTC
         const nextReset = new Date();
-        nextReset.setUTCDate(nextReset.getUTCDate() + room.durationDays);
-        nextReset.setUTCHours(0, 0, 0, 0); // Kunci Paksa Detik Menit Jam Ke Nol UTC!
+        nextReset.setUTCDate(nextReset.getUTCDate() + durationDays);
+        nextReset.setUTCHours(0, 0, 0, 0); // Kunci Paksa Jam Ke Nol UTC!
 
         await db.update(rooms)
-          .set({ resetAt: nextReset })
+          .set({ resetAt: nextReset, durationDays: durationDays })
           .where(eq(rooms.id, room.id));
       }
     }

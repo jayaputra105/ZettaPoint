@@ -23,6 +23,7 @@ interface RoomData {
   id: string;
   prizePool: number;
   resetAt: string;
+  remainingMs: number; // Menangkap data milidetik bersih dari server
 }
 
 const ROOMS = [
@@ -44,6 +45,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [myTgId, setMyTgId] = useState<string | null>(null);
   const [roomInfo, setRoomInfo] = useState<RoomData | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState("");
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -67,61 +69,55 @@ export default function LeaderboardPage() {
       .catch(() => setLoading(false));
   }, [currentRoom]);
 
-  // 3. Fetch Informasi Target Prize Pool & Reset dari DB
+  // 3. Fetch Informasi Target Prize Pool & Reset dari DB Server
   useEffect(() => {
     fetch(`/api/rooms?id=${currentRoom}`)
       .then(res => res.json())
-      .then(data => setRoomInfo(data))
+      .then(data => {
+        setRoomInfo(data);
+        if (data && typeof data.remainingMs === "number") {
+          setCountdown(data.remainingMs); // Kunci angka sisa waktu ke state lokal
+        }
+      })
       .catch(err => console.error("Room fetch error:", err));
   }, [currentRoom]);
 
-  // 4. TIMER LOGIC: REVISI FIX MUTLAK ZONA WAKTU UTC (ANTI-RESETING)
+  // 4. TIMER ENGINE LOGIC: PENGURANGAN BERBASIS TICK LINEAR (ANTI TIMEZONE BUG)
   useEffect(() => {
+    // Jalankan timer pengurang detik jika nilai hitungan mundur valid di atas nol
+    if (countdown <= 0) {
+      setTimeLeft("Resetting...");
+      return;
+    }
+
     const timer = setInterval(() => {
-      let targetTime = 0;
-
-      if (roomInfo?.resetAt) {
-        // Ganti spasi bawaan DB timestamp jadi format standard ISO 'T'
-        let dateStr = roomInfo.resetAt.replace(" ", "T");
+      setCountdown((prev) => {
+        const nextValue = prev - 1000;
         
-        // KUNCI UTAMA: Paksa tempel penanda 'Z' (UTC) di ekor string biar gak dibaca jam lokal HP!
-        if (!dateStr.endsWith("Z")) {
-          dateStr += "Z";
+        if (nextValue <= 0) {
+          setTimeLeft("Resetting...");
+          return 0;
         }
+
+        // Jalankan kalkulasi pembagian waktu harian / jam-jaman
+        const d = Math.floor(nextValue / (1000 * 60 * 60 * 24));
+        const h = Math.floor((nextValue % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((nextValue % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((nextValue % (1000 * 60)) / 1000);
         
-        targetTime = new Date(dateStr).getTime();
-      }
-
-      const nowTime = new Date().getTime();
-
-      // Fallback cadangan hitungan harian jika data dari database kosong / bermasalah
-      if (!targetTime || isNaN(targetTime)) {
-        const fallbackTarget = new Date();
-        fallbackTarget.setUTCHours(24, 0, 0, 0);
-        targetTime = fallbackTarget.getTime();
-      }
-
-      const diff = targetTime - nowTime;
-
-      if (diff <= 0) {
-        setTimeLeft("Resetting...");
-      } else {
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        // Sesuai Aturan Lu: Kalo sisa waktu >= 1 hari pake format days, kalo <= 1 hari pake jam murni
+        // Aturan Lu: Kalo sisa waktu >= 1 hari pake format days, kalo <= 1 hari pake jam murni
         if (d >= 1) {
           setTimeLeft(`${d}d ${h}j ${m}m`);
         } else {
           setTimeLeft(`${h}j ${m}m ${s}d`);
         }
-      }
+        
+        return nextValue;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [roomInfo]);
+  }, [countdown]);
 
   const activeRoomStatic = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
 
@@ -184,7 +180,7 @@ export default function LeaderboardPage() {
           <div className="py-40 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
         ) : (
           <>
-            {/* 🏆 COMPONENT PODIUM 3D - VERSION CLEAN (NO USDT TEXT DISPLAYED) */}
+            {/* 🏆 COMPONENT PODIUM 3D - CLEAN EDITION (NO USDT REWARDS TEXT) */}
             <div className="px-4 mt-6 flex justify-between items-end h-56 relative w-full mb-4">
               
               {/* JUARA 2 (PODIUM KIRI - SILVER) */}
