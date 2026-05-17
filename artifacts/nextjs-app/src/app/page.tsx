@@ -198,7 +198,6 @@ export default function Home() {
 
         <RoomSelector />
         
-        {/* BUTTON KE PAGE MINI GAMES (AMANDEMEN FIX) */}
         <div className="w-full flex justify-end mt-2 px-2">
   <Link href="/minigames" prefetch={true}>
     <motion.button
@@ -209,10 +208,8 @@ export default function Home() {
       className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
     >
       <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
-      <span className="text-xs font-black text-cyan-400 tracking-tighter uppercase opacity-80 group-hover:opacity-100">
-        Mini Games
-      </span>
-      <div className="relative text-xl">🎮</div> 
+      
+      <div className="relative text-xl">🕹️</div> 
     </motion.button>
   </Link>
 </div>
