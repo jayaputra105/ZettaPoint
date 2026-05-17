@@ -206,6 +206,27 @@ export default function Home() {
         </header>
 
         <RoomSelector />
+        
+        
+
+<div className="w-full flex justify-end mt-2 px-2">
+  <motion.button
+    whileTap={{ scale: 0.9 }}
+    onClick={() => {
+      playSFX("click");
+      window.location.href = "/minigames"; // Navigasi manual ala WebApp
+    }}
+    className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
+  >
+    {/* Pendaran Cahaya Biru Neon pelan */}
+    <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+    
+    <span className="text-xs font-black text-cyan-400 tracking-tighter uppercase opacity-80 group-hover:opacity-100">
+      Mini Games
+    </span>
+    <div className="relative text-xl">🎮</div> 
+  </motion.button>
+</div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           {/* 🌟 Baris atas penunjuk sisa iklan yang sudah disinkronkan istilahnya */}
