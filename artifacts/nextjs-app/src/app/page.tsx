@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion"; // 🌟 AMANKAN IMPORT MOTION DI SINI
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
@@ -32,7 +33,8 @@ export default function Home() {
     coins, 
     zp, setZp, 
     currentRoom,
-    loading: appLoading 
+    loading: appLoading,
+    playSFX // 🌟 AMANKAN SUNTIKAN AUDIO DI SINI BIAR GAK ERROR UNDEFINED!
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
@@ -48,7 +50,7 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
   
-  // State verifikasi iklan (User sudah nonton tapi belum nge-tap koin buat klaim)
+  // State verifikasi iklan
   const [isAdVerified, setIsAdVerified] = useState(false);
 
   // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
@@ -83,12 +85,8 @@ export default function Home() {
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
-  // Koin mode claim kalau free click ada ATAU user baru kelar nonton iklan
   const canEarnPoints = isFreeAvailable || isAdVerified;
-  
   const needsAd = !isFreeAvailable && !isAdVerified && adsUsed < MAX_ADS;
-  
-  // Koin mode total locked (🔒)
   const isLocked = !isFreeAvailable && !isAdVerified && adsUsed >= MAX_ADS;
   
   const adsRemaining = MAX_ADS - adsUsed;
@@ -125,20 +123,17 @@ export default function Home() {
 
     if (canEarnPoints) {
       if (isFreeAvailable) {
-        // Klik gratisan jam baru
         const ts = Date.now();
         setLastFreeClick(ts);
         setAdsUsed(0);
         localStorage.setItem("zetta_last_free", String(ts));
         localStorage.setItem("zetta_ads_used", "0");
       } else {
-        // Klik hasil klaim setelah nonton iklan
-        setIsAdVerified(false); // Kunci kembali statusnya biar jadi mode ⏳ lagi
+        setIsAdVerified(false);
       }
       
       giveRewards(100);
     } else if (needsAd) {
-      // Buka modal iklan untuk verifikasi terlebih dahulu
       setShowAd(true);
     }
   };
@@ -148,12 +143,9 @@ export default function Home() {
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    
-    // Iklan tontonan selesai: Buka gembok koin
     setIsAdVerified(true);
   };
   
-  // PANDUAN STATUS BAHASA INGGRIS (Disesuaikan Tema Silver Overclock)
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
@@ -166,9 +158,8 @@ export default function Home() {
     statusLabel = <>🔒 Overclock Limit! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
     statusColor = "rgba(255,100,100,0.85)";
   } else {
-    // 🌟 Ganti teks bioskop lama jadi bernuansa Overclock satelit fiksi ilmiah
     statusLabel = <>⏳ Overclock Ready: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap Matrix to Sync</>;
-    statusColor = "rgba(212,212,216,0.85)"; // Warna silver netral zinc
+    statusColor = "rgba(212,212,216,0.85)";
   }
   
   if (appLoading) {
@@ -207,36 +198,31 @@ export default function Home() {
 
         <RoomSelector />
         
-        
-
-<div className="w-full flex justify-end mt-2 px-2">
-  <motion.button
-    whileTap={{ scale: 0.9 }}
-    onClick={() => {
-      playSFX("click");
-      window.location.href = "/minigames"; // Navigasi manual ala WebApp
-    }}
-    className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
-  >
-    {/* Pendaran Cahaya Biru Neon pelan */}
-    <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
-    
-    <span className="text-xs font-black text-cyan-400 tracking-tighter uppercase opacity-80 group-hover:opacity-100">
-      Mini Games
-    </span>
-    <div className="relative text-xl">🎮</div> 
-  </motion.button>
-</div>
+        {/* BUTTON KE PAGE MINI GAMES (AMANDEMEN FIX) */}
+        <div className="w-full flex justify-end mt-2 px-2">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              playSFX("click");
+              window.location.href = "/minigames";
+            }}
+            className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+            <span className="text-xs font-black text-cyan-400 tracking-tighter uppercase opacity-80 group-hover:opacity-100">
+              Mini Games
+            </span>
+            <div className="relative text-xl">🎮</div> 
+          </motion.button>
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          {/* 🌟 Baris atas penunjuk sisa iklan yang sudah disinkronkan istilahnya */}
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
                ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
              </p>
           </div>
 
-          {/* Kirim status state alur baru ke komponen visual coin */}
           <CoinClicker 
             onCoin={handleCoinClick} 
             pointsPerClick={100} 
