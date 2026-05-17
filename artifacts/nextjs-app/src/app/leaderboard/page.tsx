@@ -48,12 +48,14 @@ export default function LeaderboardPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 1. Sinkron ID User dari Telegram WebApp
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     if (tid) setMyTgId(tid);
   }, []);
 
+  // 2. Fetch Data Anggota Leaderboard sesuai Room Tab
   useEffect(() => {
     setLoading(true);
     fetch(`/api/leaderboard?room=${currentRoom}`)
@@ -65,6 +67,7 @@ export default function LeaderboardPage() {
       .catch(() => setLoading(false));
   }, [currentRoom]);
 
+  // 3. Fetch Informasi Target Prize Pool & Reset dari DB
   useEffect(() => {
     fetch(`/api/rooms?id=${currentRoom}`)
       .then(res => res.json())
@@ -72,21 +75,26 @@ export default function LeaderboardPage() {
       .catch(err => console.error("Room fetch error:", err));
   }, [currentRoom]);
 
-  // TIMER LOGIC: AMAN & AKURAT MENGGUNAKAN FALLBACK UTC TARGET 00:00
+  // 4. TIMER LOGIC: REVISI FIX MUTLAK ZONA WAKTU UTC (ANTI-RESETING)
   useEffect(() => {
     const timer = setInterval(() => {
       let targetTime = 0;
 
       if (roomInfo?.resetAt) {
-        // Coba parsing ISO string / DB timestamp aman dengan membersihkan space jika ada
-        const sanitizedDateStr = roomInfo.resetAt.replace(" ", "T");
-        targetTime = new Date(sanitizedDateStr).getTime();
+        // Ganti spasi bawaan DB timestamp jadi format standard ISO 'T'
+        let dateStr = roomInfo.resetAt.replace(" ", "T");
+        
+        // KUNCI UTAMA: Paksa tempel penanda 'Z' (UTC) di ekor string biar gak dibaca jam lokal HP!
+        if (!dateStr.endsWith("Z")) {
+          dateStr += "Z";
+        }
+        
+        targetTime = new Date(dateStr).getTime();
       }
 
-      const now = new Date();
-      const nowTime = now.getTime();
+      const nowTime = new Date().getTime();
 
-      // Jika data API bermasalah atau gagal parsing (NaN), pasang fallback hitungan jam sisa hari ini ke 00:00 UTC
+      // Fallback cadangan hitungan harian jika data dari database kosong / bermasalah
       if (!targetTime || isNaN(targetTime)) {
         const fallbackTarget = new Date();
         fallbackTarget.setUTCHours(24, 0, 0, 0);
@@ -103,6 +111,7 @@ export default function LeaderboardPage() {
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
         
+        // Sesuai Aturan Lu: Kalo sisa waktu >= 1 hari pake format days, kalo <= 1 hari pake jam murni
         if (d >= 1) {
           setTimeLeft(`${d}d ${h}j ${m}m`);
         } else {
@@ -116,9 +125,12 @@ export default function LeaderboardPage() {
 
   const activeRoomStatic = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
 
+  // Pemotongan grup Top 3 Pemenang Podium
   const top1 = users.find(u => u.position === 1);
   const top2 = users.find(u => u.position === 2);
   const top3 = users.find(u => u.position === 3);
+  
+  // Barisan kontender peringkat 4 ke bawah
   const regularPlayers = users.filter(u => u.position > 3);
 
   return (
@@ -141,6 +153,7 @@ export default function LeaderboardPage() {
             </div>
           </div>
 
+          {/* Panel Atas Kolam Prize Pool */}
           <div className="flex flex-col items-center justify-center py-4 rounded-2xl bg-zinc-900/40 border border-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md">
             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Room Prize Pool</p>
             <h2 className="text-3xl font-black text-[#4ade80] drop-shadow-[0_0_10px_rgba(74,222,128,0.2)]">
@@ -149,6 +162,7 @@ export default function LeaderboardPage() {
             <p className="text-[9px] font-black text-zinc-500 mt-1 uppercase tracking-wider">Top 3 Shares: 50% | 30% | 20%</p>
           </div>
 
+          {/* Menu Horizontal Pengganti Tab Kamar */}
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto no-scrollbar py-1">
             {ROOMS.map((r) => (
               <button
@@ -170,10 +184,10 @@ export default function LeaderboardPage() {
           <div className="py-40 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
         ) : (
           <>
-          
+            {/* 🏆 COMPONENT PODIUM 3D - VERSION CLEAN (NO USDT TEXT DISPLAYED) */}
             <div className="px-4 mt-6 flex justify-between items-end h-56 relative w-full mb-4">
               
-              {/* JUARA 2 (PODIUM KIRI) */}
+              {/* JUARA 2 (PODIUM KIRI - SILVER) */}
               <div className="flex flex-col items-center flex-1 z-10">
                 <AnimatePresence>
                   {top2 ? (
@@ -189,12 +203,13 @@ export default function LeaderboardPage() {
                     <div className="h-20 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
+                {/* Blok Tiang Podium Silver */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-16 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-xl font-black text-zinc-400 italic tracking-tighter">#2</span>
                 </div>
               </div>
 
-              {/* JUARA 1 (PODIUM TENGAH) */}
+              {/* JUARA 1 (PODIUM TENGAH - EMAS UTAMA) */}
               <div className="flex flex-col items-center flex-1 z-20 px-1">
                 <AnimatePresence>
                   {top1 ? (
@@ -210,12 +225,13 @@ export default function LeaderboardPage() {
                     <div className="h-24 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
+                {/* Blok Tiang Podium Gold */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900 border border-[#FFD700]/20 rounded-t-2xl h-24 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.05)]">
                   <span className="text-2xl font-black text-[#FFD700] italic tracking-tighter drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]">#1</span>
                 </div>
               </div>
 
-              {/* JUARA 3 (PODIUM KANAN) */}
+              {/* JUARA 3 (PODIUM KANAN - PERUNGGU) */}
               <div className="flex flex-col items-center flex-1 z-10">
                 <AnimatePresence>
                   {top3 ? (
@@ -231,13 +247,14 @@ export default function LeaderboardPage() {
                     <div className="h-20 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
+                {/* Blok Tiang Podium Bronze */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-12 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-lg font-black text-amber-600 italic tracking-tighter">#3</span>
                 </div>
               </div>
             </div>
 
-            {/* LIST RANKING */}
+            {/* TABEL LIST SISA PERINGKAT 4 KEOBAWAH */}
             <div className="px-4 mt-2 flex flex-col gap-2">
               {regularPlayers.length === 0 ? (
                 <p className="text-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest py-10">No Contenders Left</p>
