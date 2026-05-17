@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
+// 🌟 Instance global di luar component biar gak ke-recreate tiap kali state berubah
+let bgmAudio: HTMLAudioElement | null = null;
+
 interface AppContextType {
   coins: number;
   zp: Record<string, number>;
@@ -18,6 +21,7 @@ interface AppContextType {
   setQualifiedSilver: (val: boolean) => void;
   setQualifiedGold: (val: boolean) => void;
   setQualifiedDiamond: (val: boolean) => void;
+  playSFX: (type: "click" | "spin" | "win") => void; // 🌟 Daftarkan fungsi audio global di interface
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -37,6 +41,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qualifiedDiamond, setQualifiedDiamond] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // 🌟 AUDIO LOGIC ENGINE (BGM & SFX)
+  const startBGM = () => {
+    if (typeof window === "undefined" || bgmAudio) return;
+    
+    bgmAudio = new Audio("/audio/bgm.mp3");
+    bgmAudio.loop = true;
+    bgmAudio.volume = 0.15; // Setel sayup-sayup pelan biar gak budek di HP player
+    bgmAudio.play().catch((err) => {
+      console.log("Autoplay diblokir browser, nunggu interaksi klik pertama:", err);
+    });
+  };
+
+  const playSFX = (type: "click" | "spin" | "win") => {
+    if (typeof window === "undefined") return;
+    const sfx = new Audio(`/audio/${type}.mp3`);
+    
+    // Atur volume masing-masing sfx biar seimbang
+    if (type === "spin") sfx.volume = 0.6;
+    else if (type === "win") sfx.volume = 0.7;
+    else sfx.volume = 0.4; // click volume
+
+    sfx.play().catch(() => {});
+  };
+
+  // Trigger BGM setelah user menyentuh layar pertama kali (Syarat mutlak Telegram WebApp)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const handleFirstInteraction = () => {
+        startBGM();
+        window.removeEventListener("click", handleFirstInteraction);
+        window.removeEventListener("touchstart", handleFirstInteraction);
+      };
+      
+      window.addEventListener("click", handleFirstInteraction);
+      window.addEventListener("touchstart", handleFirstInteraction);
+      
+      return () => {
+        window.removeEventListener("click", handleFirstInteraction);
+        window.removeEventListener("touchstart", handleFirstInteraction);
+      };
+    }
+  }, []);
+
+  // INITIAL DATA SYNC TELEGRAM (Bawaan lu dijaga ketat)
   useEffect(() => {
     let retryCount = 0;
 
@@ -121,6 +169,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setQualifiedSilver,
         setQualifiedGold,
         setQualifiedDiamond,
+        playSFX, // 🌟 Bagikan fungsi audio ke seluruh halaman & komponen
       }}
     >
       {children}
