@@ -8,7 +8,7 @@ import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
 import RoomSelector from "@/components/RoomSelector";
 import { useApp } from "@/context/AppProvider";
-import link from "next/link"
+import Link from "next/link"
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
 const MAX_ADS = 15;
@@ -34,7 +34,7 @@ export default function Home() {
     zp, setZp, 
     currentRoom,
     loading: appLoading,
-    playSFX // 🌟 AMANKAN SUNTIKAN AUDIO DI SINI BIAR GAK ERROR UNDEFINED!
+    playSFX 
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
