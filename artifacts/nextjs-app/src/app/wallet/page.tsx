@@ -19,7 +19,7 @@ const MIN_WD_AMOUNT = 30;
 export default function WalletPage() {
   const { coins, usdtBalance, zp } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [method, setMethod] = useState < string | null > (null);
+  const [method, setMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +57,12 @@ export default function WalletPage() {
       setIsModalOpen(false);
       setAmount("");
       setAddress("");
+
+      // 🌟 JALUR NINJA SINKRONISASI: Paksa browser WebApp reload data terbaru dari DB
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+
     } catch (e: any) {
       alert(e.message);
     } finally {
