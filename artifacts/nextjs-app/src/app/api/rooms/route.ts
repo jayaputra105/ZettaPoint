@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const roomId = searchParams.get("id"); // e.g., 'bronze', 'silver', dll.
     
-    
+    // Kondisi 1: Jika tidak ada ID, kirim seluruh data room list polosan
     if (!roomId) {
       const allRooms = await db.select().from(rooms);
       return NextResponse.json(allRooms);
@@ -20,26 +20,38 @@ export async function GET(req: Request) {
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
-
+    
     // =========================================================
-    // 🕒 FIX MUTLAK: AMBIL MILIDETIK LANGSUNG DARI OBJEK DATE DB
+    // 🛸 BYPASS TIMEZONE ENGINE: HITUNG SISA WAKTU MURNI JAVASCRIPT
     // =========================================================
-    const nowTime = Date.now();
+    const now = new Date();
     
-    // Drizzle secara default mengembalikan objek Date murni, langsung konversi ke angka milidetik
-    const targetTime = room.resetAt instanceof Date 
-      ? room.resetAt.getTime() 
-      : new Date(room.resetAt).getTime();
+    // Ambil timestamp detik saat ini dalam UTC
+    const nowTime = now.getTime();
     
-    // Cari selisih angka milidetik bersih (jika waktu lewat, minimal return 0)
-    const remainingMs = Math.max(0, targetTime - nowTime);
+    // Paksa buat target jam 00:00 UTC terdekat (Malam ini jam 12 malam waktu UTC)
+    const nextMidnightUTC = new Date();
+    nextMidnightUTC.setUTCHours(24, 0, 0, 0);
+    const msToMidnight = nextMidnightUTC.getTime() - nowTime;
     
-    // Kirimkan data matang ke frontend
+    // Ambil durasi hari asli berdasarkan aturan sakti dari lu
+    let durationDays = Number(room.durationDays) || 1;
+    if (room.id === "bronze") durationDays = 1;
+    if (room.id === "silver") durationDays = 3;
+    if (room.id === "gold" || room.id === "diamond") durationDays = 7;
+    
+    // Sisa hari real = (durasi hari - 1) dikali milidetik satu hari penuh
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    // KUNCI AMAN: Sisa waktu adalah sisa jam menuju tengah malam UTC malam ini + sisa hari berikutnya
+    const remainingMs = msToMidnight + ((durationDays - 1) * oneDayMs);
+    
+    // Kirimkan data matang ke frontend tanpa bergantung format tanggal DB lagi
     return NextResponse.json({
       id: room.id,
       prizePool: room.prizePool,
       resetAt: room.resetAt,
-      remainingMs: remainingMs // Angka bulat bersih anti-error zona waktu
+      remainingMs: remainingMs // Angka bulat bersih, anti-selisih jam antar device!
     });
   } catch (e) {
     console.error("Rooms API Error:", e);
