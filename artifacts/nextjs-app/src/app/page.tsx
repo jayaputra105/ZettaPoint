@@ -197,8 +197,7 @@ export default function Home() {
         </header>
 
         <RoomSelector />
-        
-        <div className="w-full flex justify-end mt-2 px-2">
+       <div className="w-full flex justify-end mt-2 px-2">
   <Link href="/minigames" prefetch={true}>
     <motion.button
       whileTap={{ scale: 0.9 }}
@@ -207,8 +206,10 @@ export default function Home() {
       }}
       className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
     >
+      {/* Pendaran Cahaya Biru Neon pelan */}
       <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
       
+      {/* Ikon Game Stick Flat Anti-Beban */}
       <div className="relative text-xl">🕹️</div> 
     </motion.button>
   </Link>
