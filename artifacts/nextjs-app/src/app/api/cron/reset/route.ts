@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, rooms, leaderboardWinners } from "@/db/schema";
+import { users, rooms, leaderboardWinners, transactions } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  // PENGAMAN CRON
+  // PROTECTION LAYER: Integrasi Vercel Automation Cron Security Check
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
@@ -15,9 +15,20 @@ export async function GET(req: Request) {
     const now = new Date();
 
     for (const room of allRooms) {
-      if (now >= new Date(room.resetAt)) {
+      const roomTargetReset = new Date(room.resetAt);
+
+      // KUNCI COOLDOWN: Eksekusi jalan hanya jika jam server sudah menyentuh atau melewati target UTC 00:00
+      if (now >= roomTargetReset) {
         
-        // Mapping kolom ZP
+        // Pemetaan String Nama Kolom murni Drizzle ORM (Pencegah Bug .name undefined)
+        const zpStringMap: Record<string, string> = {
+          bronze: "zp_bronze",
+          silver: "zp_silver",
+          gold: "zp_gold",
+          diamond: "zp_diamond"
+        };
+        const activeZpString = zpStringMap[room.id];
+
         const zpColumnMap: Record<string, any> = {
           bronze: users.zpBronze,
           silver: users.zpSilver,
@@ -26,6 +37,7 @@ export async function GET(req: Request) {
         };
         const activeZpCol = zpColumnMap[room.id];
 
+        // Fetch barisan player yang berhak mendapatkan pembagian hasil
         const topPlayers = await db
           .select()
           .from(users)
@@ -34,53 +46,69 @@ export async function GET(req: Request) {
           .limit(150);
 
         if (topPlayers.length > 0) {
-          const prizes = [0.5, 0.3, 0.2];
+          // HARGA MATI SESUAI ATURAN LU: 50% | 30% | 20%
+          const prizesRatio = [0.50, 0.30, 0.20];
+          
           for (let i = 0; i < Math.min(3, topPlayers.length); i++) {
             const winner = topPlayers[i];
-            const prizeAmount = room.prizePool * prizes[i];
+            const prizeAmount = room.prizePool * prizesRatio[i];
 
-            // FIX TYPE ERROR: Pastikan telegramId tidak null sebelum update
-            if (winner.telegramId) {
-              await db.update(users)
-                .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
-                .where(eq(users.telegramId, winner.telegramId));
+            if (winner.telegramId && prizeAmount > 0) {
+              await db.transaction(async (tx) => {
+                // 1. Suntik USDT murni ke saldo pemenang
+                await tx.update(users)
+                  .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
+                  .where(eq(users.id, winner.id));
 
-              await db.insert(leaderboardWinners).values({
-                roomId: room.id,
-                userId: winner.id,
-                rank: i + 1,
-                prizeAmount: prizeAmount.toString(),
+                // 2. Kunci riwayat pemenang musiman
+                await tx.insert(leaderboardWinners).values({
+                  roomId: room.id,
+                  userId: winner.id,
+                  rank: i + 1,
+                  prizeAmount: prizeAmount.toString(),
+                });
+
+                // 3. Masukkan ke log arus mutasi keuangan
+                await tx.insert(transactions).values({
+                  userId: winner.id,
+                  type: "room_rewards",
+                  amount: prizeAmount.toString(),
+                  currency: "USDT",
+                  status: "success",
+                  method: `Season Rank #${i + 1} Reward [Room ${room.id.toUpperCase()}]`,
+                });
               });
             }
           }
 
-          const nextRoomMap: Record<string, any> = {
-            bronze: "qualifiedSilver",
-            silver: "qualifiedGold",
-            gold: "qualifiedDiamond"
+          // KUALIFIKASI PROMOSI KAMAR TOP 150 BESAR
+          const nextRoomMap: Record<string, string> = {
+            bronze: "qualified_silver",
+            silver: "qualified_gold",
+            gold: "qualified_diamond"
           };
-          const nextCol = nextRoomMap[room.id];
-          if (nextCol) {
-            // Filter hanya ID yang valid (bukan null)
+          const nextColString = nextRoomMap[room.id];
+          
+          if (nextColString) {
             const topIds = topPlayers
               .map(p => p.telegramId)
               .filter((id): id is string => id !== null);
 
             if (topIds.length > 0) {
               await db.update(users)
-                .set({ [nextCol]: true })
+                .set({ [nextColString]: true })
                 .where(sql`telegram_id IN ${topIds}`);
             }
           }
         }
 
-        // Reset ZP room terkait
-        await db.update(users).set({ [activeZpCol.name]: 0 });
+        // BERSIHKAN POIN KAMAR TERKAIT (RESET TO ZERO)
+        await db.update(users).set({ [activeZpString]: 0 });
 
-        // Set reset baru
+        // TARGET WAKTU RESCHEDULE JATUH TEMPO BERIKUTNYA PAS JAM 00:00 UTC SINKRON DURATION
         const nextReset = new Date();
         nextReset.setUTCDate(nextReset.getUTCDate() + room.durationDays);
-        nextReset.setUTCHours(0, 0, 0, 0);
+        nextReset.setUTCHours(0, 0, 0, 0); // Kunci Paksa Detik Menit Jam Ke Nol UTC!
 
         await db.update(rooms)
           .set({ resetAt: nextReset })

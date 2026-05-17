@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const room = searchParams.get("room") || "bronze";
     
-    // Mapping kolom ZP berdasarkan room yang diminta frontend
+    // Mapping model kolom ZP berdasarkan data kiriman frontend tab
     const zpColumnMap: Record < string, any > = {
       bronze: users.zpBronze,
       silver: users.zpSilver,
@@ -25,13 +25,14 @@ export async function GET(req: Request) {
         name: users.name,
         username: users.username,
         avatar: users.avatar,
-        zp: targetZpCol, // Ambil nilai dari kolom room yang dipilih
+        zp: targetZpCol,
       })
       .from(users)
-      .where(sql`${targetZpCol} > 0`) // Hanya tampilkan yang sudah punya poin
+      .where(sql`${targetZpCol} > 0`) // Cukup render player yang bertarung musim ini
       .orderBy(desc(targetZpCol))
       .limit(100);
     
+    // Injeksi otomatis nomor posisi index leaderboard
     const withRank = top.map((u, i) => ({
       ...u,
       position: i + 1
