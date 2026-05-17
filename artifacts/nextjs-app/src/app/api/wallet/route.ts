@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     
     return NextResponse.json({
       coins: user.coins,
-      zp: totalZp, // Dikirim sebagai 'zp' agar sinkron dengan frontend lama
+      zp: totalZp, // Dikirim sebagai 'zp' agar sinkron dengan frontend
       usdtBalance: user.usdtBalance,
       transactions: tx || []
     });
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
   }
 }
 
-// 2. REQUEST WITHDRAWAL (USDT ONLY)
+// 2. REQUEST WITHDRAWAL (USDT ONLY + AUTO NOTIF GROUP ADMIN)
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -74,14 +74,14 @@ export async function POST(req: Request) {
     }
 
     // DATABASE TRANSACTION (Atomic Update)
-    const result = await db.transaction(async (tx) => {
+    const newTransaction = await db.transaction(async (tx) => {
       // Potong Saldo USDT User
       await tx
         .update(users)
         .set({ usdtBalance: sql`${users.usdtBalance} - ${wdAmount}` })
         .where(eq(users.id, user.id));
 
-      // Masukkan ke Tabel Transaksi
+      // Masukkan ke Tabel Transaksi dengan status pending
       const [newTx] = await tx.insert(transactions).values({
         userId: user.id,
         type: "withdrawal",
@@ -89,16 +89,63 @@ export async function POST(req: Request) {
         currency: "USDT",
         method: method || "Unknown",
         walletAddress: walletAddress || "N/A",
-        status: "pending", // Akan di-review manual oleh lu sebagai admin
+        status: "pending", 
       }).returning();
 
       return newTx;
     });
 
+    // =========================================================
+    // 📢 NOTIFICATION ENGINE: KIRIM TIKET WD KE GRUP ADMIN TELE
+    // =========================================================
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID; // Buat key ini di env Vercel (Bisa ID Grup/ID Akun lu)
+
+    if (botToken && adminChatId) {
+      const namaUser = user.name || "Player";
+      const usernameUser = user.username ? `@${user.username}` : "N/A";
+      
+      const teksNotifAdmin = 
+        `🚨 *ADA REQUEST WD BARU, COK!* 🚨\n\n` +
+        `👤 *User:* ${namaUser} (${usernameUser})\n` +
+        `🆔 *Telegram ID:* \`${user.telegramId}\`\n` +
+        `🎟️ *TX ID Database:* #${newTransaction.id}\n` +
+        `----------------------------------------\n` +
+        `💰 *Nominal WD:* $${wdAmount} USDT\n` +
+        `🌐 *Jaringan:* ${method || "Unknown"}\n` +
+        `📥 *Alamat Wallet:* \`${walletAddress || "N/A"}\`\n\n` +
+        `⚠️ *Tugas Lu:* Cek akunnya jujur/ngga, kopas alamat dompet di atas, transfer manual via dompet HP lu, terus klik tombol konfirmasi di bawah ini, Cok!`;
+
+      // Kirim ke Telegram beserta tombol Callback inline keyboard
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: adminChatId,
+          text: teksNotifAdmin,
+          parse_mode: "Markdown", // Biar teks alamat wallet bisa diklik-salin otomatis di HP
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "✅ Confirm Payout",
+                  callback_data: `confirm_wd_${newTransaction.id}`
+                },
+                {
+                  text: "❌ Reject WD",
+                  callback_data: `reject_wd_${newTransaction.id}`
+                }
+              ]
+            ]
+          }
+        }),
+      }).catch(err => console.error("Gagal kirim log ke grup admin:", err));
+    }
+
     return NextResponse.json({ 
       success: true, 
       message: "Withdrawal request pending review",
-      transaction: result 
+      transaction: newTransaction 
     });
   } catch (e) {
     console.error("Wallet POST Error:", e);
