@@ -48,10 +48,10 @@ export default function Home() {
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
   
-  // State baru untuk verifikasi iklan (User sudah nonton tapi belum nge-tap koin buat klaim)
+  // State verifikasi iklan (User sudah nonton tapi belum nge-tap koin buat klaim)
   const [isAdVerified, setIsAdVerified] = useState(false);
 
-  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM (TANPA TEMBAK API GET LAGI)
+  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -86,10 +86,9 @@ export default function Home() {
   // Koin mode claim kalau free click ada ATAU user baru kelar nonton iklan
   const canEarnPoints = isFreeAvailable || isAdVerified;
   
-  // Koin mode nonton iklan (🎬) kalau free click abis, belum verifikasi iklan, dan kuota ad masih ada
   const needsAd = !isFreeAvailable && !isAdVerified && adsUsed < MAX_ADS;
   
-  // Koin mode total locked (🔒) kalau free abis, belum ad-verify, dan kuota harian ludes
+  // Koin mode total locked (🔒)
   const isLocked = !isFreeAvailable && !isAdVerified && adsUsed >= MAX_ADS;
   
   const adsRemaining = MAX_ADS - adsUsed;
@@ -134,7 +133,7 @@ export default function Home() {
         localStorage.setItem("zetta_ads_used", "0");
       } else {
         // Klik hasil klaim setelah nonton iklan
-        setIsAdVerified(false); // Kunci kembali statusnya biar jadi mode 🎬 lagi
+        setIsAdVerified(false); // Kunci kembali statusnya biar jadi mode ⏳ lagi
       }
       
       giveRewards(100);
@@ -150,25 +149,26 @@ export default function Home() {
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
     
-    // Iklan tontonan selesai: Buka gembok koin (Jangan langsung tembak koin/ZP)
+    // Iklan tontonan selesai: Buka gembok koin
     setIsAdVerified(true);
   };
   
-  // PANDUAN STATUS BAHASA INGGRIS
+  // PANDUAN STATUS BAHASA INGGRIS (Disesuaikan Tema Silver Overclock)
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
     statusLabel = "✅ Free click available!";
     statusColor = "#4ade80";
   } else if (isAdVerified) {
-    statusLabel = "🔥 Coin Unlocked! Tap to claim +100 ZP";
+    statusLabel = "⚡ Core Unlocked! Tap Matrix to claim +100 ZP";
     statusColor = "#f59e0b";
   } else if (isLocked) {
-    statusLabel = <>🔒 Limit Reached! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
+    statusLabel = <>🔒 Overclock Limit! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
     statusColor = "rgba(255,100,100,0.85)";
   } else {
-    statusLabel = <>🎬 Ads Available: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap Coin to Watch</>;
-    statusColor = "rgba(255,215,0,0.75)";
+    // 🌟 Ganti teks bioskop lama jadi bernuansa Overclock satelit fiksi ilmiah
+    statusLabel = <>⏳ Overclock Ready: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap Matrix to Sync</>;
+    statusColor = "rgba(212,212,216,0.85)"; // Warna silver netral zinc
   }
   
   if (appLoading) {
@@ -208,9 +208,10 @@ export default function Home() {
         <RoomSelector />
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
+          {/* 🌟 Baris atas penunjuk sisa iklan yang sudah disinkronkan istilahnya */}
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-               🎬 Remaining Ads: <span className="text-yellow-500 font-black">{adsRemaining}/{MAX_ADS}</span>
+               ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
              </p>
           </div>
 
@@ -234,7 +235,6 @@ export default function Home() {
 
       <BottomNav />
       
-      {/* ADMODAL DI SINI BIAR KAGA KETINGGALAN LAGI 🗿 */}
       <AdModal 
         open={showAd} 
         adNumber={adsUsed + 1} 
