@@ -14,9 +14,9 @@ interface FloatingText {
 
 interface CoinClickerProps {
   onCoin: (amount: number) => void;
-  pointsPerClick?: number;
-  locked?: boolean;
-  needsAd?: boolean;
+  pointsPerClick ? : number;
+  locked ? : boolean;
+  needsAd ? : boolean;
 }
 
 export default function CoinClicker({
@@ -26,11 +26,11 @@ export default function CoinClicker({
   needsAd = false,
 }: CoinClickerProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const [floaters, setFloaters] = useState<FloatingText[]>([]);
+  const [floaters, setFloaters] = useState < FloatingText[] > ([]);
   const [nextId, setNextId] = useState(0);
   const [shake, setShake] = useState(false);
   
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = (e: React.MouseEvent < HTMLButtonElement > ) => {
     if (locked) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
@@ -44,8 +44,8 @@ export default function CoinClicker({
     const id = nextId;
     setNextId((n) => n + 1);
     
-    const randomRotate = Math.random() * 40 - 20; 
-    const randomTranslateX = Math.random() * 60 - 30; 
+    const randomRotate = Math.random() * 40 - 20;
+    const randomTranslateX = Math.random() * 60 - 30;
     
     if (!needsAd) {
       setFloaters((prev) => [
@@ -63,7 +63,6 @@ export default function CoinClicker({
   return (
     <div className="relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none">
       
-      {/* 🌟 INJEKSI PLASMA EFFECT FLOWING (BIAR PLASMA DI BELAKANG CENTER DISC TETEP HIDUP MEMPESONA) */}
       <style>{`
         @keyframes plasmaStatis {
           0% { background-position: 0% 50%; }
@@ -72,7 +71,7 @@ export default function CoinClicker({
         }
       `}</style>
 
-      {/* 🌟 Floating Points Effect */}
+      {/* Floating Points Effect */}
       <AnimatePresence>
         {floaters.map((f) => (
           <motion.span
@@ -121,21 +120,19 @@ export default function CoinClicker({
           }}
         />
 
-        {/* ===== 🌟 HIASAN LUAR BARU YANG VARIATIF (🧩🎲💸🪙) ===== */}
+        {/* Hiasan Luar */}
         {!locked && (
           <>
-            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-4 top-8 text-3xl">🧩</motion.div>
-            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-4 top-14 text-3xl">🎲</motion.div>
-            <motion.div animate={{ y: [0, 5, 0], rotate: [-6, 12, -6] }} transition={{ duration: 4.0, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 bottom-12 text-3xl">💸</motion.div>
-            <motion.div animate={{ y: [0, -5, 0], rotate: [8, -12, 8] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 bottom-10 text-3xl">🪙</motion.div>
+            <div className="absolute -left-4 top-8 text-3xl animate-[bounce_3.2s_infinite]">🧩</div>
+            <div className="absolute -right-4 top-14 text-3xl animate-[bounce_3.6s_infinite]">🎲</div>
+            <div className="absolute -left-2 bottom-12 text-3xl animate-[bounce_4.0s_infinite]">💸</div>
+            <div className="absolute -right-2 bottom-10 text-3xl animate-[bounce_2.8s_infinite]">🪙</div>
           </>
         )}
 
         {/* ===== LAYER 2: Rotating orbit ring ===== */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-          className="absolute w-[210px] h-[210px] rounded-full"
+        <div
+          className="absolute w-[210px] h-[210px] rounded-full animate-[spin_6s_linear_infinite]"
           style={{
             border: "2px solid transparent",
             background: locked 
@@ -147,8 +144,8 @@ export default function CoinClicker({
           }}
         />
 
-        {/* ===== LAYER 3: THE MAIN COIN ===== */}
-        <motion.div
+        {/* ===== LAYER 3 & 4: THE MAIN COIN BODY WITH TICKS ===== */}
+        <div
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
             background: locked
@@ -162,12 +159,8 @@ export default function CoinClicker({
               ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)" 
               : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
-          animate={!locked ? { y: [0, -6, 0] } : {}}
-          transition={{ 
-            y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
-          }}
         >
-          {/* ===== LAYER 4: Outer rim ticks / Strip Garis Outer ===== */}
+          {/* Ticks Pinggiran Koin Bawaan */}
           <div className="absolute inset-2 rounded-full" style={{ 
             background: needsAd 
               ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
@@ -175,91 +168,72 @@ export default function CoinClicker({
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
           }} />
 
-          {/* ===== LAYER 5: Inner medallion (TEMPAT EKSEKUSI REVISI GILA KITA COK) ===== */}
-          <div
-            className="relative w-[150px] h-[150px] rounded-full flex items-center justify-center overflow-hidden"
-            style={{
-              // Base background tetap aman mengikuti state lock/ad lu
-              background: locked 
-                ? "#333" 
-                : needsAd 
-                ? "radial-gradient(circle at 35% 30%, #FAFAFA 0%, #A1A1AA 60%, #3F3F46 100%)"
-                : "radial-gradient(circle at 35% 30%, #FFE680 0%, #E8A317 60%, #8A5A0E 100%)",
-            }}
-          >
-            {/* 🟢 1. REVISI HEXAGON EMAS DOMINAN (Sesuai Gambar Infografis!) */}
-            {!locked && !needsAd && (
-              <div 
-                className="absolute inset-1.5 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-700 shadow-inner"
-                style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-              />
-            )}
+          {/* =============================================================== */}
+          {/* 📦 JALUR PENYUSUNAN LAYER STATIS BARU (DI DALAM BODY 180PX) */}
+          {/* =============================================================== */}
+          
+          {/* 🛑 1. HEXAGON EMAS DOMINAN (Lebar memotong area dalam koin) */}
+          {!locked && !needsAd && (
+            <div 
+              className="absolute w-[140px] h-[140px] bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-800 shadow-md"
+              style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+            />
+          )}
 
-            {/* 🟢 2. REVISI PLASMA CAIR UNGU + ORANYE ACAK (Di atas Hexagon Dominan) */}
-            {!locked && !needsAd && (
-              <div 
-                className="absolute inset-2 opacity-85 mix-blend-overlay"
-                style={{
-                  clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                  backgroundImage: "linear-gradient(45deg, #6b21a8, #ea580c, #7c3aed, #f97316)",
-                  backgroundSize: "200% 200%",
-                  animation: "plasmaStatis 5s ease infinite"
-                }}
-              />
-            )}
+          {/* 🛑 2. PLASMA CAIR UNGU + ORANYE ACAK (Nesting pas di atas Hexagon) */}
+          {!locked && !needsAd && (
+            <div 
+              className="absolute w-[134px] h-[134px] opacity-90 mix-blend-color-dodge"
+              style={{
+                clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                backgroundImage: "linear-gradient(45deg, #7c3aed, #ea580c, #6b21a8, #f97316)",
+                backgroundSize: "200% 200%",
+                animation: "plasmaStatis 4s ease infinite"
+              }}
+            />
+          )}
 
-            {/* 🟢 3. REVISI CENTER DISC EMAS BULAT (Di atas Plasma, Sebagai Kontras Logo Hitam) */}
-            {!locked && !needsAd && (
-              <div 
-                className="absolute w-[90px] h-[90px] rounded-full bg-gradient-to-br from-white via-yellow-300 to-amber-500 shadow-[0_4px_10px_rgba(0,0,0,0.35),_inset_0_2px_4px_rgba(255,255,255,0.6)] border border-amber-600/40"
-              />
-            )}
+          {/* 🛑 3. CENTER DISC EMAS BULAT (Sempurna di Tengah-tengah Plasma) */}
+          {!locked && !needsAd && (
+            <div 
+              className="absolute w-[86px] h-[86px] rounded-full bg-gradient-to-br from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_4px_8px_rgba(0,0,0,0.4),_inset_0_2px_4px_rgba(255,255,255,0.5)] border border-amber-600/30"
+            />
+          )}
 
-            {/* 🟢 4. REVISI LOGO CORE TENGAH (Z + GARIS INTEGRASI DOLAR PRESTISIUS) */}
+          {/* 🛑 4. LOGO CORE CORE (Z HITAM + MANIPULASI GARIS DOLAR SENTRAL) */}
+          <div className="absolute w-[120px] h-[120px] flex items-center justify-center">
             {needsAd && !locked ? (
               <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
             ) : (
-              <div className="relative w-[90px] h-[90px] flex items-center justify-center">
+              <div className="relative w-full h-full flex items-center justify-center">
                 
-                {/* TRICK MAKIN SANGAR: Garis dollar atas (Hanya nongol di koin emas aktif) */}
+                {/* Garis Dolar Atas (Presisi Center) */}
                 {!locked && !needsAd && (
-                  <div className="absolute top-2 w-[5px] h-[14px] bg-black rounded-sm z-30" />
+                  <div className="absolute top-[26px] w-[5px] h-[12px] bg-black rounded-sm z-30" />
                 )}
 
                 <span
-                  className="font-black text-[64px] leading-none select-none z-20 relative"
+                  className="font-black text-[68px] leading-none select-none z-20"
                   style={{
-                    color: locked ? "#555" : "#000000", // Logo Z Hitam kontras maksimal duduk di atas Center Disc
-                    textShadow: locked ? "none" : "0 1.5px 0 rgba(255,255,255,0.4)",
+                    color: locked ? "#555" : "#000000",
+                    textShadow: locked ? "none" : "0 1px 0 rgba(255,255,255,0.3)",
                   }}
                 >
                   {locked ? "🔒" : "Z"}
                 </span>
 
-                {/* TRICK MAKIN SANGAR: Garis dollar bawah (Hanya nongol di koin emas aktif) */}
+                {/* Garis Dolar Bawah (Presisi Center) */}
                 {!locked && !needsAd && (
-                  <div className="absolute bottom-2 w-[5px] h-[14px] bg-black rounded-sm z-30" />
+                  <div className="absolute bottom-[26px] w-[5px] h-[12px] bg-black rounded-sm z-30" />
                 )}
               </div>
             )}
           </div>
 
-          {/* Specular highlight */}
+          {/* Specular highlight koin */}
           {!locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
-        </motion.div>
+        </div>
       </motion.button>
-
-      {/* Teks Subtitle Bawah */}
-      {needsAd && !locked && (
-        <motion.div 
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: [0.4, 0.9, 0.4] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-4 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black tracking-[0.3em] text-zinc-400 uppercase"
-        >
-          <span>OVERCLOCK TIME</span>
-        </motion.div>
-      )}
     </div>
   );
 }
