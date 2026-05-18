@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
@@ -39,14 +39,6 @@ export default function Home() {
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
-
-  // 🪙 STATE COUNTER-UP UNTUK DISPLAY INDIKATOR SALDO ZP UTAMA
-  const [displayZp, setDisplayZp] = useState(currentZp);
-  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    setDisplayZp(currentZp);
-  }, [currentZp, currentRoom]);
   
   const [userProfile, setUserProfile] = useState({
     name: "Identifying...",
@@ -58,9 +50,11 @@ export default function Home() {
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
+  
+  // State verifikasi iklan (Penentu koin berubah jadi emas premium)
   const [isAdVerified, setIsAdVerified] = useState(false);
 
-  // 1. TELEGRAM INITIATION
+  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -78,7 +72,7 @@ export default function Home() {
     }
   }, []);
 
-  // 2. TIMERS & PERSISTENCE
+  // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -88,6 +82,7 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
+  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
@@ -98,30 +93,14 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. REWARD PROCESSING & INDIKATOR COUNTER JALAN
+  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
     if (!tid) return;
 
-    if (tickerRef.current) clearInterval(tickerRef.current);
-    
-    const targetValue = currentZp + amount;
-    const step = amount / 20;
-    let currentLocal = currentZp;
-
-    tickerRef.current = setInterval(() => {
-      currentLocal += step;
-      if (currentLocal >= targetValue) {
-        setDisplayZp(targetValue);
-        if (tickerRef.current) clearInterval(tickerRef.current);
-      } else {
-        setDisplayZp(Math.floor(currentLocal));
-      }
-    }, 25); // Animasi counter-up berjalan lancar dalam 500ms
-
-    setZp(currentRoom, targetValue);
+    setZp(currentRoom, currentZp + amount);
     
     try {
       await fetch('/api/user', {
@@ -135,17 +114,16 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      setZp(currentRoom, currentZp);
-      setDisplayZp(currentZp);
+      setZp(currentRoom, currentZp); // Rollback jika fetch gagal
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // FIXED ALUR LOGIKA PENYALURAN KLIK (ANTI-TABRAKAN)
+  // ⚡ SINKRONISASI GERBANG ALUR KLIK KOIN
   const handleCoinClick = () => {
     if (isLocked) return;
 
     if (canEarnPoints) {
-      // Logic ini dipanggil saat penahanan animasi 5 detik di CoinClicker selesai dilakukan
+      // Fungsi ini dipanggil secara otomatis OLEH CoinClicker SELEPAS animasi 5 detik rampung!
       if (isFreeAvailable) {
         const ts = Date.now();
         setLastFreeClick(ts);
@@ -153,12 +131,13 @@ export default function Home() {
         localStorage.setItem("zetta_last_free", String(ts));
         localStorage.setItem("zetta_ads_used", "0");
       } else {
+        // Matikan verifikasi ad biar koin balik ke silver/lock setelah poin dicairkan
         setIsAdVerified(false);
       }
       
       giveRewards(100);
     } else if (needsAd) {
-      // Jika status membutuhkan klik iklan, buka Modal Ad secara langsung tanpa trigger delay koin!
+      // Jika statusnya butuh nonton ad, modal langsung dipicu muncul instan tanpa delay koin!
       setShowAd(true);
     }
   };
@@ -168,7 +147,7 @@ export default function Home() {
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    setIsAdVerified(true); // Ganti status koin jadi emas premium siap di-klik!
+    setIsAdVerified(true); // Membuka segel inti koin menjadi EMAS siap diekstrak 5 detik!
   };
   
   let statusLabel: React.ReactNode;
@@ -222,7 +201,7 @@ export default function Home() {
         </header>
 
         <RoomSelector />
-        
+
         <div className="w-full flex justify-end mt-2 px-2">
           <Link href="/minigames" prefetch={true}>
             <motion.button
@@ -239,11 +218,10 @@ export default function Home() {
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          
-          {/* 🌟 BALANCE INDIKATOR ZP YANG BISA MERAYAP NAIK PAS JACKPOT DETIK KE-5 */}
-          <div className="bg-zinc-900/50 border border-white/5 px-6 py-2 rounded-full backdrop-blur-sm text-center">
-             <p className="text-xs font-black tracking-widest text-zinc-400">
-               CURRENT BALANCE: <span className="text-yellow-400 font-black text-sm">{formatNumber(displayZp)} ZP</span>
+          {/* Sisa Baterai Overclock Tetap Terjaga Akurat Sesuai Request Lu */}
+          <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
+             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+               ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
              </p>
           </div>
 

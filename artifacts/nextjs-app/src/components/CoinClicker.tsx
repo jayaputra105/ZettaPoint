@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Timer } from "lucide-react";
 
@@ -27,12 +27,13 @@ export default function CoinClicker({
 }: CoinClickerProps) {
   const [isPressed, setIsPressed] = useState(false);
   const [floaters, setFloaters] = useState<FloatingText[]>([]);
+  const [nextId, setNextId] = useState(0);
   const [shake, setShake] = useState(false);
 
-  // ⚡ STATE UTAMA PROSESI CORE EXTRACTION 5 DETIK
+  // ⚡ STATE MEKANIK EXTRACTION CORE 5 DETIK
   const [isExtracting, setIsExtracting] = useState(false);
-  const [triggerShake, setTriggerShake] = useState(false);
-
+  const [isScreenShaking, setIsScreenShaking] = useState(false);
+  
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       if (locked) {
@@ -41,19 +42,19 @@ export default function CoinClicker({
         return;
       }
 
-      // Gembok klik kalau animasi sedang berjalan
+      // Kunci klik jika animasi ekstraksi data 5 detik sedang berjalan
       if (isExtracting) return;
-
-      // JIKA EMAS DAN BISA DI-KLAIM (canEarnPoints & isAdVerified)
+      
+      // JIKA YANG DI-TAP ADALAH KOIN EMAS (Bukan mode butuh iklan & canEarnPoints aktif)
       if (!needsAd && !locked) {
         setIsExtracting(true);
 
-        // DETIK KE-5: Prosesi Selesai!
+        // MASUK DETIK KE-5: Hentikan putaran + Hantaman Screen Shake + Cairkan Poin!
         setTimeout(() => {
           setIsExtracting(false);
-          setTriggerShake(true);
+          setIsScreenShaking(true);
 
-          // Pemicu efek angka melayang pas meledak di detik ke-5
+          // Pemicu angka melayang jackpot (+100 ZP) tepat di tengah koin setelah 5 detik ditahan
           const rect = e.currentTarget.getBoundingClientRect();
           const x = rect.width / 2;
           const y = rect.height / 2;
@@ -63,54 +64,60 @@ export default function CoinClicker({
             ...prev,
             { id, x, y, rotate: Math.random() * 40 - 20, translateX: Math.random() * 60 - 30 }
           ]);
-
+          
           setTimeout(() => {
             setFloaters((prev) => prev.filter((f) => f.id !== id));
           }, 800);
 
-          // Hentikan shake setelah 200ms
-          setTimeout(() => setTriggerShake(false), 200);
+          // Efek guncangan layar hantaman terakhir berjalan selama 0.3 detik (300ms) baru stop total
+          setTimeout(() => setIsScreenShaking(false), 300);
 
-          // Eksekusi penambahan poin setelah 5 detik penahanan sah!
+          // CAIRCAN REWARD MUTLAK KE DATABASE KITA COK!
           onCoin(pointsPerClick);
         }, 5000);
 
         return;
       }
-
-      // Jika koin mode butuh iklan, langsung tembak biar modal iklan keluar
+      
+      // Jika mode koin silver butuh iklan, bypass langsung ke page utama buat buka modal iklan
       onCoin(pointsPerClick);
     },
     [locked, isExtracting, needsAd, pointsPerClick, onCoin]
   );
-
+  
   return (
     <div 
       className={`relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none transition-transform duration-75 ${
-        triggerShake ? "animate-[screenGoyang_0.2s_ease-in-out_infinite]" : ""
+        isScreenShaking ? "animate-[hantamanShake_0.3s_ease-in-out_infinite]" : ""
       }`}
     >
-      {/* INJEKSI KEYFRAMES RING MELAR DAN PARTIKEL (ZERO-LAG GPU ACCELERATED) */}
+      {/* 🌌 INJEKSI RAHASIA AUDIO-VISUAL PURE CSS (GPU ACCELERATED - COLD AS ICE) */}
       <style>{`
-        @keyframes ringMelarMuter {
-          0% { transform: scale(1) rotate(0deg); stroke-dasharray: 8 12; stroke-width: 3; }
-          15% { transform: scale(1.22) rotate(180deg); stroke-dasharray: 100 0; stroke-width: 4; }
-          100% { transform: scale(1.22) rotate(1800deg); stroke-dasharray: 100 0; stroke-width: 4; }
+        @keyframes stripMelarMuter {
+          0% { transform: scale(1) rotate(0deg); }
+          8% { transform: scale(1.22) rotate(45deg); }
+          100% { transform: scale(1.22) rotate(1800deg); }
         }
-        @keyframes partikelMasuk {
-          0% { transform: translate(var(--pX, 0), var(--pY, 0)) scale(1); opacity: 0; }
-          20% { opacity: 0.9; }
+        @keyframes partikelSedot {
+          0% { transform: translate(var(--sX, 0), var(--sY, 0)) scale(1); opacity: 0; }
+          15% { opacity: 1; }
           100% { transform: translate(0, 0) scale(0.1); opacity: 0; }
         }
-        @keyframes screenGoyang {
+        @keyframes plasmaMengalir {
+          0% { background-position: 0% 50%; transform: scale(1) rotate(0deg); }
+          50% { background-position: 100% 50%; transform: scale(1.15) rotate(180deg); }
+          100% { background-position: 0% 50%; transform: scale(1) rotate(360deg); }
+        }
+        @keyframes hantamanShake {
           0%, 100% { transform: translate(0, 0); }
-          25% { transform: translate(-4px, 3px); }
-          50% { transform: translate(4px, -2px); }
-          75% { transform: translate(-2px, -3px); }
+          20% { transform: translate(-5px, 3px) rotate(-1deg); }
+          40% { transform: translate(4px, -3px) rotate(1deg); }
+          60% { transform: translate(-3px, -2px) rotate(-0.5deg); }
+          80% { transform: translate(3px, 2px) rotate(0.5deg); }
         }
       `}</style>
-
-      {/* 🌟 Efek Angka Melayang (+100) */}
+      
+      {/* 🌟 Floating Points Effect */}
       <AnimatePresence>
         {floaters.map((f) => (
           <motion.span
@@ -119,7 +126,7 @@ export default function CoinClicker({
             animate={{ 
               opacity: 0, 
               scale: 1.8,            
-              y: f.y - 150,          
+              y: f.y - 140,          
               x: f.x + f.translateX, 
               rotate: f.rotate       
             }}
@@ -132,23 +139,23 @@ export default function CoinClicker({
         ))}
       </AnimatePresence>
 
-      {/* 🌌 EFREK PUSARAN PARTIKEL EMAS MASUK KE CORE (Detik 0-4) */}
+      {/* 🌌 MAGNET PARTIKEL DIGITAL EMAS (Detik 0-4.7) - Menyusup Masuk Dari Luar ke Inti Core */}
       {isExtracting && (
         <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
           {[...Array(16)].map((_, i) => {
             const angle = (i * 360) / 16;
-            const radius = 135; 
-            const x = Math.cos((angle * Math.PI) / 180) * radius;
-            const y = Math.sin((angle * Math.PI) / 180) * radius;
+            const distance = 135; 
+            const x = Math.cos((angle * Math.PI) / 180) * distance;
+            const y = Math.sin((angle * Math.PI) / 180) * distance;
             return (
               <div
                 key={i}
                 className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_#FFF]"
                 style={{
-                  "--pX": `${x}px`,
-                  "--pY": `${y}px`,
-                  animation: `partikelMasuk 0.9s linear infinite`,
-                  animationDelay: `${(i % 4) * 0.22}s`,
+                  "--sX": `${x}px`,
+                  "--sY": `${y}px`,
+                  animation: `partikelSedot 0.8s linear infinite`,
+                  animationDelay: `${(i % 4) * 0.2}s`,
                 } as React.CSSProperties}
               />
             );
@@ -156,7 +163,7 @@ export default function CoinClicker({
         </div>
       )}
 
-      {/* Button utama pembungkus koin */}
+      {/* Button pembungkus utama */}
       <motion.button
         onMouseDown={() => !locked && !isExtracting && setIsPressed(true)}
         onMouseUp={() => setIsPressed(false)}
@@ -165,12 +172,12 @@ export default function CoinClicker({
         onTouchEnd={() => setIsPressed(false)}
         onClick={handleClick}
         animate={shake ? { x: [-6, 6, -6, 6, 0] } : isPressed ? { scale: 0.94 } : { scale: 1 }}
-        whileTap={{ scale: (locked || isExtracting) ? 1 : 0.94 }}
+        whileTap={{ scale: (locked || isExtracting) ? 1 : 0.94 }} 
         transition={{ type: "spring", stiffness: 400, damping: 15 }}
-        className={`relative w-[280px] h-[280px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
+        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        {/* ===== Ambient Glow Belakang ===== */}
+        {/* ===== LAYER 1: Ambient glow ===== */}
         <div
           className="absolute inset-0 rounded-full transition-all duration-700"
           style={{
@@ -179,51 +186,39 @@ export default function CoinClicker({
               : needsAd
               ? "radial-gradient(circle at 50% 50%, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 40%, transparent 70%)"
               : isExtracting
-              ? "radial-gradient(circle at 50% 50%, rgba(168,85,247,0.5) 0%, rgba(234,179,8,0.3) 40%, transparent 70%)" // Glow Ungu Plasma Pas Diekstrak
+              ? "radial-gradient(circle at 50% 50%, rgba(168,85,247,0.55) 0%, rgba(234,179,8,0.3) 45%, transparent 70%)"
               : "radial-gradient(circle at 50% 50%, rgba(255,200,60,0.55) 0%, rgba(255,170,30,0.25) 35%, rgba(255,150,0,0) 70%)",
-            filter: "blur(10px)",
+            filter: "blur(8px)",
           }}
         />
 
-        {/* ===== HIASAN LUAR MELAYANG (🧩 🎲 💸 🪙) - Murni hiasan luar, gak ikut kesedot ===== */}
+        {/* ===== HIASAN LUAR MELAYANG VARIATIF (🧩 🎲 💸 🪙) - Murni di luar, gak ikut kesedot ===== */}
         {!locked && (
           <>
-            <motion.div animate={{ y: [0, -8, 0], rotate: [-10, 5, -10] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-4 top-8 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">🧩</motion.div>
-            <motion.div animate={{ y: [0, 8, 0], rotate: [12, -6, 12] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-4 top-14 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">🎲</motion.div>
-            <motion.div animate={{ y: [0, 6, 0], rotate: [-5, 12, -5] }} transition={{ duration: 4.0, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 bottom-12 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">💸</motion.div>
-            <motion.div animate={{ y: [0, -6, 0], rotate: [8, -12, 8] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 bottom-10 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">🪙</motion.div>
+            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-5 top-8 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🧩</motion.div>
+            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-5 top-12 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🎲</motion.div>
+            <motion.div animate={{ y: [0, 5, 0], rotate: [-6, 10, -6] }} transition={{ duration: 4.0, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-3 bottom-10 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">💸</motion.div>
+            <motion.div animate={{ y: [0, -5, 0], rotate: [6, -10, 6] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-3 bottom-8 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🪙</motion.div>
           </>
         )}
 
-        {/* ===== 🟢 STRIP-STRIP GARIS LUAR (MELAR & MENYATU JADI BUNDERAN UTUH PAS ANIMASI) ===== */}
-        <div className="absolute w-[220px] h-[220px] flex items-center justify-center pointer-events-none">
-          <svg className="w-full h-full" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="44"
-              fill="none"
-              stroke={
-                locked 
-                  ? "rgba(255,0,0,0.4)" 
-                  : needsAd 
-                  ? "rgba(200,200,200,0.5)" 
-                  : isExtracting 
-                  ? "#a855f7" // Berubah jadi warna ungu plasma pas nyatu muter
-                  : "#fbbf24"
-              }
-              style={{
-                transformOrigin: "center",
-                animation: isExtracting 
-                  ? "ringMelarMuter 5s cubic-bezier(0.1, 0.8, 0.1, 1) infinite" 
-                  : "ringMelarMuter 15s linear infinite",
-                transition: "stroke 0.4s ease-in-out",
-              }}
-            />
-          </svg>
-        </div>
+        {/* ===== LAYER 2: Rotating orbit ring ===== */}
+        <motion.div
+          animate={isExtracting ? { rotate: 2160 } : { rotate: 360 }}
+          transition={isExtracting ? { duration: 5, ease: "easeInOut" } : { duration: 6, repeat: Infinity, ease: "linear" }}
+          className="absolute w-[210px] h-[210px] rounded-full"
+          style={{
+            border: "2px solid transparent",
+            background: locked 
+              ? "conic-gradient(from 0deg, transparent, rgba(255,0,0,0.5), transparent)"
+              : needsAd
+              ? "conic-gradient(from 0deg, rgba(200,200,200,0) 0deg, rgba(255,255,255,0.6) 60deg, rgba(200,200,200,0) 120deg, rgba(255,255,255,0.4) 220deg, rgba(200,200,200,0) 360deg)"
+              : "conic-gradient(from 0deg, rgba(255,215,0,0) 0deg, rgba(255,215,0,0.9) 60deg, rgba(255,215,0,0) 120deg, rgba(255,215,0,0.6) 220deg, rgba(255,215,0,0) 360deg)",
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
+          }}
+        />
 
-        {/* ===== THE MAIN COIN ===== */}
+        {/* ===== LAYER 3: THE MAIN COIN ===== */}
         <motion.div
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
@@ -236,65 +231,85 @@ export default function CoinClicker({
               ? "0 12px 30px rgba(0,0,0,0.55)"
               : needsAd
               ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)" 
-              : "0 12px 30px rgba(0,0,0,0.55), 0 0 45px rgba(255,190,40,0.75), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
+              : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
           animate={(!locked && !isExtracting) ? { y: [0, -6, 0] } : {}}
           transition={{ y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }}
         >
-          {/* Inner Medallion (TEMPAT BUNDARAN UNGU PLASMA + SEGI 6 NESTING) */}
+          {/* ===== LAYER 4: Outer rim ticks / Strip Garis-Garis (MELAR KELUAR & MUTER PAS DIKLIK) ===== */}
+          <div 
+            className="absolute inset-2 rounded-full transition-transform" 
+            style={{ 
+              background: needsAd 
+                ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
+                : isExtracting
+                ? "repeating-conic-gradient(#a855f7 0deg 4deg, transparent 4deg 10deg)" // Berubah ungu sakti pas nge-spin melar
+                : "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
+              WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))",
+              animation: isExtracting ? "stripMelarMuter 5s cubic-bezier(0.1, 0.8, 0.2, 1) infinite" : "none"
+            }} 
+          />
+
+          {/* ===== LAYER 5: Inner medallion ===== */}
           <div
-            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center transition-all duration-500"
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center overflow-hidden"
             style={{
               background: locked 
                 ? "#333" 
                 : needsAd 
                 ? "radial-gradient(circle at 35% 30%, #FAFAFA 0%, #A1A1AA 60%, #3F3F46 100%)"
-                : isExtracting
-                ? "radial-gradient(circle, #2e1065 0%, #0f172a 80%, #020617 100%)" // Plasma ungu fiksi ilmiah pas di-klik
                 : "radial-gradient(circle at 35% 30%, #FFE680 0%, #E8A317 60%, #8A5A0E 100%)",
               boxShadow: needsAd
                 ? "inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -6px 12px rgba(39,39,42,0.6)"
-                : isExtracting
-                ? "0 0 30px rgba(168,85,247,0.7), inset 0 0 20px rgba(234,179,8,0.4)"
                 : "inset 0 4px 10px rgba(255,255,200,0.6), inset 0 -6px 12px rgba(80,40,0,0.6)",
               border: needsAd
                 ? "2px solid rgba(113,113,122,0.55)"
-                : isExtracting
-                ? "2px solid #c084fc"
                 : "2px solid rgba(120,70,10,0.55)",
             }}
           >
-            {/* 🔴 LAPISAN BINGKAI SEGI 6 (HEXAGON COIN) */}
+            {/* 🟢 SUB-LAYER A: HEXAGON EMAS PADAT/GRADASI (Paling Belakang Medallion) */}
             {!locked && !needsAd && (
               <div 
-                className={`absolute inset-2 transition-all duration-500 border-2 ${
-                  isExtracting 
-                    ? "border-purple-400 opacity-100 rotate-90 scale-105" 
-                    : "border-amber-600/60 opacity-70 rotate-0"
-                }`}
-                style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                className="absolute inset-2 transition-transform duration-500 bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 shadow-inner"
+                style={{ 
+                  clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                  transform: isExtracting ? "rotate(180deg) scale(1.05)" : "rotate(0deg) scale(1)"
+                }}
               />
             )}
 
+            {/* 🟢 SUB-LAYER B: PLASMA CAIR UNGU + ORANYE ACAK (Mengalir Mengambang di Atas Hexagon) */}
+            {!locked && !needsAd && (
+              <div 
+                className="absolute inset-2 opacity-80 mix-blend-color-dodge transition-opacity duration-300"
+                style={{
+                  clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                  backgroundImage: "linear-gradient(45deg, #7c3aed, #ea580c, #9333ea, #f97316)",
+                  backgroundSize: "300% 300%",
+                  animation: isExtracting ? "plasmaMengalir 2.5s ease infinite" : "plasmaMengalir 6s ease infinite"
+                }}
+              />
+            )}
+
+            {/* 🟢 SUB-LAYER C: LOGO ORIGINAL GABUNGAN S/Z SANGAR UTUH (Paling Depan) */}
             {needsAd && !locked ? (
-              <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
+              <Timer size={52} className="text-zinc-800 relative z-10 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
             ) : (
-              // 🌟 LOGO GABUNGAN S/Z GAYA BARU YANG SUPER SANGAR PREMIUM
-              <div className="relative w-16 h-16 flex items-center justify-center">
+              <div className="relative w-16 h-16 flex items-center justify-center z-10">
                 <svg 
                   viewBox="0 0 24 24" 
                   className={`w-full h-full transition-all duration-500 ${
-                    isExtracting ? "text-white drop-shadow-[0_0_12px_#eab308]" : "text-amber-950"
+                    isExtracting ? "text-white drop-shadow-[0_0_15px_#FFF]" : "text-amber-950"
                   }`}
                   style={{
                     fill: "none",
                     stroke: "currentColor",
-                    strokeWidth: "2.5",
+                    strokeWidth: "2.8",
                     strokeLinecap: "round",
                     strokeLinejoin: "round",
                   }}
                 >
-                  {/* Struktur lekukan S/Z menyatu futuristik */}
+                  {/* Patokan gambar orisinal S/Z futuristik lu mendarat aman di sini */}
                   <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
               </div>
@@ -305,6 +320,27 @@ export default function CoinClicker({
           {!locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
         </motion.div>
       </motion.button>
+
+      {/* Teks Status Overclock Time */}
+      {needsAd && !locked && (
+        <motion.div 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-4 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black tracking-[0.3em] text-zinc-400 uppercase"
+        >
+          <span>OVERCLOCK TIME</span>
+        </motion.div>
+      )}
+
+      {/* NOTIFIKASI INDIKATOR SAKTI SAAT TRANSFE DATA 5 DETIK SEDANG BERJALAN */}
+      {isExtracting && (
+        <div className="absolute bottom-4 bg-purple-500/10 border border-purple-500/30 px-4 py-1.5 rounded-xl animate-pulse">
+          <p className="text-[9px] font-black tracking-[0.22em] text-purple-400 uppercase">
+            ⚡ CORE EXTRACTING: IN PROGRESS...
+          </p>
+        </div>
+      )}
     </div>
   );
 }
