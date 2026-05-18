@@ -52,6 +52,7 @@ export default function Home() {
   const [now, setNow] = useState(Date.now());
   const [isAdVerified, setIsAdVerified] = useState(false);
 
+  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -69,6 +70,7 @@ export default function Home() {
     }
   }, []);
 
+  // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -78,6 +80,7 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
+  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
@@ -88,6 +91,7 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
+  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
@@ -108,14 +112,19 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      setZp(currentRoom, currentZp);
+      setZp(currentRoom, currentZp); // Rollback
     }
   }, [currentRoom, currentZp, setZp]);
   
-  const handleCoinClick = () => {
+  // ⚡ URUTAN DIPASANG SEJA REAKTIF AGAR STATE REWARD TIDAK TERSKIP
+  const handleCoinClick = useCallback(() => {
     if (isLocked) return;
 
     if (canEarnPoints) {
+      // Kucurkan poinnya dulu masuk ke database lu!
+      giveRewards(100);
+
+      // Setelah reward cair, baru eksekusi update state cooldown pelindung
       if (isFreeAvailable) {
         const ts = Date.now();
         setLastFreeClick(ts);
@@ -125,19 +134,17 @@ export default function Home() {
       } else {
         setIsAdVerified(false);
       }
-      
-      giveRewards(100);
     } else if (needsAd) {
       setShowAd(true);
     }
-  };
+  }, [isLocked, canEarnPoints, isFreeAvailable, needsAd, giveRewards]);
   
   const handleAdComplete = () => {
     const newAds = adsUsed + 1;
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    setIsAdVerified(true);
+    setIsAdVerified(true); 
   };
   
   let statusLabel: React.ReactNode;
@@ -214,13 +221,11 @@ export default function Home() {
              </p>
           </div>
 
-          {/* SINKRONISASI MUTLAK: ISADVERIFIED KITA SUNTIK MASUK KE PROPS COINCLICKER COK! */}
           <CoinClicker 
             onCoin={handleCoinClick} 
             pointsPerClick={100} 
             locked={isLocked} 
-            needsAd={needsAd}
-            isAdVerified={isAdVerified} // <--- INI KUNCI SAKTI PEMBONGKAR GEMBOK LU BIAR GA BOTAK!
+            needsAd={needsAd} 
           />
 
           <div className="rounded-2xl px-5 py-3 text-center bg-zinc-900/80 border border-white/10">
