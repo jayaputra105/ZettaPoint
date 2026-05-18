@@ -13,7 +13,7 @@ interface FloatingText {
 }
 
 interface CoinClickerProps {
-  onCoin: () => void;
+  onCoin: (amount: number) => void;
   pointsPerClick?: number;
   locked?: boolean;
   needsAd?: boolean;
@@ -29,10 +29,10 @@ export default function CoinClicker({
   const [floaters, setFloaters] = useState<FloatingText[]>([]);
   const [shake, setShake] = useState(false);
 
-  // STATE MEKANIK EXTRACTION CORE 5 DETIK
-  const [isExtracting, setIsExtracting] = useState(false);
+  // ⚡ STATE LOGIC ORIGINAL LU (DIPERTAHANKAN UTUH)
+  const [isSpinning5s, setIsSpinning5s] = useState(false);
   const [isScreenShaking, setIsScreenShaking] = useState(false);
-  
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       if (locked) {
@@ -41,19 +41,19 @@ export default function CoinClicker({
         return;
       }
 
-      // Kunci klik jika animasi ekstraksi data 5 detik sedang berjalan
-      if (isExtracting) return;
-      
-      // JIKA YANG DI-TAP ADALAH KOIN EMAS (Bukan mode butuh iklan & canEarnPoints aktif)
-      if (!needsAd && !locked) {
-        setIsExtracting(true);
+      // KUNCI UTAMA: Jika sedang berputar, gembok klik!
+      if (isSpinning5s) return;
 
-        // MASUK DETIK KE-5: Hentikan putaran + Hantaman Screen Shake + Cairkan Poin!
+      // JIKA YANG DI-KLIK ADALAH KOIN EMAS (Bukan mode butuh iklan & bukan locked)
+      if (!needsAd && !locked) {
+        setIsSpinning5s(true);
+
+        // ⏱️ KALIBRASI URUTAN DETIK KE-5 (Biar animasi kelar sempurna, baru oper state)
         setTimeout(() => {
-          setIsExtracting(false);
+          // 1. Jalankan hantaman guncangan layar terlebih dahulu pas putaran kelar
           setIsScreenShaking(true);
 
-          // Pemicu angka melayang jackpot (+100 ZP) tepat di tengah koin setelah 5 detik ditahan
+          // Pemicu efek angka melayang pas detik ke-5 tepat di tengah koin
           const rect = e.currentTarget.getBoundingClientRect();
           const x = rect.width / 2;
           const y = rect.height / 2;
@@ -68,50 +68,49 @@ export default function CoinClicker({
             setFloaters((prev) => prev.filter((f) => f.id !== id));
           }, 800);
 
-          // Efek guncangan layar hantaman terakhir berjalan selama 0.3 detik (300ms) baru stop total
-          setTimeout(() => setIsScreenShaking(false), 300);
+          // 2. Beri jeda 200ms agar efek guncangan shake layar & putaran mereda alami (tidak hard-stop patah)
+          setTimeout(() => {
+            setIsScreenShaking(false);
+            setIsSpinning5s(false); // Matikan putaran tepat setelah visual hantaman selesai
+            
+            // 3. Terakhir, setelah semua siklus animasi tuntas, tembak data ke page luar buat transisi needsAd!
+            onCoin(pointsPerClick);
+          }, 200);
 
-          // CAIRCAN REWARD MUTLAK KE DATABASE KITA COK!
-          onCoin();
         }, 5000);
 
         return;
       }
-      
-      // Jika mode koin silver butuh iklan, bypass langsung ke page utama buat buka modal iklan
-      onCoin();
+
+      // Fallback instan langsung pemicu modal ad untuk koin silver iklan
+      onCoin(pointsPerClick);
     },
-    [locked, isExtracting, needsAd, onCoin]
+    [locked, isSpinning5s, needsAd, pointsPerClick, onCoin]
   );
-  
+
   return (
     <div 
       className={`relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none transition-transform duration-75 ${
-        isScreenShaking ? "animate-[hantamanShake_0.3s_ease-in-out_infinite]" : ""
+        isScreenShaking ? "animate-[shake_0.2s_ease-in-out_infinite]" : ""
       }`}
     >
+      {/* SUNTIKAN INJEKSI PURE CSS KEYFRAMES (MURNI 100% ASLI BAWAAN LU) */}
       <style>{`
-        @keyframes stripMelarMuter {
-          0% { transform: scale(1) rotate(0deg); }
-          8% { transform: scale(1.22) rotate(45deg); }
-          100% { transform: scale(1.22) rotate(1800deg); }
+        @keyframes spinFast {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(1440deg); }
         }
-        @keyframes partikelSedot {
-          0% { transform: translate(var(--sX, 0), var(--sY, 0)) scale(1); opacity: 0; }
-          15% { opacity: 1; }
-          100% { transform: translate(0, 0) scale(0.1); opacity: 0; }
+        @keyframes suckIn {
+          0% { transform: translate(var(--tw-x, 0), var(--tw-y, 0)) scale(1); opacity: 0; }
+          20% { opacity: 0.8; }
+          100% { transform: translate(0, 0) scale(0.2); opacity: 0; }
         }
-        @keyframes plasmaMengalir {
-          0% { background-position: 0% 50%; transform: scale(1) rotate(0deg); }
-          50% { background-position: 100% 50%; transform: scale(1.15) rotate(180deg); }
-          100% { background-position: 0% 50%; transform: scale(1) rotate(360deg); }
-        }
-        @keyframes hantamanShake {
+        @keyframes shake {
           0%, 100% { transform: translate(0, 0); }
-          20% { transform: translate(-5px, 3px) rotate(-1deg); }
-          40% { transform: translate(4px, -3px) rotate(1deg); }
-          60% { transform: translate(-3px, -2px) rotate(-0.5deg); }
-          80% { transform: translate(3px, 2px) rotate(0.5deg); }
+          20% { transform: translate(-3px, 2px); }
+          40% { transform: translate(3px, -1px); }
+          60% { transform: translate(-2px, -2px); }
+          80% { transform: translate(2px, 1px); }
         }
       `}</style>
       
@@ -124,7 +123,7 @@ export default function CoinClicker({
             animate={{ 
               opacity: 0, 
               scale: 1.8,            
-              y: f.y - 140,          
+              y: f.y - 160,          
               x: f.x + f.translateX, 
               rotate: f.rotate       
             }}
@@ -137,23 +136,23 @@ export default function CoinClicker({
         ))}
       </AnimatePresence>
 
-      {/* 🌌 MAGNET PARTIKEL DIGITAL EMAS */}
-      {isExtracting && (
+      {/* 🌌 EFEK PUSARAN KOMPONEN DI DETIK 0-4 (ASLI BAWAAN LU) */}
+      {isSpinning5s && (
         <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
           {[...Array(16)].map((_, i) => {
             const angle = (i * 360) / 16;
-            const distance = 135; 
-            const x = Math.cos((angle * Math.PI) / 180) * distance;
-            const y = Math.sin((angle * Math.PI) / 180) * distance;
+            const radius = 140; 
+            const x = Math.cos((angle * Math.PI) / 180) * radius;
+            const y = Math.sin((angle * Math.PI) / 180) * radius;
             return (
               <div
                 key={i}
-                className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_#FFF]"
+                className="absolute w-2 h-2 bg-yellow-400 rounded-sm shadow-[0_0_8px_#FFD700]"
                 style={{
-                  "--sX": `${x}px`,
-                  "--sY": `${y}px`,
-                  animation: `partikelSedot 0.8s linear infinite`,
-                  animationDelay: `${(i % 4) * 0.2}s`,
+                  "--tw-x": `${x}px`,
+                  "--tw-y": `${y}px`,
+                  animation: `suckIn 1s linear infinite`,
+                  animationDelay: `${(i % 4) * 0.25}s`,
                 } as React.CSSProperties}
               />
             );
@@ -163,59 +162,59 @@ export default function CoinClicker({
 
       {/* Button pembungkus utama */}
       <motion.button
-        onMouseDown={() => !locked && !isExtracting && setIsPressed(true)}
+        onMouseDown={() => !locked && !isSpinning5s && setIsPressed(true)}
         onMouseUp={() => setIsPressed(false)}
         onMouseLeave={() => setIsPressed(false)}
-        onTouchStart={() => !locked && !isExtracting && setIsPressed(true)}
+        onTouchStart={() => !locked && !isSpinning5s && setIsPressed(true)}
         onTouchEnd={() => setIsPressed(false)}
         onClick={handleClick}
         animate={shake ? { x: [-6, 6, -6, 6, 0] } : isPressed ? { scale: 0.94 } : { scale: 1 }}
-        whileTap={{ scale: (locked || isExtracting) ? 1 : 0.94 }} 
+        whileTap={{ scale: (locked || isSpinning5s) ? 1 : 0.94 }}
         transition={{ type: "spring", stiffness: 400, damping: 15 }}
-        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
+        className={`relative w-[280px] h-[280px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        {/* ===== LAYER 1: Ambient glow ===== */}
+        {/* ===== Ambient glow ===== */}
         <div
-          className="absolute inset-0 rounded-full transition-all duration-700"
+          className="absolute inset-0 rounded-full transition-all duration-500"
           style={{
             background: locked 
               ? "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)"
               : needsAd
               ? "radial-gradient(circle at 50% 50%, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 40%, transparent 70%)"
-              : isExtracting
-              ? "radial-gradient(circle at 50% 50%, rgba(168,85,247,0.55) 0%, rgba(234,179,8,0.3) 45%, transparent 70%)"
+              : isSpinning5s
+              ? "radial-gradient(circle at 50% 50%, rgba(147,51,234,0.6) 0%, rgba(255,140,0,0.4) 40%, transparent 70%)" 
               : "radial-gradient(circle at 50% 50%, rgba(255,200,60,0.55) 0%, rgba(255,170,30,0.25) 35%, rgba(255,150,0,0) 70%)",
             filter: "blur(8px)",
           }}
         />
 
-        {!locked && (
+        {/* ===== Floating side props 🧩 ===== */}
+        {!locked && !isSpinning5s && (
           <>
-            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-5 top-8 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🧩</motion.div>
-            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-5 top-12 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🎲</motion.div>
-            <motion.div animate={{ y: [0, 5, 0], rotate: [-6, 10, -6] }} transition={{ duration: 4.0, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-3 bottom-10 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">💸</motion.div>
-            <motion.div animate={{ y: [0, -5, 0], rotate: [6, -10, 6] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-3 bottom-8 text-3xl filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)]">🪙</motion.div>
+            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 top-10 text-3xl">🧩</motion.div>
+            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 top-16 text-3xl">🧩</motion.div>
           </>
         )}
 
-        {/* ===== LAYER 2: Rotating orbit ring ===== */}
-        <motion.div
-          animate={isExtracting ? { rotate: 2160 } : { rotate: 360 }}
-          transition={isExtracting ? { duration: 5, ease: "easeInOut" } : { duration: 6, repeat: Infinity, ease: "linear" }}
-          className="absolute w-[210px] h-[210px] rounded-full"
+        {/* Rotating orbit ring */}
+        <div
+          className="absolute rounded-full transition-all"
           style={{
+            width: isSpinning5s ? "250px" : "210px",
+            height: isSpinning5s ? "250px" : "210px",
             border: "2px solid transparent",
             background: locked 
               ? "conic-gradient(from 0deg, transparent, rgba(255,0,0,0.5), transparent)"
               : needsAd
               ? "conic-gradient(from 0deg, rgba(200,200,200,0) 0deg, rgba(255,255,255,0.6) 60deg, rgba(200,200,200,0) 120deg, rgba(255,255,255,0.4) 220deg, rgba(200,200,200,0) 360deg)"
               : "conic-gradient(from 0deg, rgba(255,215,0,0) 0deg, rgba(255,215,0,0.9) 60deg, rgba(255,215,0,0) 120deg, rgba(255,215,0,0.6) 220deg, rgba(255,215,0,0) 360deg)",
-            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px))",
+            animation: isSpinning5s ? "spinFast 5s cubic-bezier(0.25, 1, 0.20, 1) infinite" : "spinFast 12s linear infinite",
           }}
         />
 
-        {/* ===== LAYER 3: THE MAIN COIN ===== */}
+        {/* ===== THE MAIN COIN ===== */}
         <motion.div
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
@@ -230,26 +229,20 @@ export default function CoinClicker({
               ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)" 
               : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
-          animate={(!locked && !isExtracting) ? { y: [0, -6, 0] } : {}}
+          animate={(!locked && !isSpinning5s) ? { y: [0, -6, 0] } : {}}
           transition={{ y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }}
         >
-          {/* ===== LAYER 4: Outer rim ticks ===== */}
-          <div 
-            className="absolute inset-2 rounded-full transition-transform" 
-            style={{ 
-              background: needsAd 
-                ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
-                : isExtracting
-                ? "repeating-conic-gradient(#a855f7 0deg 4deg, transparent 4deg 10deg)" 
-                : "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
-              WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))",
-              animation: isExtracting ? "stripMelarMuter 5s cubic-bezier(0.1, 0.8, 0.2, 1) infinite" : "none"
-            }} 
-          />
+          {/* Outer rim ticks */}
+          <div className="absolute inset-2 rounded-full" style={{ 
+            background: needsAd 
+              ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
+              : "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
+          }} />
 
-          {/* ===== LAYER 5: Inner medallion ===== */}
+          {/* Inner medallion */}
           <div
-            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center overflow-hidden"
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center transition-all duration-500"
             style={{
               background: locked 
                 ? "#333" 
@@ -264,55 +257,48 @@ export default function CoinClicker({
                 : "2px solid rgba(120,70,10,0.55)",
             }}
           >
+            {/* 🟢 LAPISAN BINGKAI SEGI 6 */}
             {!locked && !needsAd && (
               <div 
-                className="absolute inset-2 transition-transform duration-500 bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 shadow-inner"
-                style={{ 
-                  clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                  transform: isExtracting ? "rotate(180deg) scale(1.05)" : "rotate(0deg) scale(1)"
-                }}
-              />
-            )}
-
-            {!locked && !needsAd && (
-              <div 
-                className="absolute inset-2 opacity-80 mix-blend-color-dodge transition-opacity duration-300"
-                style={{
-                  clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                  backgroundImage: "linear-gradient(45deg, #7c3aed, #ea580c, #9333ea, #f97316)",
-                  backgroundSize: "300% 300%",
-                  animation: isExtracting ? "plasmaMengalir 2.5s ease infinite" : "plasmaMengalir 6s ease infinite"
-                }}
+                className={`absolute inset-1 transition-all duration-500 opacity-40 border-2 border-yellow-500/40 ${isSpinning5s ? "scale-110 rotate-180 opacity-100 border-purple-400" : ""}`}
+                style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
               />
             )}
 
             {needsAd && !locked ? (
-              <Timer size={52} className="text-zinc-800 relative z-10 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
+              <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
             ) : (
-              <div className="relative w-16 h-16 flex items-center justify-center z-10">
-                <svg 
-                  viewBox="0 0 24 24" 
-                  className={`w-full h-full transition-all duration-500 ${
-                    isExtracting ? "text-white drop-shadow-[0_0_15px_#FFF]" : "text-amber-950"
-                  }`}
+              // 🌟 LOGO Z PREMIUN GAYA DOLAR DIGITAL
+              <div className="relative flex items-center justify-center">
+                {!locked && (
+                  <div 
+                    className="absolute w-[6px] h-[72px] rounded-sm transition-all duration-500" 
+                    style={{
+                      background: isSpinning5s 
+                        ? "linear-gradient(to bottom, #c084fc, #eab308)" 
+                        : "linear-gradient(to bottom, #8A5A0E, #7A4A08)",
+                    }}
+                  />
+                )}
+                <span
+                  className="font-black text-[68px] leading-none select-none z-10 transition-colors duration-500"
                   style={{
-                    fill: "none",
-                    stroke: "currentColor",
-                    strokeWidth: "2.8",
-                    strokeLinecap: "round",
-                    strokeLinejoin: "round",
+                    color: locked ? "#555" : isSpinning5s ? "#FFF" : "#7A4A08",
+                    textShadow: locked ? "none" : isSpinning5s ? "0 0 15px #eab308" : "0 2px 0 rgba(255,240,180,0.7)",
                   }}
                 >
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
+                  {locked ? "🔒" : "Z"}
+                </span>
               </div>
             )}
           </div>
 
+          {/* Specular highlight */}
           {!locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
         </motion.div>
       </motion.button>
 
+      {/* 🌟 TEKS SUBTITLE DESIGN */}
       {needsAd && !locked && (
         <motion.div 
           initial={{ opacity: 0, y: 5 }}
@@ -324,10 +310,11 @@ export default function CoinClicker({
         </motion.div>
       )}
 
-      {isExtracting && (
-        <div className="absolute bottom-4 bg-purple-500/10 border border-purple-500/30 px-4 py-1.5 rounded-xl animate-pulse">
-          <p className="text-[9px] font-black tracking-[0.22em] text-purple-400 uppercase">
-            ⚡ CORE EXTRACTING: IN PROGRESS...
+      {/* INDIKATOR TEKS PAS DATA SPINNING ACTIVE */}
+      {isSpinning5s && (
+        <div className="absolute bottom-4 bg-yellow-500/10 border border-yellow-500/30 px-4 py-1 rounded-xl animate-pulse">
+          <p className="text-[9px] font-black tracking-[0.2em] text-yellow-400 uppercase">
+            ⚡ EXTRACTING CORE MATRIX DATA...
           </p>
         </div>
       )}
