@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion"; // 🌟 AMANKAN IMPORT MOTION DI SINI
+import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
 import RoomSelector from "@/components/RoomSelector";
 import { useApp } from "@/context/AppProvider";
-import Link from "next/link"
+import Link from "next/link";
+
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
 const MAX_ADS = 15;
@@ -38,6 +39,15 @@ export default function Home() {
   } = useApp();
   
   const currentZp = zp[currentRoom] || 0;
+
+  // 🌟 STATE BARU: Buat nampilin angka saldo ZP jalan merayap naik (Counter-Up)
+  const [displayZp, setDisplayZp] = useState(currentZp);
+  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Efek sinkronisasi angka saldo pas ganti room biar gak salah nominal data
+  useEffect(() => {
+    setDisplayZp(currentZp);
+  }, [currentZp, currentRoom]);
   
   const [userProfile, setUserProfile] = useState({
     name: "Identifying...",
@@ -49,8 +59,6 @@ export default function Home() {
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
-  
-  // State verifikasi iklan
   const [isAdVerified, setIsAdVerified] = useState(false);
 
   // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
@@ -81,7 +89,6 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
-  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
@@ -92,14 +99,32 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
+  // 3. FUNGSI DATABASE REWARD + EFEK ANGKA SALDO JALAN MERAYAP (NUMBER TICKER)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
     if (!tid) return;
 
-    setZp(currentRoom, currentZp + amount);
+    // 🏎️ EFEK NUMBER TICKER SAKTI: Angka saldo merayap naik selama 0.6 detik
+    if (tickerRef.current) clearInterval(tickerRef.current);
+    
+    const targetValue = currentZp + amount;
+    const step = amount / 20; // 20 kali lompatan kecil
+    let currentLocal = currentZp;
+
+    tickerRef.current = setInterval(() => {
+      currentLocal += step;
+      if (currentLocal >= targetValue) {
+        setDisplayZp(targetValue);
+        if (tickerRef.current) clearInterval(tickerRef.current);
+      } else {
+        setDisplayZp(Math.floor(currentLocal));
+      }
+    }, 30); // Beres mulus dalam waktu 600ms (0.6 detik!)
+
+    // Update state global context utama lu
+    setZp(currentRoom, targetValue);
     
     try {
       await fetch('/api/user', {
@@ -114,10 +139,11 @@ export default function Home() {
     } catch (err) {
       console.error("Save error:", err);
       setZp(currentRoom, currentZp);
+      setDisplayZp(currentZp);
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // ALUR KLIK BARU
+  // ALUR KLIK UTAMA YANG SUDAH DISINKRONKAN DENGAN ANIMASI 5 DETIK
   const handleCoinClick = () => {
     if (isLocked) return;
 
@@ -129,9 +155,11 @@ export default function Home() {
         localStorage.setItem("zetta_last_free", String(ts));
         localStorage.setItem("zetta_ads_used", "0");
       } else {
+        // Matikan status verifikasi koin emas setelah prosesi 5 detik selesai dieksekusi
         setIsAdVerified(false);
       }
       
+      // Tembak reward! (Fungsi ini dipanggil otomatis di detik ke-5 oleh CoinClicker baru lu)
       giveRewards(100);
     } else if (needsAd) {
       setShowAd(true);
@@ -143,7 +171,7 @@ export default function Home() {
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    setIsAdVerified(true);
+    setIsAdVerified(true); // Koin berubah jadi Emas super premium!
   };
   
   let statusLabel: React.ReactNode;
@@ -197,28 +225,28 @@ export default function Home() {
         </header>
 
         <RoomSelector />
-       <div className="w-full flex justify-end mt-2 px-2">
-  <Link href="/minigames" prefetch={true}>
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      onClick={() => {
-        if (typeof playSFX === "function") playSFX("click");
-      }}
-      className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
-    >
-      {/* Pendaran Cahaya Biru Neon pelan */}
-      <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
-      
-      {/* Ikon Game Stick Flat Anti-Beban */}
-      <div className="relative text-xl">🕹️</div> 
-    </motion.button>
-  </Link>
-</div>
+        
+        <div className="w-full flex justify-end mt-2 px-2">
+          <Link href="/minigames" prefetch={true}>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                if (typeof playSFX === "function") playSFX("click");
+              }}
+              className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+              <div className="relative text-xl">🕹️</div> 
+            </motion.button>
+          </Link>
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
-             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-               ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
+          
+          {/* BANNER INDIKATOR SALDO ZP (YANG SEKARANG BISA NGITUNG JALAN CEPAT 🪙) */}
+          <div className="bg-zinc-900/50 border border-white/5 px-6 py-2 rounded-full backdrop-blur-sm text-center">
+             <p className="text-xs font-black tracking-widest text-zinc-400">
+               CURRENT BALANCE: <span className="text-yellow-400 font-black text-sm transition-all">{formatNumber(displayZp)} ZP</span>
              </p>
           </div>
 
