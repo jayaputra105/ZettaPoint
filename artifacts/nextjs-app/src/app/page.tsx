@@ -40,11 +40,10 @@ export default function Home() {
   
   const currentZp = zp[currentRoom] || 0;
 
-  // 🌟 STATE BARU: Buat nampilin angka saldo ZP jalan merayap naik (Counter-Up)
+  // 🪙 STATE COUNTER-UP UNTUK DISPLAY INDIKATOR SALDO ZP UTAMA
   const [displayZp, setDisplayZp] = useState(currentZp);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Efek sinkronisasi angka saldo pas ganti room biar gak salah nominal data
   useEffect(() => {
     setDisplayZp(currentZp);
   }, [currentZp, currentRoom]);
@@ -61,7 +60,7 @@ export default function Home() {
   const [now, setNow] = useState(Date.now());
   const [isAdVerified, setIsAdVerified] = useState(false);
 
-  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
+  // 1. TELEGRAM INITIATION
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -79,7 +78,7 @@ export default function Home() {
     }
   }, []);
 
-  // 2. TIMER & LOCAL STORAGE
+  // 2. TIMERS & PERSISTENCE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -99,18 +98,17 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI DATABASE REWARD + EFEK ANGKA SALDO JALAN MERAYAP (NUMBER TICKER)
+  // 3. REWARD PROCESSING & INDIKATOR COUNTER JALAN
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
     if (!tid) return;
 
-    // 🏎️ EFEK NUMBER TICKER SAKTI: Angka saldo merayap naik selama 0.6 detik
     if (tickerRef.current) clearInterval(tickerRef.current);
     
     const targetValue = currentZp + amount;
-    const step = amount / 20; // 20 kali lompatan kecil
+    const step = amount / 20;
     let currentLocal = currentZp;
 
     tickerRef.current = setInterval(() => {
@@ -121,9 +119,8 @@ export default function Home() {
       } else {
         setDisplayZp(Math.floor(currentLocal));
       }
-    }, 30); // Beres mulus dalam waktu 600ms (0.6 detik!)
+    }, 25); // Animasi counter-up berjalan lancar dalam 500ms
 
-    // Update state global context utama lu
     setZp(currentRoom, targetValue);
     
     try {
@@ -143,11 +140,12 @@ export default function Home() {
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // ALUR KLIK UTAMA YANG SUDAH DISINKRONKAN DENGAN ANIMASI 5 DETIK
+  // FIXED ALUR LOGIKA PENYALURAN KLIK (ANTI-TABRAKAN)
   const handleCoinClick = () => {
     if (isLocked) return;
 
     if (canEarnPoints) {
+      // Logic ini dipanggil saat penahanan animasi 5 detik di CoinClicker selesai dilakukan
       if (isFreeAvailable) {
         const ts = Date.now();
         setLastFreeClick(ts);
@@ -155,13 +153,12 @@ export default function Home() {
         localStorage.setItem("zetta_last_free", String(ts));
         localStorage.setItem("zetta_ads_used", "0");
       } else {
-        // Matikan status verifikasi koin emas setelah prosesi 5 detik selesai dieksekusi
         setIsAdVerified(false);
       }
       
-      // Tembak reward! (Fungsi ini dipanggil otomatis di detik ke-5 oleh CoinClicker baru lu)
       giveRewards(100);
     } else if (needsAd) {
+      // Jika status membutuhkan klik iklan, buka Modal Ad secara langsung tanpa trigger delay koin!
       setShowAd(true);
     }
   };
@@ -171,7 +168,7 @@ export default function Home() {
     setAdsUsed(newAds);
     localStorage.setItem("zetta_ads_used", String(newAds));
     setShowAd(false);
-    setIsAdVerified(true); // Koin berubah jadi Emas super premium!
+    setIsAdVerified(true); // Ganti status koin jadi emas premium siap di-klik!
   };
   
   let statusLabel: React.ReactNode;
@@ -243,10 +240,10 @@ export default function Home() {
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           
-          {/* BANNER INDIKATOR SALDO ZP (YANG SEKARANG BISA NGITUNG JALAN CEPAT 🪙) */}
+          {/* 🌟 BALANCE INDIKATOR ZP YANG BISA MERAYAP NAIK PAS JACKPOT DETIK KE-5 */}
           <div className="bg-zinc-900/50 border border-white/5 px-6 py-2 rounded-full backdrop-blur-sm text-center">
              <p className="text-xs font-black tracking-widest text-zinc-400">
-               CURRENT BALANCE: <span className="text-yellow-400 font-black text-sm transition-all">{formatNumber(displayZp)} ZP</span>
+               CURRENT BALANCE: <span className="text-yellow-400 font-black text-sm">{formatNumber(displayZp)} ZP</span>
              </p>
           </div>
 
