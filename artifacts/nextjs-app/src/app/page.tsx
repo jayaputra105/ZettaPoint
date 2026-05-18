@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion"; // 🌟 AMANKAN IMPORT MOTION DI SINI
+import { motion } from "framer-motion";
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
 import RoomSelector from "@/components/RoomSelector";
 import { useApp } from "@/context/AppProvider";
-import Link from "next/link"
+import Link from "next/link";
+
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
 const MAX_ADS = 15;
@@ -49,11 +50,8 @@ export default function Home() {
   const [adsUsed, setAdsUsed] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [now, setNow] = useState(Date.now());
-  
-  // State verifikasi iklan
   const [isAdVerified, setIsAdVerified] = useState(false);
 
-  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -71,7 +69,6 @@ export default function Home() {
     }
   }, []);
 
-  // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -81,7 +78,6 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
-  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
@@ -92,7 +88,6 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
@@ -117,7 +112,6 @@ export default function Home() {
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // ALUR KLIK BARU
   const handleCoinClick = () => {
     if (isLocked) return;
 
@@ -197,23 +191,21 @@ export default function Home() {
         </header>
 
         <RoomSelector />
-       <div className="w-full flex justify-end mt-2 px-2">
-  <Link href="/minigames" prefetch={true}>
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      onClick={() => {
-        if (typeof playSFX === "function") playSFX("click");
-      }}
-      className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
-    >
-      {/* Pendaran Cahaya Biru Neon pelan */}
-      <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
-      
-      {/* Ikon Game Stick Flat Anti-Beban */}
-      <div className="relative text-xl">🕹️</div> 
-    </motion.button>
-  </Link>
-</div>
+
+        <div className="w-full flex justify-end mt-2 px-2">
+          <Link href="/minigames" prefetch={true}>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                if (typeof playSFX === "function") playSFX("click");
+              }}
+              className="group relative flex items-center gap-2 bg-zinc-900/50 border border-cyan-500/30 px-4 py-2 rounded-2xl backdrop-blur-md overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
+              <div className="relative text-xl">🕹️</div> 
+            </motion.button>
+          </Link>
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
@@ -222,11 +214,13 @@ export default function Home() {
              </p>
           </div>
 
+          {/* SINKRONISASI MUTLAK: ISADVERIFIED KITA SUNTIK MASUK KE PROPS COINCLICKER COK! */}
           <CoinClicker 
             onCoin={handleCoinClick} 
             pointsPerClick={100} 
             locked={isLocked} 
-            needsAd={needsAd} 
+            needsAd={needsAd}
+            isAdVerified={isAdVerified} // <--- INI KUNCI SAKTI PEMBONGKAR GEMBOK LU BIAR GA BOTAK!
           />
 
           <div className="rounded-2xl px-5 py-3 text-center bg-zinc-900/80 border border-white/10">
