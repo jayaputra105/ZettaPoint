@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AdModalProps {
@@ -11,42 +11,77 @@ interface AdModalProps {
   onClose: () => void;
 }
 
-const AD_DURATION = 5;
-
 export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }: AdModalProps) {
-  const [timeLeft, setTimeLeft] = useState(AD_DURATION);
-  const [done, setDone] = useState(false);
-  const intervalRef = useRef < ReturnType < typeof setInterval > | null > (null);
-  
+  const [adsgramController, setAdsgramController] = useState<any>(null);
+  const [loadingAd, setLoadingAd] = useState(false);
+  const [isError, setIsError] = useState(false);
+
+  // 1. Suntik SDK Adsgram secara diam-diam tanpa merusak style HTML lu
   useEffect(() => {
-    if (!open) {
-      setTimeLeft(AD_DURATION);
-      setDone(false);
+    if (!open) return;
+
+    setIsError(false);
+    setLoadingAd(false);
+
+    const existingScript = document.getElementById("adsgram-sdk");
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.id = "adsgram-sdk";
+      script.src = "https://sad.adsgram.ai/js/sad.min.js";
+      script.async = true;
+      script.onload = () => initAdsgram();
+      script.onerror = () => setIsError(true);
+      document.body.appendChild(script);
+    } else {
+      initAdsgram();
+    }
+
+    function initAdsgram() {
+      const windowObj = window as any;
+      if (windowObj.Adsgram) {
+        // Kunci Block ID Adsgram resmi milik lu
+        const controller = windowObj.Adsgram.init({ blockId: "30467" });
+        setAdsgramController(controller);
+      } else {
+        setIsError(true);
+      }
+    }
+  }, [open]);
+
+  // 2. Fungsi pemicu buat muter video iklan komersial asli
+  const handleWatchAd = async () => {
+    if (!adsgramController) {
+      setIsError(true);
       return;
     }
-    
-    // ==========================================
-    // PLACE TO TRIGGER SPONSOR AD SCRIPT (SDK)
-    // ==========================================
-    // Contoh: window.AdsGram?.showAd().then(() => setDone(true))
-    
-    setTimeLeft(AD_DURATION);
-    setDone(false);
-    intervalRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(intervalRef.current!);
-          setDone(true);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current!);
-  }, [open]);
-  
-  const progress = ((AD_DURATION - timeLeft) / AD_DURATION) * 100;
-  
+
+    setLoadingAd(true);
+    setIsError(false);
+
+    try {
+      const result = await adsgramController.show();
+      
+      // Validasi mutlak Adsgram: User sukses nonton iklan tanpa di-skip
+      if (result && result.done === true) {
+        setLoadingAd(false);
+        onComplete(); // Buka gembok koin di kliker utama lu!
+      } else {
+        alert("⚠️ Overclock Sync Failed! You must watch the video until the end.");
+        setLoadingAd(false);
+      }
+    } catch (err: any) {
+      console.error("Adsgram error:", err);
+      // Fallback aman jika iklan gak tersedia/jaringan lemot, biar user gak ngamuk game stuck
+      if (err?.description === "No ads available") {
+        alert("📡 Server Busy: No ads available right now. Emergency core unlocked!");
+        onComplete();
+      } else {
+        setIsError(true);
+        setLoadingAd(false);
+      }
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -70,6 +105,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
               boxShadow: "0 -8px 40px rgba(255,215,0,0.1)",
             }}
           >
+            {/* TAMPILAN ATAS: TOTAL EMAS TETEP UTUH */}
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p
@@ -101,100 +137,53 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
               </div>
             </div>
 
+            {/* STATUS BOX: Disederhanakan biar gak makan memori pas iklan streaming */}
             <div
-              className="rounded-2xl flex flex-col items-center justify-center gap-3 mb-5"
+              className="rounded-2xl flex flex-col items-center justify-center gap-2 mb-5 p-4"
               style={{
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,215,0,0.1)",
-                height: 140,
+                height: 120,
               }}
             >
-              {!done ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-10 h-10 rounded-full"
-                    style={{
-                      border: "3px solid rgba(255,215,0,0.15)",
-                      borderTop: "3px solid #FFD700",
-                    }}
-                  />
-                  <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
-                    Streaming advertisement...
-                  </p>
-                  <p
-                    className="text-2xl font-black tabular-nums"
-                    style={{ color: "#FFD700", textShadow: "0 0 12px rgba(255,215,0,0.6)" }}
-                  >
-                    {timeLeft}s
-                  </p>
-                </>
-              ) : (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <span className="text-4xl">✅</span>
-                  <p className="font-bold text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
-                    Verification Completed!
-                  </p>
-                </motion.div>
+              <p className="text-sm font-bold text-white/80">
+                {loadingAd ? "⏳ Video Stream Active..." : "📡 Ready to Synchronize"}
+              </p>
+              <p className="text-[10px] text-center text-zinc-400 max-w-[200px] leading-tight">
+                {loadingAd ? "Complete the ad video to unlock overclock." : "Tap Verify below to request advertisement data."}
+              </p>
+              {isError && (
+                <p className="text-[10px] font-black text-red-500 uppercase animate-pulse mt-1">
+                  ❌ Network Timeout. Try again.
+                </p>
               )}
             </div>
 
-            <div className="mb-5">
-              <div
-                className="h-2 rounded-full overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.07)" }}
-              >
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    background: "linear-gradient(90deg, #FFD700, #FF8C00)",
-                    boxShadow: "0 0 8px rgba(255,215,0,0.5)",
-                  }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.4 }}
-                />
-              </div>
-            </div>
-
+            {/* TOMBOL AKSI BAWAAN LU */}
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-3 rounded-2xl font-semibold text-sm transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.4)",
-                }}
+                disabled={loadingAd}
+                className="flex-1 py-3 rounded-2xl font-semibold text-sm transition-all bg-white/5 border border-white/10 text-white/40 disabled:opacity-30"
               >
                 Cancel
               </button>
               <motion.button
-                onClick={done ? onComplete : undefined}
-                disabled={!done}
-                animate={done ? { scale: [1, 1.04, 1] } : {}}
-                transition={{ duration: 0.5, repeat: done ? Infinity : 0 }}
+                onClick={handleWatchAd}
+                disabled={loadingAd}
                 className="flex-[2] py-3 rounded-2xl font-black text-sm transition-all"
                 style={{
-                  background: done
-                    ? "linear-gradient(135deg, #FFD700, #FF8C00)"
-                    : "rgba(255,215,0,0.1)",
-                  border: done
-                    ? "1px solid rgba(255,240,100,0.5)"
-                    : "1px solid rgba(255,215,0,0.15)",
-                  color: done ? "#000" : "rgba(255,215,0,0.3)",
-                  boxShadow: done ? "0 0 20px rgba(255,215,0,0.4)" : "none",
-                  cursor: done ? "pointer" : "not-allowed",
+                  background: "linear-gradient(135deg, #FFD700, #FF8C00)",
+                  border: "1px solid rgba(255,240,100,0.5)",
+                  color: "#000",
+                  boxShadow: "0 0 20px rgba(255,215,0,0.4)",
+                  cursor: loadingAd ? "not-allowed" : "pointer",
                 }}
               >
-                {done ? "Verify Coin Unlock" : `Wait ${timeLeft}s...`}
+                {loadingAd ? "Processing..." : "Verify Coin Unlock"}
               </motion.button>
             </div>
+
           </motion.div>
         </motion.div>
       )}

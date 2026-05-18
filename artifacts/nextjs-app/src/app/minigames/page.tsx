@@ -38,7 +38,7 @@ export default function MiniGamesPage() {
     <div className="min-h-screen w-full bg-[#030712] text-white select-none p-5 pb-10">
       <div className="max-w-md mx-auto flex flex-col gap-5">
         
-        {/* ================= BARIS: JUDUL & RETURN (FIXED LINK) ================= */}
+      
         <div className="flex items-center justify-between w-full">
           <h1 className="text-xl font-black text-cyan-400 tracking-wider uppercase">
             Mini Games
