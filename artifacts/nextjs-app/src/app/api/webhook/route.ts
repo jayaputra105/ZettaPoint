@@ -78,12 +78,12 @@ export async function POST(req: Request) {
           }
         }
 
-        // Cek apakah user baru ini udah terdaftar sebelumnya di DB
+      
         const [existingUser] = await sql`SELECT id, referrer_id FROM users WHERE telegram_id = ${id.toString()}`;
         let finalInviterParam = "";
 
         if (!existingUser) {
-          // JIKA USER BARU: Masukkan data dan pasang referrer_id sesuai tipe integer schema lu!
+          
           await sql`
             INSERT INTO users (telegram_id, name, username, coins, rank, referrer_id)
             VALUES (${id.toString()}, ${first_name}, ${username || ''}, 0, 0, ${inviterDbId})
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: id,
-            text: `Woi ${first_name}! Selamat datang di Playzetta. Room chat sengaja gua bersihin biar gak berisik teks. 🪙🔥\n\nKlik tombol raksasa di bawah ini buat langsung buka game lu sekarang! 👇`,
+            text: `Woi ${first_name}! Selamat datang di Playzetta.🪙🔥\n\nKlik tombol di bawah ini buat langsung buka game lu sekarang! 👇`,
             reply_markup: {
               keyboard: [
                 [
