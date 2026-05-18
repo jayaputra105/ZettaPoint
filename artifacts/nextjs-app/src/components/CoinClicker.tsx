@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Timer } from "lucide-react";
 
@@ -30,48 +30,52 @@ export default function CoinClicker({
   const [nextId, setNextId] = useState(0);
   const [shake, setShake] = useState(false);
   
-  const handleClick = (e: React.MouseEvent < HTMLButtonElement > ) => {
-    if (locked) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      return;
-    }
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const id = nextId;
-    setNextId((n) => n + 1);
-    
-    const randomRotate = Math.random() * 40 - 20;
-    const randomTranslateX = Math.random() * 60 - 30;
-    
-    if (!needsAd) {
-      setFloaters((prev) => [
-        ...prev,
-        { id, x, y, rotate: randomRotate, translateX: randomTranslateX }
-      ]);
-      setTimeout(() => {
-        setFloaters((prev) => prev.filter((f) => f.id !== id));
-      }, 800);
-    }
-    
-    onCoin(pointsPerClick);
-  };
+  const handleClick = useCallback(
+    (e: React.MouseEvent < HTMLButtonElement > ) => {
+      if (locked) {
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        return;
+      }
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const id = nextId;
+      setNextId((n) => n + 1);
+      
+      const randomRotate = Math.random() * 40 - 20;
+      const randomTranslateX = Math.random() * 60 - 30;
+      
+      if (!needsAd) {
+        setFloaters((prev) => [
+          ...prev,
+          { id, x, y, rotate: randomRotate, translateX: randomTranslateX }
+        ]);
+        setTimeout(() => {
+          setFloaters((prev) => prev.filter((f) => f.id !== id));
+        }, 800);
+      }
+      
+      onCoin(pointsPerClick);
+    },
+    [nextId, onCoin, locked, pointsPerClick, needsAd]
+  );
   
   return (
     <div className="relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none">
       
+      {/* 🔮 ANIMASI CAIRAN PLASMA UNGU-ORANYE DI BELAKANG CENTER DISC */}
       <style>{`
-        @keyframes plasmaStatis {
+        @keyframes plasmaMengalirStatis {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
       `}</style>
 
-      {/* Floating Points Effect */}
+      {/* 🌟 Floating Points Effect */}
       <AnimatePresence>
         {floaters.map((f) => (
           <motion.span
@@ -120,19 +124,21 @@ export default function CoinClicker({
           }}
         />
 
-        {/* Hiasan Luar */}
+        {/* ===== 🌟 VARIAN HIASAN LUAR BARU (🧩🎲💸🪙) ===== */}
         {!locked && (
           <>
-            <div className="absolute -left-4 top-8 text-3xl animate-[bounce_3.2s_infinite]">🧩</div>
-            <div className="absolute -right-4 top-14 text-3xl animate-[bounce_3.6s_infinite]">🎲</div>
-            <div className="absolute -left-2 bottom-12 text-3xl animate-[bounce_4.0s_infinite]">💸</div>
-            <div className="absolute -right-2 bottom-10 text-3xl animate-[bounce_2.8s_infinite]">🪙</div>
+            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-4 top-8 text-3xl">🧩</motion.div>
+            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-4 top-14 text-3xl">🎲</motion.div>
+            <motion.div animate={{ y: [0, 5, 0], rotate: [-6, 12, -6] }} transition={{ duration: 4.0, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 bottom-12 text-3xl">💸</motion.div>
+            <motion.div animate={{ y: [0, -5, 0], rotate: [8, -12, 8] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 bottom-10 text-3xl">🪙</motion.div>
           </>
         )}
 
-        {/* ===== LAYER 2: Rotating orbit ring ===== */}
-        <div
-          className="absolute w-[210px] h-[210px] rounded-full animate-[spin_6s_linear_infinite]"
+        {/* ===== LAYER 2: Rotating orbit ring bawaan asli lu ===== */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+          className="absolute w-[210px] h-[210px] rounded-full"
           style={{
             border: "2px solid transparent",
             background: locked 
@@ -144,8 +150,8 @@ export default function CoinClicker({
           }}
         />
 
-        {/* ===== LAYER 3 & 4: THE MAIN COIN BODY WITH TICKS ===== */}
-        <div
+        {/* ===== LAYER 3: THE MAIN COIN BODY ===== */}
+        <motion.div
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
             background: locked
@@ -159,8 +165,12 @@ export default function CoinClicker({
               ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)" 
               : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
+          animate={!locked ? { y: [0, -6, 0] } : {}}
+          transition={{ 
+            y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+          }}
         >
-          {/* Ticks Pinggiran Koin Bawaan */}
+          {/* ===== LAYER 4: Outer rim ticks asli bawaan lu ===== */}
           <div className="absolute inset-2 rounded-full" style={{ 
             background: needsAd 
               ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
@@ -168,72 +178,91 @@ export default function CoinClicker({
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
           }} />
 
-          {/* =============================================================== */}
-          {/* 📦 JALUR PENYUSUNAN LAYER STATIS BARU (DI DALAM BODY 180PX) */}
-          {/* =============================================================== */}
-          
-          {/* 🛑 1. HEXAGON EMAS DOMINAN (Lebar memotong area dalam koin) */}
-          {!locked && !needsAd && (
-            <div 
-              className="absolute w-[140px] h-[140px] bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-800 shadow-md"
-              style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-            />
-          )}
-
-          {/* 🛑 2. PLASMA CAIR UNGU + ORANYE ACAK (Nesting pas di atas Hexagon) */}
-          {!locked && !needsAd && (
-            <div 
-              className="absolute w-[134px] h-[134px] opacity-90 mix-blend-color-dodge"
-              style={{
-                clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-                backgroundImage: "linear-gradient(45deg, #7c3aed, #ea580c, #6b21a8, #f97316)",
-                backgroundSize: "200% 200%",
-                animation: "plasmaStatis 4s ease infinite"
-              }}
-            />
-          )}
-
-          {/* 🛑 3. CENTER DISC EMAS BULAT (Sempurna di Tengah-tengah Plasma) */}
-          {!locked && !needsAd && (
-            <div 
-              className="absolute w-[86px] h-[86px] rounded-full bg-gradient-to-br from-yellow-200 via-yellow-400 to-amber-500 shadow-[0_4px_8px_rgba(0,0,0,0.4),_inset_0_2px_4px_rgba(255,255,255,0.5)] border border-amber-600/30"
-            />
-          )}
-
-          {/* 🛑 4. LOGO CORE CORE (Z HITAM + MANIPULASI GARIS DOLAR SENTRAL) */}
-          <div className="absolute w-[120px] h-[120px] flex items-center justify-center">
+          {/* ===== LAYER 5: Inner medallion CONTAINER (120px) ===== */}
+          <div
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center"
+            style={{
+              // GAK USAH DI-EDIT: Logic background bawaan untuk state locked & needsAd
+              background: locked 
+                ? "#333" 
+                : needsAd 
+                ? "radial-gradient(circle at 35% 30%, #FAFAFA 0%, #A1A1AA 60%, #3F3F46 100%)"
+                : "transparent", // Transparan pas mode aktif biar tumpukan CSS di bawahnya terlihat sempurna
+              boxShadow: (locked || needsAd) ? "inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -6px 12px rgba(39,39,42,0.6)" : "none",
+              border: (locked || needsAd) ? (needsAd ? "2px solid rgba(113,113,122,0.55)" : "2px solid rgba(120,70,10,0.55)") : "none",
+            }}
+          >
             {needsAd && !locked ? (
+              // TETAP ORIGINAL: Icon Timer Silver Cyberpunk bawaan lu saat butuh ad
               <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
+            ) : locked ? (
+              // TETAP ORIGINAL: Simbol gembok saat locked kuota habis
+              <span className="font-black text-[68px] leading-none select-none text-[#555]">🔒</span>
             ) : (
-              <div className="relative w-full h-full flex items-center justify-center">
+              
+              // ===============================================================
+              // 🔥 JALUR PERAKITAN ELEMEN KOIN EMAS BARU (SESUAI GAMBAR REFERENSI LU)
+              // ===============================================================
+              <div className="absolute inset-0 flex items-center justify-center w-full h-full">
                 
-                {/* Garis Dolar Atas (Presisi Center) */}
-                {!locked && !needsAd && (
-                  <div className="absolute top-[26px] w-[5px] h-[12px] bg-black rounded-sm z-30" />
-                )}
+                {/* 🛡️ 1. HEXAGON FRAME EMAS TEBAL (Simbiosis sempurna, gak terlalu nempel ke ticks) */}
+                <div 
+                  className="absolute w-[104px] h-[104px] bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-800 flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
+                  style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                >
+                  {/* Inner border pemotong frame tebal */}
+                  <div 
+                    className="w-[100px] h-[100px] bg-gradient-to-br from-amber-300 to-amber-900" 
+                    style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                  />
+                </div>
 
-                <span
-                  className="font-black text-[68px] leading-none select-none z-20"
+                {/* 🌌 2. PURPLE PLASMA CORE (Duduk rapi di dalam area Hexagon) */}
+                <div 
+                  className="absolute w-[92px] h-[92px] opacity-90 shadow-[inset_0_0_15px_#a855f7]"
                   style={{
-                    color: locked ? "#555" : "#000000",
-                    textShadow: locked ? "none" : "0 1px 0 rgba(255,255,255,0.3)",
+                    clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+                    backgroundImage: "linear-gradient(135deg, #6b21a8, #ea580c, #7c3aed, #f97316)",
+                    backgroundSize: "200% 200%",
+                    animation: "plasmaMengalirStatis 4s ease infinite"
+                  }}
+                />
+
+                {/* 🟡 3. CENTER DISC EMAS BULAT (Center pembawa kontras murni) */}
+                <div 
+                  className="absolute w-[56px] h-[56px] rounded-full bg-gradient-to-br from-yellow-100 via-yellow-400 to-amber-500 border border-amber-600/40 shadow-[0_3px_6px_rgba(0,0,0,0.4),_inset_0_1.5px_3px_rgba(255,255,255,0.6)]"
+                />
+
+              
+                <span
+                  className="absolute font-black text-[38px] leading-none select-none text-black z-10"
+                  style={{
+                    textShadow: "0 1px 0 rgba(255,255,255,0.4)",
                   }}
                 >
-                  {locked ? "🔒" : "Z"}
+                  Z
                 </span>
 
-                {/* Garis Dolar Bawah (Presisi Center) */}
-                {!locked && !needsAd && (
-                  <div className="absolute bottom-[26px] w-[5px] h-[12px] bg-black rounded-sm z-30" />
-                )}
               </div>
             )}
           </div>
 
-          {/* Specular highlight koin */}
+          {/* Specular highlight bawaan koin asli lu */}
           {!locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
-        </div>
+        </motion.div>
       </motion.button>
+
+      {/* Teks Subtitle Overclock Time Bawaan */}
+      {needsAd && !locked && (
+        <motion.div 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-4 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black tracking-[0.3em] text-zinc-400 uppercase"
+        >
+          <span>OVERCLOCK TIME</span>
+        </motion.div>
+      )}
     </div>
   );
 }
