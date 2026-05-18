@@ -12,11 +12,13 @@ interface FloatingText {
   translateX: number;
 }
 
+// 🛡️ INTERFACE SUDAH DISINKRONKAN TOTAL DENGAN PAGE.TSX LU COK!
 interface CoinClickerProps {
   onCoin: (amount: number) => void;
-  pointsPerClick?: number;
-  locked?: boolean;
-  needsAd?: boolean;
+  pointsPerClick ? : number;
+  locked ? : boolean;
+  needsAd ? : boolean;
+  isAdVerified ? : boolean; // <--- TypeScript dijamin adem ayem ngeliat ini
 }
 
 export default function CoinClicker({
@@ -24,14 +26,15 @@ export default function CoinClicker({
   pointsPerClick = 100,
   locked = false,
   needsAd = false,
+  isAdVerified = false, // Default value aman
 }: CoinClickerProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const [floaters, setFloaters] = useState<FloatingText[]>([]);
+  const [floaters, setFloaters] = useState < FloatingText[] > ([]);
   const [nextId, setNextId] = useState(0);
   const [shake, setShake] = useState(false);
   
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: React.MouseEvent < HTMLButtonElement > ) => {
       if (locked) {
         setShake(true);
         setTimeout(() => setShake(false), 500);
@@ -45,8 +48,8 @@ export default function CoinClicker({
       const id = nextId;
       setNextId((n) => n + 1);
       
-      const randomRotate = Math.random() * 40 - 20; 
-      const randomTranslateX = Math.random() * 60 - 30; 
+      const randomRotate = Math.random() * 40 - 20;
+      const randomTranslateX = Math.random() * 60 - 30;
       
       if (!needsAd) {
         setFloaters((prev) => [
@@ -173,7 +176,7 @@ export default function CoinClicker({
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
           }} />
 
-          {/* ===== LAYER 5: INNER MEDALLION CORE ASLI (DUDUK PALING BAWAH, GAK DI-EDIT!) ===== */}
+          {/* ===== LAYER 5: INNER MEDALLION CORE ASLI (DUDUK DI Z-INDEX 20) ===== */}
           <div
             className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center z-20"
             style={{
@@ -191,13 +194,12 @@ export default function CoinClicker({
             ) : locked ? (
               <span className="font-black text-[68px] leading-none select-none text-[#555]">🔒</span>
             ) : (
-              // Sisakan string kosong murni biar huruf Z lama lu gak numpuk, diganti Z-index baru di atas
-              ""
+              "" // String kosong biar huruf Z emas polosan lama lu gak numpuk
             )}
           </div>
 
           {/* =============================================================== */}
-          {/* 🔥 SEKSI UTAMA REAKTOR BARU (NUMPUK DI ATAS MEDALLION DENGAN Z-INDEX 40!) */}
+          {/* 🔥 SEKSI UTAMA REAKTOR BARU LU (NUMPUK DI ATAS MEDALLION - Z-INDEX 40!) */}
           {/* =============================================================== */}
           {!locked && !needsAd && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
@@ -213,7 +215,7 @@ export default function CoinClicker({
                 />
               </div>
 
-              {/* 🌌 B. PURPLE PLASMA CORE (Mengalir gahar di atas Hexagon) */}
+              {/* 🌌 B. PURPLE PLASMA CORE MATRIX */}
               <div 
                 className="absolute w-[106px] h-[106px]"
                 style={{
@@ -225,12 +227,12 @@ export default function CoinClicker({
                 }}
               />
 
-              {/* 🟡 C. CENTER DISC EMAS BULAT (Sempurna nindih Plasma) */}
+              {/* 🟡 C. CENTER DISC EMAS BULAT */}
               <div 
                 className="absolute w-[58px] h-[58px] rounded-full bg-gradient-to-br from-yellow-200 via-yellow-400 to-amber-500 border border-amber-600/50 shadow-[0_3px_6px_rgba(0,0,0,0.45),_inset_0_2px_4px_rgba(255,255,255,0.6)]"
               />
 
-              {/* 🎯 D. HURUF Z HITAM SENTRAL (Paling Depan Kontras Maksimal) */}
+              {/* 🎯 D. HURUF Z HITAM CORE SENTRAL */}
               <span className="absolute font-black text-[38px] leading-none select-none text-black drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]">
                 Z
               </span>
