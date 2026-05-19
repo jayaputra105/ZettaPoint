@@ -38,11 +38,7 @@ export default function RoomSelector() {
     diamond: qualifiedDiamond
   };
 
-  // =========================================================
-  // 🛡️ SECURITY BARIKADE GERBANG UTAMA: ANTI-BYPASS EXPLOIT
-  // =========================================================
-  // Tiap kali balik ke halaman Home, cek apakah room aktif saat ini valid.
-  // Jika tidak lolos kualifikasi / koin kurang, TENDANG LANGSUNG ke Bronze!
+
   useEffect(() => {
     const activeRoomData = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
     const isUnlocked = coins >= activeRoomData.minCoins && qualificationMap[currentRoom];
@@ -155,4 +151,4 @@ export default function RoomSelector() {
       )}
     </div>
   );
-}
+      }
