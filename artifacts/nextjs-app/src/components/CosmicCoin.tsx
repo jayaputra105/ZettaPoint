@@ -5,11 +5,10 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 
 interface Particle {
   id: number;
-  targetX: number;
-  targetY: number;
+  initialAngle: number;
+  initialDistance: number;
   randomSpeed: number;
-  randomDelay: number; 
-  randomRotateSpeed: number;
+  randomDelay: number;
 }
 
 interface CosmicCoinProps {
@@ -26,6 +25,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
   const [particles, setParticles] = useState<Particle[]>([]);
 
   const handleTriggerAnimasi = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Mode needsAd & locked bypass total biar gak dieksploitasi user
     if (locked || needsAd) {
       onClick(e);
       return;
@@ -35,100 +35,99 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
 
     const savedEvent = { ...e };
 
-    // 1. STAGE IMPACT
+    // 1. STAGE IMPACT: Koin melompat 3D maju tebal + guling vertikal ekstrem
     setStage("impact");
 
-    // 2. STAGE FREEZE: Naikkan partikel ke 85, tapi render diperenteng via GPU
+    // 2. STAGE FREEZE: Koin boom hancur, generate 85 partikel melayang diam
     setTimeout(() => {
       const generatedParticles = Array.from({ length: 85 }).map((_, i) => {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 170 + 40; 
         return {
           id: i,
-          targetX: Math.cos(angle) * distance,
-          targetY: Math.sin(angle) * distance - 40,
-          randomSpeed: Math.random() * 1.5 + 2.2, // Seloroin rentang sedot (2.2s - 3.7s)
-          randomDelay: Math.random() * 1.8,       // Delay sekuensial diperlebar biar mengular panjang
-          randomRotateSpeed: Math.random() * 800 + 400,
+          initialAngle: Math.random() * Math.PI * 2, // Sudut sebaran awal
+          initialDistance: Math.random() * 110 + 60, // Jarak ledakan awal
+          randomSpeed: Math.random() * 1.5 + 2.5,    // Waktu pusaran spiral (2.5s - 4.0s)
+          randomDelay: Math.random() * 2.0,          // Delay mengular sekuensial panjang (0s - 2s)
         };
       });
       setParticles(generatedParticles);
       setStage("freeze");
-    }, 1200); 
+    }, 1200);
 
-    // 3. STAGE SUCTION
+    // 3. STAGE SUCTION: Blackhole & Angin Tornado muncul, partikel kesedot muter spiral
     setTimeout(() => {
       setStage("suction");
-    }, 2800); 
+    }, 2800);
 
-    // 4. STAGE OVERLOAD: Nahan energi total
+    // 4. STAGE OVERLOAD: Partikel habis, blackhole vakum total lalu getar gempa dahsyat
     setTimeout(() => {
-      setParticles([]); 
+      setParticles([]);
       setStage("overload");
-    }, 8500); // Durasi nunggu antrean rampung dinaikkan
+    }, 8800); // Durasi sedat-sedot spiral dibikin 6 detik penuh biar puas!
 
-    // 5. STAGE REBIRTH
+    // 5. STAGE REBIRTH: Muntah dari dimensi Z terdalam guling vertikal balik posisi semula
     setTimeout(() => {
       setStage("rebirth");
       onClick(savedEvent as any);
-    }, 10300); 
+    }, 10500);
 
     // 6. RESET TO IDLE
     setTimeout(() => {
       setStage("idle");
-    }, 12500); 
+    }, 12500); // Total durasi maha sinematik premium 12.5 detik!
   };
 
-  // 🪙 KONTROL ANIMASI MAESTRO 3D (OPTIMIZED FOR GPU)
+  // 🪙 KONTROL ANIMASI KOIN REAL 3D (X + Z + SHADING PERSPECTIVE)
   const coinVariants: Variants = {
-    idle: { scale: 1, opacity: 1, rotateX: 0, z: 0, transformPerspective: 1000 },
-    impact: { 
-      scale: [1, 0.85, 2.1],          
-      z: [0, 80, 320],                
-      opacity: [1, 1, 0],       
-      rotateX: [0, -45, 1440],        
+    idle: { scale: 1, opacity: 1, rotateX: 0, z: 0, filter: "brightness(1)", transformPerspective: 1000 },
+    impact: {
+      scale: [1, 0.85, 2.2],
+      z: [0, 100, 350], // Melompat nabrak muka user
+      opacity: [1, 1, 0],
+      rotateX: [0, -50, 1440], // Guling vertikal bertenaga 4 putaran
+      filter: ["brightness(1)", "brightness(1.4)", "brightness(0.6)"], // Efek shading cahaya pas muter
       transformPerspective: 1000,
-      transition: { 
-        times: [0, 0.15, 1],
-        duration: 1.2,          
-        ease: "easeInOut" as const 
+      transition: {
+        times: [0, 0.2, 1],
+        duration: 1.2,
+        ease: "easeInOut" as const
       }
     },
     freeze: { scale: 0, opacity: 0, rotateX: 0, z: -300 },
     suction: { scale: 0, opacity: 0, rotateX: 0, z: -300 },
     overload: { scale: 0, opacity: 0, rotateX: 0, z: -300 },
-    rebirth: { 
-      scale: [0, 1.5, 1],       
-      z: [-400, 160, 0],              
+    rebirth: {
+      scale: [0, 1.5, 1],
+      z: [-400, 180, 0], // Melesat keluar dari lubang hampa terdalam
       opacity: [0, 1, 1],
-      rotateX: [-1440, 0],            
+      rotateX: [-1440, 0], // Muter balik guling vertikal
+      filter: ["brightness(0.5)", "brightness(1.3)", "brightness(1)"],
       transformPerspective: 1000,
-      transition: { 
-        duration: 2.2,          
+      transition: {
+        duration: 2.2,
         ease: "easeOut" as const,
-        rotateX: { type: "spring", stiffness: 30, damping: 10 } 
+        rotateX: { type: "spring", stiffness: 30, damping: 9 }
       }
     }
   };
 
-  // 🌀 KONTROL ANIMASI BLACKHOLE
+  // 🌀 KONTROL ANIMASI BLACKHOLE MIKRO SINGULARITAS
   const blackholeVariants: Variants = {
     hidden: { scale: 0, rotate: 0, opacity: 0, z: -100, transformPerspective: 1000 },
-    visible: { 
-      scale: [0, 1.1, 1], 
-      rotate: [0, -1440],       
+    visible: {
+      scale: [0, 1.1, 1],
+      rotate: [0, -1440],
       opacity: 1,
       z: 0,
       transition: { duration: 0.9, ease: "backOut" as const }
     },
     shake: {
-      scale: [1, 1, 1.2, 1.12, 1.2, 1], 
-      x: [0, 0, -5, 5, -6, 6, -3, 3, 0],
-      y: [0, 0, 4, -4, 5, -5, 2, -2, 0],
-      transition: { 
-        times: [0, 0.65, 0.72, 0.8, 0.9, 0.95, 1], 
-        duration: 1.8, 
-        ease: "linear" as const 
+      scale: [1, 1, 1.22, 1.15, 1.22, 1],
+      x: [0, 0, -6, 6, -7, 7, -4, 4, 0],
+      y: [0, 0, 4, -4, 6, -6, 3, -3, 0],
+      transition: {
+        times: [0, 0.65, 0.72, 0.8, 0.9, 0.95, 1],
+        duration: 1.7,
+        ease: "linear" as const
       }
     }
   };
@@ -136,112 +135,141 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
   return (
     <div className="relative flex items-center justify-center w-[260px] h-[260px]" style={{ perspective: "1000px" }}>
       
-      {/* WRAPPER KOIN UTAMA LU */}
+      {/* 🪙 WRAPPER KOIN UTAMA LU (DIKASIH TEBAL PALSU FAUX-SHADOW 3D) */}
       <motion.button
         variants={coinVariants}
         animate={stage}
         initial="idle"
         className="absolute z-30 outline-none select-none bg-transparent border-none p-0 cursor-pointer"
-        style={{ 
-          WebkitTapHighlightColor: "transparent", 
+        style={{
+          WebkitTapHighlightColor: "transparent",
           transformStyle: "preserve-3d",
-          willChange: "transform, opacity" // 🚀 GPU KRAMAT 1
+          willChange: "transform, opacity",
         }}
         onClick={handleTriggerAnimasi}
-        disabled={stage !== "idle" && !locked && !needsAd} 
+        disabled={stage !== "idle" && !locked && !needsAd}
       >
-        <div style={{ animation: stage !== "idle" ? "none" : undefined }}>
+        {/* Layer Bayangan Tebal Logam 3D biar gak kelihatan Gepeng pas muter */}
+        <div 
+          className="relative transition-all duration-300"
+          style={{ 
+            animation: stage !== "idle" ? "none" : undefined,
+            filter: stage === "impact" ? "drop-shadow(-4px 8px 0px rgba(0,0,0,0.35))" : "none"
+          }}
+        >
           {children}
         </div>
       </motion.button>
 
-      {/* 🌌 LAYER BADAI PARTIKEL (85 BIJI - ULTRA SMOOTH GPU SPIRAL RUNNING) */}
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          initial={{ x: 0, y: 0, scale: 1, opacity: 1, z: 0 }}
-          animate={
-            stage === "suction" || stage === "overload"
-              ? { 
-                  // Meliuk spiral melambat secara linear murni di sumbu GPU translate3d
-                  x: [p.targetX, p.targetX * 0.7, p.targetX * 0.3, 0], 
-                  y: [p.targetY, p.targetY * 0.6, p.targetY * 0.2, 0], 
-                  scale: [0.95, 0.75, 0.35, 0], 
-                  opacity: [1, 0.9, 0.5, 0],
-                  z: [0, -60, -180, -350], 
-                  rotate: [0, p.randomRotateSpeed * 0.4, p.randomRotateSpeed * 0.8, p.randomRotateSpeed], 
-                  transition: { 
-                    duration: p.randomSpeed, 
-                    delay: p.randomDelay, 
-                    ease: "easeOut" as const // Diganti ke easeOut bawaan browser biar super enteng di HP
-                  } 
-                }
-              : { 
-                  x: p.targetX, 
-                  y: p.targetY, 
-                  scale: Math.random() * 0.5 + 0.5, 
-                  transition: { type: "spring", stiffness: 60, damping: 10 } 
-                }
-          }
-          className="absolute w-2.5 h-2.5 rounded-sm z-40 bg-gradient-to-br from-white via-yellow-400 to-amber-600"
-          style={{
-            // 🚀 GPU KRAMAT 2: Paksa rendering 3D hardware & ganti shadow berat dengan blur murah
-            willChange: "transform, opacity",
-            transform: "translateZ(0)",
-            filter: "blur(0.2px) brightness(1.2)"
-          }}
-        />
-      ))}
+      {/* 🌌 LAYER BADAI PARTIKEL (EFEK PUSARAN SPIRAL MENGULAR MATEMATIS) */}
+      {particles.map((p) => {
+        // Rumus Trigonometri dinamis untuk bikin lintasan memutar spiral melingkar makin mengecil menuju pusat (0,0)
+        const spiralKeyframesX = [
+          Math.cos(p.initialAngle) * p.initialDistance,                         // Awal ledakan
+          Math.cos(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7), // Muter spiral putaran 1
+          Math.cos(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35),// Muter spiral putaran 2 Rapat
+          0                                                                     // Ambles ke Core
+        ];
 
-      {/* 🌀 LAYER BLACKHOLE CYBERPUNK MULTI-TEXTURE (ANTI-POLOS) */}
+        const spiralKeyframesY = [
+          Math.sin(p.initialAngle) * p.initialDistance - 40,
+          Math.sin(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7) - 25,
+          Math.sin(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35) - 10,
+          0
+        ];
+
+        return (
+          <motion.div
+            key={p.id}
+            initial={{ x: Math.cos(p.initialAngle) * p.initialDistance, y: Math.sin(p.initialAngle) * p.initialDistance - 40, scale: 1, opacity: 1, z: 0 }}
+            animate={
+              stage === "suction" || stage === "overload"
+                ? {
+                    x: spiralKeyframesX,
+                    y: spiralKeyframesY,
+                    scale: [0.95, 0.75, 0.4, 0],
+                    opacity: [1, 0.95, 0.6, 0],
+                    z: [0, -50, -180, -350], // Ambles masuk ke dimensi dalam lubang
+                    transition: {
+                      duration: p.randomSpeed,
+                      delay: p.randomDelay, // Delay mengular sekuensial antre masuk
+                      ease: "linear" as const // Wajib linear biar putaran spiral trigonometrinya smooth konstan
+                    }
+                  }
+                : {
+                    x: Math.cos(p.initialAngle) * p.initialDistance,
+                    y: Math.sin(p.initialAngle) * p.initialDistance - 40,
+                    scale: Math.random() * 0.5 + 0.5,
+                    transition: { type: "spring", stiffness: 60, damping: 10 }
+                  }
+            }
+            className="absolute w-2.5 h-2.5 rounded-sm z-40 bg-gradient-to-br from-white via-yellow-400 to-amber-600"
+            style={{
+              willChange: "transform, opacity",
+              transform: "translateZ(0)",
+              filter: "blur(0.2px) brightness(1.2)"
+            }}
+          />
+        );
+      })}
+
+      {/* 🌀 LAYER BLACKHOLE CYBERPUNK + EFEK ANGIN TORNADO KOSMIK (ANTI POLOS) */}
       <AnimatePresence>
         {(stage === "suction" || stage === "overload") && (
           <motion.div
             variants={blackholeVariants}
             animate={stage === "overload" ? "shake" : "visible"}
             initial="hidden"
-            exit={{ scale: 0, opacity: 0, z: -200, transition: { duration: 0.35 } }} 
+            exit={{ scale: 0, opacity: 0, z: -200, transition: { duration: 0.35 } }}
             className="absolute w-[120px] h-[120px] rounded-full z-20 flex items-center justify-center"
             style={{
-              background: "radial-gradient(circle, #000000 15%, #18012e 45%, #ffd700 75%, #ff1a00 92%, transparent 100%)",
-              boxShadow: "0 0 45px 15px rgba(139, 92, 246, 0.5), inset 0 0 25px #000",
+              background: "radial-gradient(circle, #000000 15%, #150129 42%, #ffd700 74%, #ff1a00 90%, transparent 100%)",
+              boxShadow: "0 0 50px 18px rgba(139, 92, 246, 0.55), inset 0 0 25px #000",
               transformStyle: "preserve-3d",
               willChange: "transform, opacity"
             }}
           >
-            {/* Tekstur Pola Nebula Plasma Luar */}
-            <div className="absolute inset-0 rounded-full opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900 via-transparent to-transparent animate-pulse" />
-
-            {/* Cincin Plasma Dotted Pink */}
+            {/* 🌪️ EFFECT 1: ANGIN NEBULA PLASMA (Cosmic Dust Vortex nyeret partikel) */}
             <motion.div 
+              animate={{ rotate: -720 }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
+              className="absolute w-[180px] h-[180px] rounded-full opacity-30 pointer-events-none"
+              style={{
+                background: "conic-gradient(from 0deg, transparent, rgba(147, 51, 234, 0.4), transparent, rgba(255, 215, 0, 0.2), transparent)",
+                filter: "blur(8px)"
+              }}
+            />
+
+            {/* EFFECT 2: Cincin Orbit Plasma Pink Ring */}
+            <motion.div
               animate={{ rotate: -360 }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
               className="absolute inset-1 rounded-full opacity-40"
               style={{
                 border: "2px dotted #ff0055",
               }}
             />
 
-            {/* Cincin Debu Emas */}
-            <div className="absolute inset-2 rounded-full animate-spin [animation-duration:0.5s]" style={{
+            {/* EFFECT 3: Cincin Debu Emas Internal */}
+            <div className="absolute inset-2 rounded-full animate-spin [animation-duration:0.4s]" style={{
               border: "1.5px dashed rgba(255, 215, 0, 0.3)",
             }} />
 
-            {/* 🎛️ INTI BLACKHOLE TEKSTUR QUANTUM (ANTI POLOS) */}
-            <motion.div 
+            {/* 🎛️ INTI SINGLE BLACKHOLE SINGULARITAS MICRO */}
+            <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-9 h-9 rounded-full bg-black shadow-[0_0_20px_8px_#000] border border-purple-500/40 flex items-center justify-center overflow-hidden"
+              className="relative w-8.5 h-8.5 rounded-full bg-black shadow-[0_0_20px_8px_#000] border border-purple-500/40 flex items-center justify-center overflow-hidden"
               style={{ willChange: "transform" }}
             >
-              {/* Garis Event Horizon Internal Muter Super Kencang */}
+              {/* Event horizon internal muter kencang */}
               <div className="absolute inset-0.5 rounded-full opacity-80 animate-spin [animation-duration:0.25s]" style={{
                 border: "2px dotted rgba(168, 85, 247, 0.9)",
                 filter: "blur(0.3px)"
               }} />
-              {/* Cincin Pusaran Tambahan Di Tengah Lubang */}
-              <div className="absolute w-5 h-5 rounded-full border border-yellow-500/20 animate-ping opacity-30 [animation-duration:1s]" />
-              {/* Titik Gravitasi Inti */}
+              {/* Riak gelombang kuantum lubang */}
+              <div className="absolute w-5 h-5 rounded-full border border-yellow-500/20 animate-ping opacity-20 [animation-duration:0.9s]" />
+              {/* Inti gravitasi mati hitam pekat */}
               <div className="w-2.5 h-2.5 rounded-full bg-[#020005] z-10" />
             </motion.div>
           </motion.div>
