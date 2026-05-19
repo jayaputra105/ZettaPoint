@@ -14,9 +14,9 @@ interface FloatingText {
 
 interface CoinClickerProps {
   onCoin: (amount: number) => void;
-  pointsPerClick?: number;
-  locked?: boolean;
-  needsAd?: boolean;
+  pointsPerClick ? : number;
+  locked ? : boolean;
+  needsAd ? : boolean;
 }
 
 export default function CoinClicker({
@@ -26,22 +26,23 @@ export default function CoinClicker({
   needsAd = false,
 }: CoinClickerProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const [floaters, setFloaters] = useState<FloatingText[]>([]);
+  const [floaters, setFloaters] = useState < FloatingText[] > ([]);
   const [shake, setShake] = useState(false);
-
+  
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: React.MouseEvent < HTMLButtonElement > ) => {
       if (locked) {
         setShake(true);
         setTimeout(() => setShake(false), 500);
         return;
       }
-
+      
+      // Efek angka melayang bawaan lu
       const rect = e.currentTarget.getBoundingClientRect();
       const x = rect.width / 2;
       const y = rect.height / 2;
       const id = Date.now();
-
+      
       setFloaters((prev) => [
         ...prev,
         { id, x, y, rotate: Math.random() * 40 - 20, translateX: Math.random() * 60 - 30 }
@@ -50,12 +51,13 @@ export default function CoinClicker({
       setTimeout(() => {
         setFloaters((prev) => prev.filter((f) => f.id !== id));
       }, 800);
-
+      
+      // Pemicu fungsi klik utama tanpa timer gantung
       onCoin(pointsPerClick);
     },
     [locked, pointsPerClick, onCoin]
   );
-
+  
   return (
     <div className="relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none">
       <AnimatePresence>
@@ -157,7 +159,7 @@ export default function CoinClicker({
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
               <>
-                {/* PURPLE PLASMA (Tetap absolute murni, urutan diatur pake zIndex inline style) */}
+                {/* PURPLE PLASMA */}
                 <motion.div
                   animate={{
                     rotate: 360,
@@ -179,9 +181,8 @@ export default function CoinClicker({
                       repeat: Infinity
                     }
                   }}
-                  className="absolute w-[92px] h-[92px]"
+                  className="absolute w-[104px] h-[104px]"
                   style={{
-                    zIndex: 10,
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -199,11 +200,10 @@ export default function CoinClicker({
                   }}
                 />
 
-                {/* HEXAGON FRAME (Tetap absolute murni, zIndex ditingkatkan) */}
+                {/* HEXAGON FRAME */}
                 <div
                   className="absolute w-[100px] h-[100px]"
                   style={{
-                    zIndex: 20,
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -222,8 +222,15 @@ export default function CoinClicker({
                     style={{
                       clipPath:
                         "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
+
                       background:
-                        "rgba(0,0,0,.45)"
+                        "transparent",
+
+                      backdropFilter: "blur(1px)",
+
+                      boxShadow: `
+                        inset 0 0 10px rgba(255,180,40,.35)
+                      `
                     }}
                   />
                 </div>
@@ -232,7 +239,7 @@ export default function CoinClicker({
                 <div
                   className="absolute w-[46px] h-[46px] rounded-full"
                   style={{
-                    zIndex: 30,
+                    zIndex: 5,
                     background:
                       "radial-gradient(circle at 35% 30%,#FFE680,#E8A317,#8A5A0E)",
 
@@ -248,15 +255,15 @@ export default function CoinClicker({
                 <span
                   className="absolute font-black text-[68px] leading-none select-none"
                   style={{
-                    zIndex: 40,
+                    zIndex: 20,
                     color: "#7A4A08",
                     textShadow:
                       "0 2px 0 rgba(255,240,180,.7)"
-                }}
-              >
-                Z
-              </span>
-            </>
+                  }}
+                >
+                  Z
+                </span>
+              </>
             ) : needsAd && !locked ? (
               <Timer
                 size={52}
