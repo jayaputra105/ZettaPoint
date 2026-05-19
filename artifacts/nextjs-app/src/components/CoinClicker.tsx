@@ -156,13 +156,14 @@ export default function CoinClicker({
           >
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
+
               <>
-                {/* 🟢 1. HEXAGON FRAME */}
+                {/* 🟢 1. HEXAGON FRAME (Diputer 90deg, lancip atas-bawah) */}
                 <div
                   className="absolute w-[110px] h-[110px]"
                   style={{
                     zIndex: 10,
-                    transform: "rotate(90deg)", // 🔄 DIPUTER 90 DERAJAT DI SINI
+                    transform: "rotate(90deg)", // 🔄 Lancip atas bawah
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -175,46 +176,44 @@ export default function CoinClicker({
                     `
                   }}
                 >
+                  {/* Lubang dalam hexagon (Sekarang dikasih background pekat koin biar gak kosong bolong) */}
                   <div
                     className="absolute inset-[8px]"
                     style={{
                       clipPath:
                         "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
-                      background: "transparent",
-                      backdropFilter: "blur(1px)",
-                      boxShadow: `inset 0 0 10px rgba(255,180,40,.35)`
+                      background: "radial-gradient(circle, #2a1805 0%, #1a1204 100%)", // 🎨 Pengisi bagian kosong
+                      boxShadow: `inset 0 0 10px rgba(0,0,0,.8)`
                     }}
                   />
                 </div>
 
-                {/* 🟣 2. PURPLE PLASMA */}
+                {/* 🟣 2. PURPLE PLASMA (Sekarang BULAT + TEXTURE GRADIENT, di atas Hexagon) */}
                 <motion.div
                   animate={{
-                    rotate: [90, 450, 90], // 🔄 START DARI 90 DERAJAT BIAR LANCIP DI ATAS, TRUS MUTER (+360 DERAJAT)
-                    scale: [1, 1.04, 1],
+                    rotate: 360,
+                    scale: [1, 1.06, 1],
                     opacity: [0.9, 1, 0.9]
                   }}
                   transition={{
-                    rotate: { duration: 10, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 4, repeat: Infinity },
-                    opacity: { duration: 3, repeat: Infinity }
+                    rotate: { duration: 15, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                    opacity: { duration: 2, repeat: Infinity }
                   }}
-                  className="absolute w-[96px] h-[96px]"
+                  className="absolute w-[86px] h-[86px] rounded-full" // 🟡 Berubah jadi BULAT MURNI
                   style={{
                     zIndex: 20,
-                    clipPath:
-                      "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
-
+                    // Efek texture plasma pakai perpaduan multi radial-gradient pekat-terang
                     background: `
-                    radial-gradient(circle at 50% 50%,
-                    rgba(190,80,255,.95) 0%,
-                    rgba(120,0,255,.9) 35%,
-                    rgba(60,0,120,.95) 65%,
-                    rgba(10,0,20,1) 100%)
+                      radial-gradient(circle at 30% 30%, rgba(230,150,255,1) 0%, rgba(160,0,255,0.85) 30%, transparent 70%),
+                      radial-gradient(circle at 70% 60%, rgba(100,0,255,0.9) 0%, rgba(40,0,120,0.95) 50%, rgba(10,0,20,1) 100%)
                     `,
-
-                    filter: "blur(4px)",
-                    boxShadow: "0 0 18px rgba(180,60,255,.8)"
+                    backgroundBlendMode: "screen",
+                    filter: "blur(3px)",
+                    boxShadow: `
+                      0 0 20px rgba(180,60,255,0.85),
+                      inset 0 0 15px rgba(255,255,255,0.4)
+                    `
                   }}
                 />
 
@@ -229,6 +228,7 @@ export default function CoinClicker({
                 >
                   Z
                 </span>
+              
               </>
             ) : needsAd && !locked ? (
               <Timer
