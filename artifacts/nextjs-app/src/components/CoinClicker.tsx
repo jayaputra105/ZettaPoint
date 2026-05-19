@@ -8,6 +8,15 @@ interface FloatingText {
   id: number;
   x: number;
   y: number;
+  rotate: number;
+  translateX: number;
+}
+
+interface Particle {
+  id: number;
+  angle: number;
+  distance: number;
+  size: number;
 }
 
 interface CoinClickerProps {
@@ -26,83 +35,118 @@ export default function CoinClicker({
   const [isPressed, setIsPressed] = useState(false);
   const [floaters, setFloaters] = useState<FloatingText[]>([]);
   const [nextId, setNextId] = useState(0);
-  
-  // State Animasi & Buffer Logic
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [internalState, setInternalState] = useState({ locked, needsAd });
   const [shake, setShake] = useState(false);
 
-  // Monitor perubahan props dari luar, tapi jangan langsung diupdate jika sedang animasi
+  // 🌟 State Animasi Khusus 5 Detik
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [finalImpact, setFinalImpact] = useState(false);
+  
+  // Ref untuk menahan status visual agar tidak berubah mendadak
+  const [visualMode, setVisualMode] = useState({ locked, needsAd });
+
+  // Update visualMode hanya ketika animasi TIDAK sedang berjalan
   useEffect(() => {
     if (!isAnimating) {
-      setInternalState({ locked, needsAd });
+      setVisualMode({ locked, needsAd });
     }
   }, [locked, needsAd, isAnimating]);
 
+  const triggerEpicAnimation = () => {
+    setIsAnimating(true);
+    
+    // Buat 30 partikel emas untuk efek blackhole
+    const newParticles = Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      angle: Math.random() * 360,
+      distance: 150 + Math.random() * 100,
+      size: 2 + Math.random() * 4
+    }));
+    setParticles(newParticles);
+
+    // Timeline 5 Detik
+    setTimeout(() => {
+      setFinalImpact(true); // Guncangan akhir (Heboh)
+      setTimeout(() => {
+        setFinalImpact(false);
+        setIsAnimating(false);
+        setParticles([]);
+      }, 300); // Durasi hentakan akhir
+    }, 4700);
+  };
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      // Jika koin terkunci (state internal), hanya goyang
-      if (internalState.locked) {
+      if (locked) {
         setShake(true);
         setTimeout(() => setShake(false), 500);
         return;
       }
 
-      // Jika sedang animasi, abaikan klik tambahan atau biarkan hanya onCoin saja
-      if (isAnimating) return;
+      if (isAnimating) return; // Kunci klik saat sedang heboh
 
-      // 1. MULAI ANIMASI 5 DETIK
-      setIsAnimating(true);
-      onCoin(pointsPerClick);
-
-      // Munculin floater +100
+      triggerEpicAnimation();
+      
       const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
       const id = nextId;
-      setNextId(n => n + 1);
-      setFloaters(prev => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-      setTimeout(() => setFloaters(prev => prev.filter(f => f.id !== id)), 800);
+      setNextId((n) => n + 1);
 
-      // 2. SELESAI ANIMASI (5 Detik)
-      setTimeout(() => {
-        setIsAnimating(false);
-        // Sinkronisasi dengan props terbaru dari parent setelah animasi selesai
-        setInternalState({ locked, needsAd });
-      }, 5000);
+      if (!needsAd) {
+        setFloaters((prev) => [
+          ...prev,
+          { id, x, y, rotate: Math.random() * 40 - 20, translateX: Math.random() * 60 - 30 }
+        ]);
+        setTimeout(() => setFloaters((prev) => prev.filter((f) => f.id !== id)), 800);
+      }
+      
+      onCoin(pointsPerClick);
     },
-    [internalState, isAnimating, nextId, onCoin, pointsPerClick, locked, needsAd]
+    [nextId, onCoin, locked, pointsPerClick, needsAd, isAnimating]
   );
 
   return (
-    <div className="relative mx-auto flex items-center justify-center w-full h-[450px] max-w-[400px] select-none" style={{ perspective: "1000px" }}>
+    <div className="relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none">
       
-      {/* 🌟 MATRIX DATA RAIN (Spin Up Effect) */}
+      {/* 🌌 GOLDEN BLACKHOLE PARTICLES (Tersedot ke tengah koin) */}
       <AnimatePresence>
-        {isAnimating && (
-          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
-            {[...Array(15)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ y: 400, opacity: 0 }}
-                animate={{ y: -100, opacity: [0, 1, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1, ease: "linear" }}
-                className="absolute text-[#00ff41] font-mono text-xs font-bold"
-                style={{ left: `${(i * 7)}%` }}
-              >
-                {Math.random() > 0.5 ? "1" : "0"}<br/>{Math.random() > 0.5 ? "0" : "1"}<br/>1
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {isAnimating && particles.map((p) => (
+          <motion.div
+            key={p.id}
+            initial={{ 
+              opacity: 0, 
+              x: Math.cos(p.angle * (Math.PI / 180)) * p.distance, 
+              y: Math.sin(p.angle * (Math.PI / 180)) * p.distance,
+              scale: 0
+            }}
+            animate={{ 
+              opacity: [0, 1, 0], 
+              x: 0, 
+              y: 0, 
+              scale: [0, 1.5, 0] 
+            }}
+            transition={{ 
+              duration: 1.5, 
+              repeat: Infinity, 
+              delay: Math.random() * 2,
+              ease: "circIn" 
+            }}
+            className="absolute rounded-full bg-yellow-400 z-50 shadow-[0_0_10px_#ffd700]"
+            style={{ width: p.size, height: p.size }}
+          />
+        ))}
       </AnimatePresence>
 
-      {/* Floating Text */}
       <AnimatePresence>
         {floaters.map((f) => (
           <motion.span
             key={f.id}
-            initial={{ opacity: 1, y: f.y, x: f.x }}
-            animate={{ opacity: 0, y: f.y - 150, scale: 2 }}
-            className="absolute z-[60] font-black text-3xl text-yellow-400 drop-shadow-[0_0_10px_#ffd700]"
+            initial={{ opacity: 1, scale: 1, y: f.y - 20, x: f.x }}
+            animate={{ opacity: 0, scale: 1.5, y: f.y - 140, x: f.x + f.translateX, rotate: f.rotate }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.75, ease: "easeOut" }}
+            className="absolute pointer-events-none font-black text-3xl text-yellow-400 z-50 drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]"
           >
             +{pointsPerClick}
           </motion.span>
@@ -111,99 +155,115 @@ export default function CoinClicker({
 
       <motion.button
         onClick={handleClick}
-        onMouseDown={() => !internalState.locked && setIsPressed(true)}
-        onMouseUp={() => setIsPressed(false)}
         animate={
-          shake ? { x: [-10, 10, -10, 10, 0] } :
-          isAnimating ? { 
-            rotateX: [0, -25, 0], // Efek Spin Up ke arah belakang/atas
-            scale: [1, 1.1, 1],
-            y: [0, -20, 0] 
-          } : 
+          finalImpact ? { scale: [1.2, 0.9, 1], rotate: [0, 5, -5, 0] } :
+          shake ? { x: [-6, 6, -6, 6, 0] } : 
+          isAnimating ? { scale: [1, 1.05, 1] } :
           isPressed ? { scale: 0.94 } : { scale: 1 }
         }
-        transition={isAnimating ? { duration: 0.5, repeat: 10 } : { type: "spring", stiffness: 400, damping: 15 }}
-        className={`relative w-[280px] h-[280px] flex items-center justify-center outline-none transition-all duration-500 ${internalState.locked ? 'grayscale opacity-50' : ''}`}
+        transition={finalImpact ? { duration: 0.3 } : isAnimating ? { duration: 0.5, repeat: Infinity } : { type: "spring", stiffness: 400, damping: 15 }}
+        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${visualMode.locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
       >
         
-        {/* BG GLOW (Makin terang saat animasi) */}
+        {/* ===== Ambient Aura (Luxury Glow) ===== */}
         <motion.div
-          animate={isAnimating ? { scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] } : {}}
-          transition={{ duration: 1, repeat: Infinity }}
           className="absolute inset-0 rounded-full"
+          animate={isAnimating ? { 
+            scale: [1, 1.4, 1],
+            opacity: [0.3, 0.8, 0.3],
+            boxShadow: ["0 0 20px #E89A12", "0 0 60px #FFD24A", "0 0 20px #E89A12"]
+          } : {}}
+          transition={{ duration: 1, repeat: Infinity }}
           style={{
-            background: internalState.locked ? "radial-gradient(circle, red, transparent)" : "radial-gradient(circle, rgba(0,255,65,0.4) 0%, transparent 70%)",
-            filter: "blur(20px)"
+            background: visualMode.locked 
+              ? "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)"
+              : visualMode.needsAd
+              ? "radial-gradient(circle, rgba(200,200,200,0.3) 0%, transparent 70%)"
+              : "radial-gradient(circle, rgba(255,200,60,0.55) 0%, transparent 70%)",
+            filter: "blur(8px)",
           }}
         />
 
-        {/* OUTER RING (Muter gila-gilaan) */}
+        {/* Orbit Ring (Spinning Luxury) */}
         <motion.div
           animate={{ rotate: isAnimating ? 3600 : 360 }}
-          transition={{ duration: isAnimating ? 5 : 10, ease: "linear", repeat: isAnimating ? 0 : Infinity }}
-          className="absolute w-full h-full rounded-full border-[3px] border-dashed border-[#00ff41]/30"
-          style={{ WebkitMask: "radial-gradient(circle, transparent 65%, black 66%)" }}
+          transition={{ duration: isAnimating ? 5 : 6, repeat: isAnimating ? 0 : Infinity, ease: isAnimating ? "easeIn" : "linear" }}
+          className="absolute w-[210px] h-[210px] rounded-full"
+          style={{
+            border: "2px solid transparent",
+            background: visualMode.locked 
+              ? "conic-gradient(from 0deg, transparent, rgba(255,0,0,0.5), transparent)"
+              : "conic-gradient(from 0deg, rgba(255,215,0,0) 0deg, rgba(255,215,0,0.9) 60deg, rgba(255,215,0,0) 120deg, rgba(255,215,0,0.6) 220deg, rgba(255,215,0,0) 360deg)",
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
+          }}
         />
 
-        {/* THE COIN */}
+        {/* ===== MODEL KOIN ASLI (DIAM/VIBRATE) ===== */}
         <motion.div
-          className="relative w-[200px] h-[200px] rounded-full flex items-center justify-center overflow-hidden"
+          className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
+          animate={isAnimating ? { x: [-1, 1, -1, 1, 0], y: [-1, 1, -1, 1, 0] } : !visualMode.locked ? { y: [0, -6, 0] } : {}}
+          transition={isAnimating ? { duration: 0.1, repeat: Infinity } : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
           style={{
-            background: internalState.locked 
-              ? "radial-gradient(circle at 30% 30%, #444, #111)" 
-              : internalState.needsAd 
-              ? "radial-gradient(circle at 30% 30%, #fff, #71717a, #27272a)" 
-              : "radial-gradient(circle at 30% 30%, #FFF6C2, #E89A12, #7A4A08)",
-            boxShadow: isAnimating ? "0 0 50px #00ff41" : "0 10px 30px rgba(0,0,0,0.5)",
+            background: visualMode.locked
+              ? "radial-gradient(circle at 35% 30%, #444 0%, #222 60%, #111 100%)"
+              : visualMode.needsAd
+              ? "radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D4D4D8 25%, #71717A 60%, #27272A 100%)"
+              : "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 25%, #E89A12 60%, #7A4A08 100%)",
+            boxShadow: visualMode.locked
+              ? "0 12px 30px rgba(0,0,0,0.55)"
+              : visualMode.needsAd
+              ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)"
+              : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
         >
-          {/* Inner Medallion */}
-          <motion.div
-            animate={isAnimating ? { 
-              backgroundColor: ["rgba(232,163,23,1)", "rgba(0,255,65,1)", "rgba(168,85,247,1)"],
-              scale: [1, 0.8, 1] 
-            } : {}}
-            transition={{ duration: 0.5, repeat: 10 }}
-            className="w-[130px] h-[130px] rounded-full flex items-center justify-center border-2 border-black/20"
+          {/* Rim ticks */}
+          <div className="absolute inset-2 rounded-full opacity-50" style={{ 
+            background: visualMode.needsAd ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)" : "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
+          }} />
+
+          {/* Inner medallion */}
+          <div
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center"
             style={{
-              background: internalState.locked ? "#222" : internalState.needsAd ? "#FAFAFA" : "#FFE680",
-              boxShadow: "inset 0 4px 10px rgba(0,0,0,0.3)"
+              background: visualMode.locked ? "#333" : visualMode.needsAd ? "radial-gradient(circle at 35% 30%, #FAFAFA 0%, #A1A1AA 60%, #3F3F46 100%)" : "radial-gradient(circle at 35% 30%, #FFE680 0%, #E8A317 60%, #8A5A0E 100%)",
+              boxShadow: visualMode.needsAd ? "inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -6px 12px rgba(39,39,42,0.6)" : "inset 0 4px 10px rgba(255,255,200,0.6), inset 0 -6px 12px rgba(80,40,0,0.6)",
+              border: visualMode.needsAd ? "2px solid rgba(113,113,122,0.55)" : "2px solid rgba(120,70,10,0.55)",
             }}
           >
-            {internalState.needsAd && !internalState.locked ? (
-              <Timer size={60} className={isAnimating ? "text-white" : "text-zinc-800"} />
+            {visualMode.needsAd && !visualMode.locked ? (
+              <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
             ) : (
-              <span className={`font-black text-7xl ${isAnimating ? 'text-white' : 'text-yellow-950/70'}`}>
-                {internalState.locked ? "🔒" : "Z"}
+              <span className="font-black text-[68px] leading-none select-none" style={{ color: visualMode.locked ? "#555" : "#7A4A08", textShadow: visualMode.locked ? "none" : "0 2px 0 rgba(255,240,180,0.7)" }}>
+                {visualMode.locked ? "🔒" : "Z"}
               </span>
             )}
-          </motion.div>
+          </div>
 
-          {/* Shine effect yang muter pas animasi */}
-          <motion.div 
-            animate={isAnimating ? { rotate: 720 } : { rotate: 0 }}
-            transition={{ duration: 5 }}
-            className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent pointer-events-none" 
-          />
+          {/* Specular highlight */}
+          {!visualMode.locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
+
+          {/* 🌟 Luxury Shimmer Effect saat Animasi */}
+          {isAnimating && (
+            <motion.div 
+              initial={{ x: "-100%" }}
+              animate={{ x: "200%" }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12"
+            />
+          )}
         </motion.div>
-
-        {/* Side Props 🧩 */}
-        {!internalState.locked && (
-          <>
-            <motion.div animate={isAnimating ? { y: -200, opacity: 0, rotate: 720 } : { y: [0, -10, 0] }} transition={{ duration: isAnimating ? 1 : 2, repeat: isAnimating ? 0 : Infinity }} className="absolute -left-4 top-0 text-4xl">🧩</motion.div>
-            <motion.div animate={isAnimating ? { y: -200, opacity: 0, rotate: -720 } : { y: [0, 10, 0] }} transition={{ duration: isAnimating ? 1.2 : 2.5, repeat: isAnimating ? 0 : Infinity }} className="absolute -right-4 bottom-0 text-4xl">🧩</motion.div>
-          </>
-        )}
       </motion.button>
 
-      {/* Overclock Label */}
-      {isAnimating && (
+      {/* 🌟 Footer Status */}
+      {visualMode.needsAd && !visualMode.locked && (
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute bottom-2 font-mono text-[#00ff41] text-[10px] tracking-widest font-bold"
+          animate={isAnimating ? { opacity: [1, 0, 1], color: "#ffd700" } : { opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: isAnimating ? 0.2 : 2, repeat: Infinity }}
+          className="absolute bottom-4 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black tracking-[0.3em] uppercase"
+          style={{ color: isAnimating ? "#ffd700" : "#a1a1aa" }}
         >
-          MATRIX_OVERCLOCKING_v2.0...
+          <span>{isAnimating ? "CONCENTRATING GOLD..." : "OVERCLOCK TIME"}</span>
         </motion.div>
       )}
     </div>
