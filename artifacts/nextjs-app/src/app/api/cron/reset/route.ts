@@ -81,7 +81,7 @@ export async function GET(req: Request) {
             }
           }
 
-          // PROMOSI KAMAR OTOMATIS BAGI TOP 150 BESAR
+          // PROMOSI KAMAR OTOMATIS BAGI TOP 150 BESAR (TIDAK DIUBAH SAMA SEKALI)
           const nextRoomMap: Record<string, string> = {
             bronze: "qualified_silver",
             silver: "qualified_gold",
@@ -106,7 +106,7 @@ export async function GET(req: Request) {
         await db.update(users).set({ [activeZpString]: 0 });
 
         // =========================================================
-        // 🛠️ FIX MATI ATURAN LU: KUNCI DURASI SINKRON SESUAI ROOM ID
+        // 🛠️ KUNCI DURASI SESUAI SPESIFIKASI DAN JAM SERVER 00:00 UTC
         // =========================================================
         let durationDays = 1; // Default Bronze 1 hari
         if (room.id === "silver") {
@@ -115,10 +115,11 @@ export async function GET(req: Request) {
           durationDays = 7;   // Gold & Diamond 7 hari
         }
 
-        // Target waktu reschedule jatuh tempo berikutnya pas jam 00:00 UTC
-        const nextReset = new Date();
+        // FIX MUTLAK: Hitung estafet tanggal masa depan bersandar dari data roomTargetReset DB,
+        // bukan dari 'new Date()' hari ini yang jamnya rentan goyang/bergeser menitnya!
+        const nextReset = new Date(roomTargetReset);
         nextReset.setUTCDate(nextReset.getUTCDate() + durationDays);
-        nextReset.setUTCHours(0, 0, 0, 0); // Kunci Paksa Jam Ke Nol UTC!
+        nextReset.setUTCHours(0, 0, 0, 0); // Kunci Mati Jam 00:00 UTC Teng!
 
         await db.update(rooms)
           .set({ resetAt: nextReset, durationDays: durationDays })

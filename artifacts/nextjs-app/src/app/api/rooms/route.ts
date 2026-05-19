@@ -22,36 +22,21 @@ export async function GET(req: Request) {
     }
     
     // =========================================================
-    // 🛸 BYPASS TIMEZONE ENGINE: HITUNG SISA WAKTU MURNI JAVASCRIPT
+    // 🛸 SATU IMAN ENGINE: HITUNG SISA WAKTU ASLI DARI DATABASE
     // =========================================================
-    const now = new Date();
+    const now = new Date().getTime();
+    const targetReset = new Date(room.resetAt).getTime();
     
-    // Ambil timestamp detik saat ini dalam UTC
-    const nowTime = now.getTime();
+    // Sisa waktu murni hasil pengurangan target masa depan di DB dikurangi waktu sekarang
+    // Menggunakan Math.max agar jika server telat nge-cron, angka di frontend tidak minus
+    const remainingMs = Math.max(0, targetReset - now);
     
-    // Paksa buat target jam 00:00 UTC terdekat (Malam ini jam 12 malam waktu UTC)
-    const nextMidnightUTC = new Date();
-    nextMidnightUTC.setUTCHours(24, 0, 0, 0);
-    const msToMidnight = nextMidnightUTC.getTime() - nowTime;
-    
-    // Ambil durasi hari asli berdasarkan aturan sakti dari lu
-    let durationDays = Number(room.durationDays) || 1;
-    if (room.id === "bronze") durationDays = 1;
-    if (room.id === "silver") durationDays = 3;
-    if (room.id === "gold" || room.id === "diamond") durationDays = 7;
-    
-    // Sisa hari real = (durasi hari - 1) dikali milidetik satu hari penuh
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    
-    // KUNCI AMAN: Sisa waktu adalah sisa jam menuju tengah malam UTC malam ini + sisa hari berikutnya
-    const remainingMs = msToMidnight + ((durationDays - 1) * oneDayMs);
-    
-    // Kirimkan data matang ke frontend tanpa bergantung format tanggal DB lagi
+    // Kirimkan data matang ke frontend tanpa rumus abu-abu harian lagi!
     return NextResponse.json({
       id: room.id,
       prizePool: room.prizePool,
       resetAt: room.resetAt,
-      remainingMs: remainingMs // Angka bulat bersih, anti-selisih jam antar device!
+      remainingMs: remainingMs // FIX: Akurat merayap mundur mengikuti DB!
     });
   } catch (e) {
     console.error("Rooms API Error:", e);

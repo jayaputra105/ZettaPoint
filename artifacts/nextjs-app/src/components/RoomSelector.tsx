@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Zap } from "lucide-react";
 import { useApp } from "@/context/AppProvider";
 
@@ -21,16 +21,20 @@ export const ROOMS: Room[] = [
 ];
 
 function fmtCountdown(ms: number) {
-  if (ms <= 0) return "00 jam 00 menit 00 detik";
+  if (ms <= 0) return "Resetting...";
   const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
+  const d = Math.floor(s / (3600 * 24));
+  const h = Math.floor((s % (3600 * 24)) / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
+
+  if (d >= 1) {
+    return `${d} hari ${h} jam ${m} menit`;
+  }
   return `${h} jam ${m} menit ${sec} detik`;
 }
 
 export default function RoomSelector() {
-  // AMBIL DATA PUSAT DARI CONTEXT
   const { 
     coins, 
     zp, 
@@ -41,9 +45,8 @@ export default function RoomSelector() {
     qualifiedDiamond 
   } = useApp();
 
-  // Mapping status kualifikasi dari database
   const qualificationMap: Record<string, boolean> = {
-    bronze: true, // Bronze selalu terbuka
+    bronze: true, 
     silver: qualifiedSilver,
     gold: qualifiedGold,
     diamond: qualifiedDiamond
@@ -51,21 +54,33 @@ export default function RoomSelector() {
 
   const active = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
 
-  // TIMER LOGIC
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  // =========================================================
+  // 🛰️ FETCH TIMEOUT ENGINE: AMBIL DATA SISA WAKTU SINKRON DARI DB
+  // =========================================================
+  const [countdown, setCountdown] = useState<number>(0);
 
-  // Timer target (default 00:00 UTC)
-  const target = useMemo(() => {
-    const d = new Date();
-    d.setUTCHours(24, 0, 0, 0); // Reset jam 00:00 UTC besok
-    return d.getTime();
+  useEffect(() => {
+    // Tiap user ganti tab room, fetch sisa waktu real dari database
+    fetch(`/api/rooms?id=${currentRoom}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.remainingMs === "number") {
+          setCountdown(data.remainingMs);
+        }
+      })
+      .catch((err) => console.error("Room selector fetch error:", err));
   }, [currentRoom]);
 
-  const remain = target - now;
+  // Kunci linear TICK pengurang 1 detik (Anti-manipulasi jam lokal HP)
+  useEffect(() => {
+    if (countdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev <= 1000 ? 0 : prev - 1000));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   return (
     <div
@@ -89,8 +104,8 @@ export default function RoomSelector() {
           >
             {active.name}
           </h2>
-          <p className="text-[10px] mt-1.5 text-emerald-400 font-black uppercase tracking-tighter">
-            {fmtCountdown(remain)}
+          <p className="text-[10px] mt-1.5 text-emerald-400 font-black uppercase tracking-tighter tabular-nums">
+            {fmtCountdown(countdown)}
           </p>
         </div>
 
@@ -106,7 +121,6 @@ export default function RoomSelector() {
 
       <div className="mt-4 flex items-center justify-between gap-2">
         {ROOMS.map((r) => {
-          // Syarat Unlocked: Koin Cukup DAN Lolos Kualifikasi Top 150 (kecuali Bronze)
           const isUnlocked = coins >= r.minCoins && qualificationMap[r.id];
           const isActive = r.id === currentRoom;
 
@@ -129,7 +143,6 @@ export default function RoomSelector() {
         })}
       </div>
 
-      {/* LOCK HINT */}
       {!qualificationMap[currentRoom === 'bronze' ? 'silver' : currentRoom] && (
         <p className="text-[8px] text-white/30 text-center mt-3 font-bold uppercase tracking-widest">
           Locked: reach top 150 leaderboard to unlock next room
