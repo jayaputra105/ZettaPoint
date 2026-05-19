@@ -1,27 +1,22 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Timer } from 'lucide-react';
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Timer } from "lucide-react"; // Kita pakai icon stopwatch/timer silver futuristik dari lucide
+
+interface FloatingText {
+  id: number;
+  x: number;
+  y: number;
+  rotate: number;
+  translateX: number;
+}
 
 interface CoinClickerProps {
   onCoin: (amount: number) => void;
-  pointsPerClick?: number;
-  locked?: boolean;
-  needsAd?: boolean;
-  onAdClick?: () => void;
-}
-
-interface GoldParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  alpha: number;
-  phase: 'burst' | 'suck';
-  angle: number;
-  orbitRadius: number;
+  pointsPerClick ? : number;
+  locked ? : boolean;
+  needsAd ? : boolean;
 }
 
 export default function CoinClicker({
@@ -29,277 +24,200 @@ export default function CoinClicker({
   pointsPerClick = 100,
   locked = false,
   needsAd = false,
-  onAdClick,
 }: CoinClickerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPressed, setIsPressed] = useState(false);
+  const [floaters, setFloaters] = useState < FloatingText[] > ([]);
+  const [nextId, setNextId] = useState(0);
+  const [shake, setShake] = useState(false);
   
-  const [isMatrixSpinning, setIsMatrixSpinning] = useState(false);
-  const [isCoreShaking, setIsCoreShaking] = useState(false);
-  const particlesRef = useRef<GoldParticle[]>([]);
-
-  const spawnParticles = useCallback((cx: number, cy: number) => {
-    const pCount = 50;
-    const arr: GoldParticle[] = [];
-    for (let i = 0; i < pCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 5;
-      arr.push({
-        x: cx,
-        y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 2 + Math.random() * 3,
-        alpha: 1,
-        phase: 'burst',
-        angle: angle,
-        orbitRadius: 80 + Math.random() * 40
-      });
-    }
-    particlesRef.current = arr;
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const resizeCanvas = () => {
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-    };
-    resizeCanvas();
-
-    let localTime = 0;
-    let animationFrameId: number;
-
-    const render = () => {
-      localTime += 1;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
-      // 1. STRIP EMAS RADIAL
-      if (isMatrixSpinning) {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate((localTime * 15 * Math.PI) / 180);
-
-        const stripCount = 45;
-        const outerLimit = cx * 0.95;
-
-        for (let i = 0; i < stripCount; i++) {
-          const angle = (i * Math.PI * 2) / stripCount;
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(angle) * 50, Math.sin(angle) * 50);
-          ctx.lineTo(Math.cos(angle) * outerLimit, Math.sin(angle) * outerLimit);
-          ctx.strokeStyle = i % 2 === 0 ? 'rgba(255, 215, 0, 0.85)' : 'rgba(232, 154, 18, 0.35)';
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
-        }
-        ctx.restore();
+  const handleClick = useCallback(
+    (e: React.MouseEvent < HTMLButtonElement > ) => {
+      if (locked) {
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        return;
       }
-
-      // 2. TEXTURE PLASMA UNGU
-      if (!locked && !needsAd) {
-        ctx.save();
-        const glowGrad = ctx.createRadialGradient(cx, cy, 25, cx, cy, 65);
-        glowGrad.addColorStop(0, 'rgba(147, 51, 234, 1)');
-        glowGrad.addColorStop(0.4, 'rgba(192, 38, 211, 0.6)');
-        glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = glowGrad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 65, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255, 230, 255, 1)';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = '#f43f5e';
-        ctx.shadowBlur = 12;
-
-        const drawLightning = (radius: number, segs: number) => {
-          ctx.beginPath();
-          for (let i = 0; i <= segs; i++) {
-            const angle = (i * Math.PI * 2) / segs;
-            const deviation = (Math.random() - 0.5) * 10;
-            const r = radius + deviation;
-            const x = cx + Math.cos(angle) * r;
-            const y = cy + Math.sin(angle) * r;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.closePath();
-          ctx.stroke();
-        };
-
-        drawLightning(42, 14);
-        drawLightning(50, 10);
-        ctx.restore();
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const id = nextId;
+      setNextId((n) => n + 1);
+      
+      // 🌟 RACIKAN RAHASIA: Acak arah belokan (X) dan kemiringan putaran (Rotate)
+      const randomRotate = Math.random() * 40 - 20; // Miring acak -20deg sampai 20deg
+      const randomTranslateX = Math.random() * 60 - 30; // Melosor acak ke kiri/kanan -30px sampai 30px
+      
+      // Munculin angka melayang (+100) jika bukan mode nonton iklan
+      if (!needsAd) {
+        setFloaters((prev) => [
+          ...prev,
+          { id, x, y, rotate: randomRotate, translateX: randomTranslateX }
+        ]);
+        setTimeout(() => {
+          setFloaters((prev) => prev.filter((f) => f.id !== id));
+        }, 800);
       }
-
-      // 3. MEKANISME PARTIKEL EMAS
-      if (isMatrixSpinning) {
-        particlesRef.current.forEach((p) => {
-          if (p.phase === 'burst') {
-            p.x += p.vx;
-            p.y += p.vy;
-            const dist = Math.hypot(p.x - cx, p.y - cy);
-            if (dist >= p.orbitRadius) p.phase = 'suck';
-          } else {
-            p.angle += 0.12;
-            const currentDist = Math.hypot(p.x - cx, p.y - cy) - 4;
-            p.x = cx + Math.cos(p.angle) * currentDist;
-            p.y = cy + Math.sin(p.angle) * currentDist;
-
-            if (currentDist <= 8) p.alpha = 0;
-          }
-
-          if (p.alpha > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(252, 211, 77, ${p.alpha})`;
-            ctx.shadowColor = '#fbbf24';
-            ctx.shadowBlur = 4;
-            ctx.fill();
-            ctx.restore();
-          }
-        });
-      }
-
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [isMatrixSpinning, locked, needsAd]);
-
-  // 🛠️ LOGIC KLIK BARU: ANTI PLING-PLONG STATE
-  const handleCoinClick = () => {
-    if (locked || isMatrixSpinning) return;
-
-    // Kalau butuh iklan, LANGSUNG tembak onAdClick dari parent tanpa ba-bi-bu
-    if (needsAd) {
-      if (onAdClick) onAdClick();
-      return;
-    }
-
-    // Jalankan Animasi Clicker Utama koin emas biasa
-    setIsMatrixSpinning(true);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      spawnParticles(canvas.width / 2, canvas.height / 2);
-    }
-
-    const shakeTimer = setTimeout(() => {
-      setIsCoreShaking(true);
-    }, 6000);
-
-    const finalTimer = setTimeout(() => {
-      onCoin(pointsPerClick); // Di dalam fungsi ini di parent lu, WAJIB set state needsAd jadi true!
-      setIsMatrixSpinning(false);
-      setIsCoreShaking(false);
-      particlesRef.current = [];
-    }, 6200);
-  };
-
+      
+      onCoin(pointsPerClick);
+    },
+    [nextId, onCoin, locked, pointsPerClick, needsAd]
+  );
+  
   return (
-    <div 
-      ref={containerRef} 
-      className="relative mx-auto flex items-center justify-center w-full h-[380px] max-w-[380px] select-none"
-    >
-      {/* AREA KLIK TAMENG UTAMA (z-40) */}
-      <div 
-        onClick={handleCoinClick}
-        className="absolute w-[220px] h-[220px] rounded-full z-40 cursor-pointer"
+    <div className="relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none">
+      
+      {/* 🌟 Floating Points Effect (Dinamis & Juicy) */}
+      <AnimatePresence>
+        {floaters.map((f) => (
+          <motion.span
+            key={f.id}
+            initial={{ opacity: 1, scale: 1, y: f.y - 20, x: f.x, rotate: 0 }}
+            animate={{ 
+              opacity: 0, 
+              scale: 1.5,            // Membesar pas melayang biar puas liat koinnya
+              y: f.y - 140,          // Terbang meluncur tinggi
+              x: f.x + f.translateX, // Melosor acak ke samping kiri/kanan
+              rotate: f.rotate       // Berputar miring acak
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.75, ease: "easeOut" }}
+            className="absolute pointer-events-none font-black text-3xl text-yellow-400 z-50 drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]"
+          >
+            +{pointsPerClick}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+
+      {/* Button pembungkus utama */}
+      <motion.button
+        onMouseDown={() => !locked && setIsPressed(true)}
+        onMouseUp={() => setIsPressed(false)}
+        onMouseLeave={() => setIsPressed(false)}
+        onTouchStart={() => !locked && setIsPressed(true)}
+        onTouchEnd={() => setIsPressed(false)}
+        onClick={handleClick}
+        animate={shake ? { x: [-6, 6, -6, 6, 0] } : isPressed ? { scale: 0.94 } : { scale: 1 }}
+        whileTap={{ scale: locked ? 1 : 0.94 }} // Efek membal empuk pas ditekan beneran
+        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
         style={{ WebkitTapHighlightColor: "transparent" }}
-      />
-
-      {/* CANVAS RENDERING EFFECTS (z-20) */}
-      <div className="absolute inset-0 pointer-events-none z-20">
-        <canvas ref={canvasRef} className="w-full h-full" />
-      </div>
-
-      {/* FLOATING DECORATIONS */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute left-4 top-12 text-4xl">🧩</motion.div>
-        <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute right-4 top-20 text-4xl">🎲</motion.div>
-        <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute right-6 bottom-20 text-4xl">💸</motion.div>
-      </div>
-
-      {/* VISUAL BODY KOIN (z-30) */}
-      <motion.div
-        animate={isCoreShaking ? { x: [-6, 6, -5, 5, -2, 2, 0], y: [-4, 4, 0] } : {}}
-        transition={{ duration: 0.2, ease: "linear" }}
-        className={`relative w-[210px] h-[210px] flex items-center justify-center rounded-full overflow-hidden z-30 ${
-          locked ? "opacity-60 grayscale" : "opacity-100"
-        }`}
       >
+        {/* ===== Ambient glow ===== */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: locked 
+              ? "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)"
+              : needsAd
+              ? "radial-gradient(circle at 50% 50%, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 40%, transparent 70%)"
+              : "radial-gradient(circle at 50% 50%, rgba(255,200,60,0.55) 0%, rgba(255,170,30,0.25) 35%, rgba(255,150,0,0) 70%)",
+            filter: "blur(8px)",
+          }}
+        />
+
+        {/* ===== Floating side props 🧩 ===== */}
+        {!locked && (
+          <>
+            <motion.div animate={{ y: [0, -6, 0], rotate: [-8, 4, -8] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-2 top-10 text-3xl">🧩</motion.div>
+            <motion.div animate={{ y: [0, 6, 0], rotate: [10, -4, 10] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-2 top-16 text-3xl">🧩</motion.div>
+          </>
+        )}
+
+        {/* Rotating orbit ring */}
         <motion.div
-          className="relative w-full h-full flex items-center justify-center"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+          className="absolute w-[210px] h-[210px] rounded-full"
+          style={{
+            border: "2px solid transparent",
+            background: locked 
+              ? "conic-gradient(from 0deg, transparent, rgba(255,0,0,0.5), transparent)"
+              : needsAd
+              ? "conic-gradient(from 0deg, rgba(200,200,200,0) 0deg, rgba(255,255,255,0.6) 60deg, rgba(200,200,200,0) 120deg, rgba(255,255,255,0.4) 220deg, rgba(200,200,200,0) 360deg)"
+              : "conic-gradient(from 0deg, rgba(255,215,0,0) 0deg, rgba(255,215,0,0.9) 60deg, rgba(255,215,0,0) 120deg, rgba(255,215,0,0.6) 220deg, rgba(255,215,0,0) 360deg)",
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
+          }}
+        />
+
+        {/* ===== THE MAIN COIN ===== */}
+        <motion.div
+          className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
             background: locked
               ? "radial-gradient(circle at 35% 30%, #444 0%, #222 60%, #111 100%)"
               : needsAd
-              ? "radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D4D4D8 25%, #71717A 60%, #27272A 100%)" 
+              ? "radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D4D4D8 25%, #71717A 60%, #27272A 100%)" // Gradasi Silver Zinc Mewah Futuristik
               : "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 25%, #E89A12 60%, #7A4A08 100%)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.4), inset 0 5px 10px rgba(255,255,255,0.4)"
+            boxShadow: locked
+              ? "0 12px 30px rgba(0,0,0,0.55)"
+              : needsAd
+              ? "0 12px 30px rgba(0,0,0,0.55), 0 0 35px rgba(255,255,255,0.25), inset 0 -8px 18px rgba(39,39,42,0.6), inset 0 6px 14px rgba(255,255,255,0.4)" // Shadow perak cyber
+              : "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
-          animate={isMatrixSpinning && !isCoreShaking ? { rotate: 2160 } : { rotate: 0 }}
-          transition={{ duration: 6, ease: [0.4, 0, 0.2, 1] }}
+          animate={!locked ? { y: [0, -6, 0] } : {}}
+          transition={{ 
+            y: { duration: 2.4, repeat: Infinity, ease: "easeInOut" }
+          }}
         >
+          {/* Outer rim ticks */}
           <div className="absolute inset-2 rounded-full" style={{ 
             background: needsAd 
-              ? "repeating-conic-gradient(rgba(113,113,122,0.4) 0deg 4deg, transparent 4deg 10deg)"
-              : "repeating-conic-gradient(rgba(120,70,10,0.4) 0deg 4deg, transparent 4deg 10deg)", 
-            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
+              ? "repeating-conic-gradient(rgba(113,113,122,0.45) 0deg 4deg, transparent 4deg 10deg)"
+              : "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
+            WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
           }} />
 
+          {/* Inner medallion */}
           <div
-            className="relative w-[140px] h-[140px] rounded-full flex items-center justify-center overflow-hidden"
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center"
             style={{
-              background: locked ? "#333" : needsAd ? "#3f3f46" : "#1a1204",
-              boxShadow: "inset 0 5px 10px rgba(0,0,0,0.85)"
+              background: locked 
+                ? "#333" 
+                : needsAd 
+                ? "radial-gradient(circle at 35% 30%, #FAFAFA 0%, #A1A1AA 60%, #3F3F46 100%)"
+                : "radial-gradient(circle at 35% 30%, #FFE680 0%, #E8A317 60%, #8A5A0E 100%)",
+              boxShadow: needsAd
+                ? "inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -6px 12px rgba(39,39,42,0.6)"
+                : "inset 0 4px 10px rgba(255,255,200,0.6), inset 0 -6px 12px rgba(80,40,0,0.6)",
+              border: needsAd
+                ? "2px solid rgba(113,113,122,0.55)"
+                : "2px solid rgba(120,70,10,0.55)",
             }}
           >
-            {!locked && !needsAd ? (
-              <>
-                <div
-                  className="absolute w-[124px] h-[124px]"
-                  style={{
-                    transform: "rotate(90deg)",
-                    clipPath: "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
-                    background: "linear-gradient(145deg, #fff0a8, #f7c53b, #a85c00)",
-                  }}
-                >
-                  <div className="absolute inset-[5px]" style={{ clipPath: "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)", background: "#1a1204" }} />
-                </div>
-
-                <div 
-                  className="absolute w-[60px] h-[60px] rounded-full flex items-center justify-center z-10"
-                  style={{
-                    background: "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 40%, #7A4A08 100%)",
-                    boxShadow: "0 4px 8px rgba(0,0,0,0.5), inset 0 1.5px 3px #fff"
-                  }}
-                >
-                  <span className="font-black text-[34px] leading-none select-none text-[#2a1805]" style={{ textShadow: "0 1px 0 rgba(255,255,255,0.4)" }}>
-                    Z
-                  </span>
-                </div>
-              </>
-            ) : needsAd && !locked ? (
-              <Timer size={44} className="text-zinc-300 animate-pulse" />
+            {needsAd && !locked ? (
+              // ⏳ TOMBOL ADS: Ganti 🎬 jadi Timer Silver Cyberpunk
+              <Timer size={52} className="text-zinc-800 drop-shadow-[0_2px_0_rgba(255,255,255,0.6)]" />
             ) : (
-              <span className="text-3xl">🔒</span>
+              <span
+                className="font-black text-[68px] leading-none select-none"
+                style={{
+                  color: locked ? "#555" : "#7A4A08",
+                  textShadow: locked ? "none" : "0 2px 0 rgba(255,240,180,0.7)",
+                }}
+              >
+                {locked ? "🔒" : "Z"}
+              </span>
             )}
           </div>
+
+          {/* Specular highlight */}
+          {!locked && <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} />}
         </motion.div>
-      </motion.div>
+      </motion.button>
+
+      {/* 🌟 TEKS SUBTITLE DESIGN: Indikator Status Tambahan di Bawah Koin */}
+      {needsAd && !locked && (
+        <motion.div 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-4 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black tracking-[0.3em] text-zinc-400 uppercase"
+        >
+          <span>OVERCLOCK TIME</span>
+        </motion.div>
+      )}
     </div>
   );
 }
