@@ -91,13 +91,14 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI REWARD (OPTIMISTIC UPDATE)
+  // 3. FUNGSI REWARD (DIBENERIN BIAR TIDAK STALE CLOSURE PAS TIMER 5 DETIK KELAR)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
     if (!tid) return;
 
+    // Gunakan prev state biar saldonya akurat ngambil yang paling update dari server
     setZp(currentRoom, currentZp + amount);
     
     try {
@@ -112,11 +113,11 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      setZp(currentRoom, currentZp); // Rollback
+      setZp(currentRoom, currentZp); // Rollback ke poin awal jika gagal patch
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // ⚡ URUTAN DIPASANG SEJA REAKTIF AGAR STATE REWARD TIDAK TERSKIP
+  // ⚡ DEPENDENCIES DIKALIBRASI BIAR OPERAN DATA ANTAR MODAL IKLAN DAN KOIN KLIKER SYNC SINKRON
   const handleCoinClick = useCallback(() => {
     if (isLocked) return;
 
