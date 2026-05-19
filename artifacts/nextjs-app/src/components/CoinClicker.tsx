@@ -37,7 +37,6 @@ export default function CoinClicker({
         return;
       }
       
-      // Efek angka melayang bawaan lu
       const rect = e.currentTarget.getBoundingClientRect();
       const x = rect.width / 2;
       const y = rect.height / 2;
@@ -52,7 +51,6 @@ export default function CoinClicker({
         setFloaters((prev) => prev.filter((f) => f.id !== id));
       }, 800);
       
-      // Pemicu fungsi klik utama tanpa timer gantung
       onCoin(pointsPerClick);
     },
     [locked, pointsPerClick, onCoin]
@@ -159,51 +157,11 @@ export default function CoinClicker({
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
               <>
-                {/* PURPLE PLASMA */}
-                <motion.div
-                  animate={{
-                    rotate: 360,
-                    scale: [1, 1.04, 1],
-                    opacity: [0.9, 1, 0.9]
-                  }}
-                  transition={{
-                    rotate: {
-                      duration: 10,
-                      repeat: Infinity,
-                      ease: "linear"
-                    },
-                    scale: {
-                      duration: 4,
-                      repeat: Infinity
-                    },
-                    opacity: {
-                      duration: 3,
-                      repeat: Infinity
-                    }
-                  }}
-                  className="absolute w-[104px] h-[104px]"
-                  style={{
-                    clipPath:
-                      "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
-
-                    background: `
-                    radial-gradient(circle at 50% 50%,
-                    rgba(190,80,255,.95) 0%,
-                    rgba(120,0,255,.9) 35%,
-                    rgba(60,0,120,.95) 65%,
-                    rgba(10,0,20,1) 100%)
-                    `,
-
-                    filter: "blur(4px)",
-                    boxShadow:
-                      "0 0 18px rgba(180,60,255,.8)"
-                  }}
-                />
-
-                {/* HEXAGON FRAME */}
+                {/* 🟢 1. HEXAGON FRAME (Sekarang di bawah Plasma) */}
                 <div
-                  className="absolute w-[100px] h-[100px]"
+                  className="absolute w-[110px] h-[110px]"
                   style={{
+                    zIndex: 10,
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -216,49 +174,56 @@ export default function CoinClicker({
                     `
                   }}
                 >
-                  {/* lubang hexagon */}
                   <div
                     className="absolute inset-[8px]"
                     style={{
                       clipPath:
                         "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
-
-                      background:
-                        "transparent",
-
+                      background: "transparent",
                       backdropFilter: "blur(1px)",
-
-                      boxShadow: `
-                        inset 0 0 10px rgba(255,180,40,.35)
-                      `
+                      boxShadow: `inset 0 0 10px rgba(255,180,40,.35)`
                     }}
                   />
                 </div>
 
-                {/* CENTER DISC */}
-                <div
-                  className="absolute w-[46px] h-[46px] rounded-full"
+                {/* 🟣 2. PURPLE PLASMA (Sekarang di atas Hexagon) */}
+                <motion.div
+                  animate={{
+                    rotate: 360,
+                    scale: [1, 1.04, 1],
+                    opacity: [0.9, 1, 0.9]
+                  }}
+                  transition={{
+                    rotate: { duration: 10, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 4, repeat: Infinity },
+                    opacity: { duration: 3, repeat: Infinity }
+                  }}
+                  className="absolute w-[96px] h-[96px]"
                   style={{
-                    zIndex: 5,
-                    background:
-                      "radial-gradient(circle at 35% 30%,#FFE680,#E8A317,#8A5A0E)",
+                    zIndex: 20,
+                    clipPath:
+                      "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
-                    boxShadow: `
-                    inset 0 3px 8px rgba(255,255,255,.5),
-                    inset 0 -4px 8px rgba(80,40,0,.5),
-                    0 0 10px rgba(255,180,40,.5)
-                    `
+                    background: `
+                    radial-gradient(circle at 50% 50%,
+                    rgba(190,80,255,.95) 0%,
+                    rgba(120,0,255,.9) 35%,
+                    rgba(60,0,120,.95) 65%,
+                    rgba(10,0,20,1) 100%)
+                    `,
+
+                    filter: "blur(4px)",
+                    boxShadow: "0 0 18px rgba(180,60,255,.8)"
                   }}
                 />
 
-                {/* Z PALING ATAS */}
+                {/* 🟡 3. Z PALING ATAS */}
                 <span
                   className="absolute font-black text-[68px] leading-none select-none"
                   style={{
-                    zIndex: 20,
+                    zIndex: 40,
                     color: "#7A4A08",
-                    textShadow:
-                      "0 2px 0 rgba(255,240,180,.7)"
+                    textShadow: "0 2px 0 rgba(255,240,180,.7)"
                   }}
                 >
                   Z
