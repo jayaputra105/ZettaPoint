@@ -270,7 +270,7 @@ export default function CoinClicker({
             }}
             // LAYER 1 MUTER CEPAT SAAT MATRIX SPINNING (0 -> 4.8 Detik)
             animate={isMatrixSpinning && !shouldTriggerCoreShake ? { rotate: 2160 } : { rotate: 0 }}
-            transition={{ duration: 4.8, ease: "cubic-bezier(0.4, 0, 0.2, 1)" }}
+            transition={{ duration: 4.8, ease: [0.4, 0, 0.2, 1] }}
           >
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
