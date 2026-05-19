@@ -34,13 +34,11 @@ export default function CoinClicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // State internal biar sinkronisasi transisi iklan instant dan responsif
   const [localNeedsAd, setLocalNeedsAd] = useState(needsAd);
   const [isMatrixSpinning, setIsMatrixSpinning] = useState(false);
   const [isCoreShaking, setIsCoreShaking] = useState(false);
   const particlesRef = useRef<GoldParticle[]>([]);
 
-  // Daftarkan ulang perubahan props dari parent ke state internal
   useEffect(() => {
     setLocalNeedsAd(needsAd);
   }, [needsAd]);
@@ -186,15 +184,17 @@ export default function CoinClicker({
     return () => cancelAnimationFrame(animationFrameId);
   }, [isMatrixSpinning, locked, localNeedsAd]);
 
-  const handleCoinClick = useCallback(() => {
-    // 📺 SEKARANG BISA DI-KLIK! Klik mode iklan langsung jalankan fungsi parent
-    if (localNeedsAd && !locked && !isMatrixSpinning) {
+  // 🛠️ LOGIC KLIK BARU: DIJAMIN BERSIH DARI BLOCKING FRAME ANIMASI
+  const handleCoinClick = () => {
+    if (locked || isMatrixSpinning) return;
+
+    // Paksa tembus panggil AdClick milik parent lu tanpa syarat ribet
+    if (localNeedsAd) {
       if (onAdClick) onAdClick();
       return;
     }
 
-    if (locked || isMatrixSpinning) return;
-
+    // Jalankan Animasi Clicker Utama
     setIsMatrixSpinning(true);
     const canvas = canvasRef.current;
     if (canvas) {
@@ -209,45 +209,45 @@ export default function CoinClicker({
       onCoin(pointsPerClick);
       setIsMatrixSpinning(false);
       setIsCoreShaking(false);
-      setLocalNeedsAd(true); // Otomatis kunci ke mode iklan biar anti-stuck
+      setLocalNeedsAd(true); // Masuk mode iklan
       particlesRef.current = [];
     }, 6200);
-
-    return () => {
-      clearTimeout(shakeTimer);
-      clearTimeout(finalTimer);
-    };
-  }, [locked, localNeedsAd, isMatrixSpinning, pointsPerClick, onCoin, onAdClick, spawnParticles]);
+  };
 
   return (
     <div 
       ref={containerRef} 
       className="relative mx-auto flex items-center justify-center w-full h-[380px] max-w-[380px] select-none"
     >
-      {/* 🛠️ FIX UTAMA: KASIH POINTER-EVENTS-NONE BIAR KLIKNYA TIDAK TERBLOCKING CANVAS */}
+      {/* AREA KLIK TAMENG UTAMA (Membungkus total koin biar ga luput dari jempol HP) */}
+      <div 
+        onClick={handleCoinClick}
+        className="absolute w-[220px] h-[220px] rounded-full z-40 cursor-pointer"
+        style={{ WebkitTapHighlightColor: "transparent" }}
+      />
+
+      {/* CANVAS RENDERING EFFECTS */}
       <div className="absolute inset-0 pointer-events-none z-20">
         <canvas ref={canvasRef} className="w-full h-full" />
       </div>
 
-      {/* AKSESORIS LUAR */}
+      {/* FLOATING DECORATIONS */}
       <div className="absolute inset-0 pointer-events-none z-10">
         <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="absolute left-4 top-12 text-4xl">🧩</motion.div>
         <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="absolute right-4 top-20 text-4xl">🎲</motion.div>
         <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute right-6 bottom-20 text-4xl">💸</motion.div>
       </div>
 
-      {/* TOMBOL KOIN UTAMA */}
-      <motion.button
-        onClick={handleCoinClick}
+      {/* VISUAL BODY KOIN (Murni render visual aja sekarang, ga megang logic onClick) */}
+      <motion.div
         animate={isCoreShaking ? { x: [-6, 6, -5, 5, -2, 2, 0], y: [-4, 4, 0] } : {}}
         transition={{ duration: 0.2, ease: "linear" }}
-        className={`relative w-[210px] h-[210px] flex items-center justify-center outline-none z-30 ${
+        className={`relative w-[210px] h-[210px] flex items-center justify-center rounded-full overflow-hidden z-30 ${
           locked ? "opacity-60 grayscale" : "opacity-100"
         }`}
-        style={{ WebkitTapHighlightColor: "transparent" }}
       >
         <motion.div
-          className="relative w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+          className="relative w-full h-full flex items-center justify-center"
           style={{
             background: locked
               ? "radial-gradient(circle at 35% 30%, #444 0%, #222 60%, #111 100%)"
@@ -305,7 +305,7 @@ export default function CoinClicker({
             )}
           </div>
         </motion.div>
-      </motion.button>
+      </motion.div>
     </div>
   );
 }
