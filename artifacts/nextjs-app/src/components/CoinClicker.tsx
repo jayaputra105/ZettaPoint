@@ -37,7 +37,6 @@ export default function CoinClicker({
         return;
       }
 
-      // Efek angka melayang bawaan lu
       const rect = e.currentTarget.getBoundingClientRect();
       const x = rect.width / 2;
       const y = rect.height / 2;
@@ -52,7 +51,6 @@ export default function CoinClicker({
         setFloaters((prev) => prev.filter((f) => f.id !== id));
       }, 800);
 
-      // Pemicu fungsi klik utama tanpa timer gantung
       onCoin(pointsPerClick);
     },
     [locked, pointsPerClick, onCoin]
@@ -159,7 +157,7 @@ export default function CoinClicker({
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
               <>
-                {/* PURPLE PLASMA */}
+                {/* PURPLE PLASMA (Tetap absolute murni, urutan diatur pake zIndex inline style) */}
                 <motion.div
                   animate={{
                     rotate: 360,
@@ -181,8 +179,9 @@ export default function CoinClicker({
                       repeat: Infinity
                     }
                   }}
-                  className="absolute w-[92px] h-[92px] relative z-10"
+                  className="absolute w-[92px] h-[92px]"
                   style={{
+                    zIndex: 10,
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -194,16 +193,17 @@ export default function CoinClicker({
                     rgba(10,0,20,1) 100%)
                     `,
 
-                    filter: "blur(6px)",
+                    filter: "blur(4px)",
                     boxShadow:
                       "0 0 18px rgba(180,60,255,.8)"
                   }}
                 />
 
-                {/* HEXAGON FRAME */}
+                {/* HEXAGON FRAME (Tetap absolute murni, zIndex ditingkatkan) */}
                 <div
-                  className="absolute w-[100px] h-[100px] relative z-20"
+                  className="absolute w-[100px] h-[100px]"
                   style={{
+                    zIndex: 20,
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -252,11 +252,11 @@ export default function CoinClicker({
                     color: "#7A4A08",
                     textShadow:
                       "0 2px 0 rgba(255,240,180,.7)"
-                  }}
-                >
-                  Z
-                </span>
-              </>
+                }}
+              >
+                Z
+              </span>
+            </>
             ) : needsAd && !locked ? (
               <Timer
                 size={52}
