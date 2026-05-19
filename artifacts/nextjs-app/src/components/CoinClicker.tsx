@@ -36,14 +36,12 @@ export default function CoinClicker({
   const [nextId, setNextId] = useState(0);
   const [shake, setShake] = useState(false);
   
-  // State untuk animasi khusus 5 detik
   const [isTransforming, setIsTransforming] = useState(false);
   const [showFinalShake, setShowFinalShake] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
 
   const startTransform = () => {
     setIsTransforming(true);
-    // Generate particles
     const newParticles = Array.from({ length: 20 }).map((_, i) => ({
       id: i,
       angle: Math.random() * 360,
@@ -51,14 +49,13 @@ export default function CoinClicker({
     }));
     setParticles(newParticles);
 
-    // End sequence after 5s
     setTimeout(() => {
       setShowFinalShake(true);
       setTimeout(() => {
         setShowFinalShake(false);
         setIsTransforming(false);
         setParticles([]);
-      }, 200); // Shake 0.2s
+      }, 200);
     }, 4800);
   };
 
@@ -70,8 +67,7 @@ export default function CoinClicker({
         return;
       }
       
-      // Trigger transform jika koin diklik (Contoh trigger)
-      if (!isTransforming) startTransform();
+      if (!isTransforming && !needsAd) startTransform();
 
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -99,7 +95,7 @@ export default function CoinClicker({
   );
 
   return (
-    <div className={`relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none ${showFinalShake ? 'animate-bounce' : ''}`}>
+    <div className={`relative mx-auto flex flex-col items-center justify-center w-full h-[400px] max-w-[400px] select-none ${showFinalShake ? 'animate-shake' : ''}`}>
       
       {/* Particle Golden Effect */}
       <AnimatePresence>
@@ -147,18 +143,21 @@ export default function CoinClicker({
         onMouseLeave={() => setIsPressed(false)}
         onClick={handleClick}
         animate={
-          showFinalShake ? { x: [-10, 10, -10, 10, 0], y: [-5, 5, -5, 5, 0] } :
           shake ? { x: [-6, 6, -6, 6, 0] } : 
-          isTransforming ? { scale: [1, 1.3, 1], rotate: 360 } :
-          isPressed ? { scale: 0.94 } : { scale: 1 }
+          isPressed && !isTransforming ? { scale: 0.94 } : { scale: 1 }
         }
-        transition={isTransforming ? { duration: 5, ease: "easeInOut" } : { type: "spring", stiffness: 400, damping: 15 }}
+        transition={{ type: "spring", stiffness: 400, damping: 15 }}
         className={`relative w-[260px] h-[260px] flex items-center justify-center outline-none ${locked ? 'opacity-60 grayscale' : 'opacity-100'}`}
       >
-        {/* Ambient glow */}
+        {/* AMBIENT GLOW - Layer di bawah inner medallion, melar & muter */}
         <motion.div
           className="absolute inset-0 rounded-full"
-          animate={isTransforming ? { scale: [1, 2, 1], opacity: [0.5, 0.8, 0.5] } : {}}
+          animate={isTransforming ? { 
+            scale: [1, 1.6, 1],
+            rotate: [0, 180, 360],
+            opacity: [0.5, 0.9, 0.5]
+          } : {}}
+          transition={{ duration: 5, ease: "easeInOut" }}
           style={{
             background: locked 
               ? "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)"
@@ -167,10 +166,13 @@ export default function CoinClicker({
           }}
         />
 
-        {/* Orbit Ring (Muter & Melar) */}
+        {/* ORBIT RING - Melar & muter cepat */}
         <motion.div
-          animate={{ rotate: isTransforming ? 1080 : 360, scale: isTransforming ? 1.5 : 1 }}
-          transition={{ duration: isTransforming ? 5 : 6, repeat: isTransforming ? 0 : Infinity, ease: "linear" }}
+          animate={isTransforming ? { 
+            scale: [1, 1.8, 1],
+            rotate: [0, 720, 1440]
+          } : { rotate: 360 }}
+          transition={isTransforming ? { duration: 5, ease: "easeInOut" } : { duration: 6, repeat: Infinity, ease: "linear" }}
           className="absolute w-[210px] h-[210px] rounded-full"
           style={{
             border: "2px solid transparent",
@@ -179,39 +181,65 @@ export default function CoinClicker({
           }}
         />
 
-        {/* THE MAIN COIN BODY (Melar) */}
+        {/* COIN BODY + OUTER RIM - Melar & muter */}
         <motion.div
-          animate={isTransforming ? { scale: 1.2, rotate: -360 } : !locked ? { y: [0, -6, 0] } : {}}
-          transition={{ duration: 5 }}
+          animate={isTransforming ? { 
+            scale: [1, 1.3, 1],
+            rotate: [0, -180, -360]
+          } : !locked ? { y: [0, -6, 0] } : {}}
+          transition={isTransforming ? { duration: 5, ease: "easeInOut" } : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
           className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center overflow-hidden"
           style={{
             background: locked
               ? "radial-gradient(circle at 35% 30%, #444 0%, #222 60%, #111 100%)"
               : "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 25%, #E89A12 60%, #7A4A08 100%)",
-            boxShadow: "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7)",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255,190,40,0.7), inset 0 -8px 18px rgba(120,60,0,0.55), inset 0 6px 14px rgba(255,255,255,0.55)",
           }}
         >
-          <div className="absolute inset-2 rounded-full" style={{ background: "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" }} />
+          {/* Outer Rim Ticks - ikut muter bareng coin body */}
+          <motion.div 
+            className="absolute inset-2 rounded-full"
+            animate={isTransforming ? { rotate: [0, 180, 360] } : {}}
+            transition={isTransforming ? { duration: 5, ease: "easeInOut" } : {}}
+            style={{ 
+              background: "repeating-conic-gradient(rgba(120,70,10,0.45) 0deg 4deg, transparent 4deg 10deg)", 
+              WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
+            }} 
+          />
 
-          {/* INNER MEDALLION (Berubah Ungu) */}
+          {/* INNER MEDALLION - TETAP DIAM */}
           <motion.div
+            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center z-10"
             animate={isTransforming ? { 
-                background: "radial-gradient(circle at 35% 30%, #E0B0FF 0%, #800080 60%, #4B0082 100%)",
-                boxShadow: "inset 0 4px 10px rgba(255,200,255,0.6), 0 0 20px rgba(128,0,128,0.8)"
+              background: "radial-gradient(circle at 35% 30%, #E0B0FF 0%, #800080 60%, #4B0082 100%)",
+              boxShadow: "inset 0 4px 10px rgba(255,200,255,0.6), inset 0 -6px 12px rgba(75,0,130,0.6), 0 0 30px rgba(128,0,128,0.8)"
             } : {}}
-            className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center transition-colors duration-[5000ms]"
+            transition={{ duration: 5, ease: "easeInOut" }}
             style={{
               background: locked ? "#333" : "radial-gradient(circle at 35% 30%, #FFE680 0%, #E8A317 60%, #8A5A0E 100%)",
+              boxShadow: locked ? "none" : "inset 0 4px 10px rgba(255,255,200,0.6), inset 0 -6px 12px rgba(80,40,0,0.6)",
               border: "2px solid rgba(120,70,10,0.55)",
             }}
           >
-            <span
-              className="font-black text-[68px] leading-none select-none transition-colors duration-[5000ms]"
-              style={{ color: isTransforming ? "#E0B0FF" : locked ? "#555" : "#7A4A08" }}
+            <motion.span
+              className="font-black text-[68px] leading-none select-none"
+              animate={isTransforming ? { color: "#E0B0FF", textShadow: "0 0 20px rgba(224,176,255,0.8)" } : {}}
+              transition={{ duration: 5, ease: "easeInOut" }}
+              style={{
+                color: locked ? "#555" : "#7A4A08",
+                textShadow: locked ? "none" : "0 2px 0 rgba(255,240,180,0.7)",
+              }}
             >
               {locked ? "🔒" : "Z"}
-            </span>
+            </motion.span>
           </motion.div>
+
+          {/* Specular highlight - tetap diam */}
+          {!locked && (
+            <div className="absolute top-3 left-6 w-16 h-8 rounded-full pointer-events-none z-10" 
+              style={{ background: "radial-gradient(ellipse at center, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)" }} 
+            />
+          )}
         </motion.div>
       </motion.button>
 
