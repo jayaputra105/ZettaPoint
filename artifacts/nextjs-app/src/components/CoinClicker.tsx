@@ -34,14 +34,9 @@ export default function CoinClicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const [localNeedsAd, setLocalNeedsAd] = useState(needsAd);
   const [isMatrixSpinning, setIsMatrixSpinning] = useState(false);
   const [isCoreShaking, setIsCoreShaking] = useState(false);
   const particlesRef = useRef<GoldParticle[]>([]);
-
-  useEffect(() => {
-    setLocalNeedsAd(needsAd);
-  }, [needsAd]);
 
   const spawnParticles = useCallback((cx: number, cy: number) => {
     const pCount = 50;
@@ -110,7 +105,7 @@ export default function CoinClicker({
       }
 
       // 2. TEXTURE PLASMA UNGU
-      if (!locked && !localNeedsAd) {
+      if (!locked && !needsAd) {
         ctx.save();
         const glowGrad = ctx.createRadialGradient(cx, cy, 25, cx, cy, 65);
         glowGrad.addColorStop(0, 'rgba(147, 51, 234, 1)');
@@ -182,19 +177,19 @@ export default function CoinClicker({
     render();
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isMatrixSpinning, locked, localNeedsAd]);
+  }, [isMatrixSpinning, locked, needsAd]);
 
-  // 🛠️ LOGIC KLIK BARU: DIJAMIN BERSIH DARI BLOCKING FRAME ANIMASI
+  // 🛠️ LOGIC KLIK BARU: ANTI PLING-PLONG STATE
   const handleCoinClick = () => {
     if (locked || isMatrixSpinning) return;
 
-    // Paksa tembus panggil AdClick milik parent lu tanpa syarat ribet
-    if (localNeedsAd) {
+    // Kalau butuh iklan, LANGSUNG tembak onAdClick dari parent tanpa ba-bi-bu
+    if (needsAd) {
       if (onAdClick) onAdClick();
       return;
     }
 
-    // Jalankan Animasi Clicker Utama
+    // Jalankan Animasi Clicker Utama koin emas biasa
     setIsMatrixSpinning(true);
     const canvas = canvasRef.current;
     if (canvas) {
@@ -206,10 +201,9 @@ export default function CoinClicker({
     }, 6000);
 
     const finalTimer = setTimeout(() => {
-      onCoin(pointsPerClick);
+      onCoin(pointsPerClick); // Di dalam fungsi ini di parent lu, WAJIB set state needsAd jadi true!
       setIsMatrixSpinning(false);
       setIsCoreShaking(false);
-      setLocalNeedsAd(true); // Masuk mode iklan
       particlesRef.current = [];
     }, 6200);
   };
@@ -219,14 +213,14 @@ export default function CoinClicker({
       ref={containerRef} 
       className="relative mx-auto flex items-center justify-center w-full h-[380px] max-w-[380px] select-none"
     >
-      {/* AREA KLIK TAMENG UTAMA (Membungkus total koin biar ga luput dari jempol HP) */}
+      {/* AREA KLIK TAMENG UTAMA (z-40) */}
       <div 
         onClick={handleCoinClick}
         className="absolute w-[220px] h-[220px] rounded-full z-40 cursor-pointer"
         style={{ WebkitTapHighlightColor: "transparent" }}
       />
 
-      {/* CANVAS RENDERING EFFECTS */}
+      {/* CANVAS RENDERING EFFECTS (z-20) */}
       <div className="absolute inset-0 pointer-events-none z-20">
         <canvas ref={canvasRef} className="w-full h-full" />
       </div>
@@ -238,7 +232,7 @@ export default function CoinClicker({
         <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }} className="absolute right-6 bottom-20 text-4xl">💸</motion.div>
       </div>
 
-      {/* VISUAL BODY KOIN (Murni render visual aja sekarang, ga megang logic onClick) */}
+      {/* VISUAL BODY KOIN (z-30) */}
       <motion.div
         animate={isCoreShaking ? { x: [-6, 6, -5, 5, -2, 2, 0], y: [-4, 4, 0] } : {}}
         transition={{ duration: 0.2, ease: "linear" }}
@@ -251,7 +245,7 @@ export default function CoinClicker({
           style={{
             background: locked
               ? "radial-gradient(circle at 35% 30%, #444 0%, #222 60%, #111 100%)"
-              : localNeedsAd
+              : needsAd
               ? "radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D4D4D8 25%, #71717A 60%, #27272A 100%)" 
               : "radial-gradient(circle at 35% 30%, #FFF6C2 0%, #FFD24A 25%, #E89A12 60%, #7A4A08 100%)",
             boxShadow: "0 10px 30px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.4), inset 0 5px 10px rgba(255,255,255,0.4)"
@@ -260,7 +254,7 @@ export default function CoinClicker({
           transition={{ duration: 6, ease: [0.4, 0, 0.2, 1] }}
         >
           <div className="absolute inset-2 rounded-full" style={{ 
-            background: localNeedsAd 
+            background: needsAd 
               ? "repeating-conic-gradient(rgba(113,113,122,0.4) 0deg 4deg, transparent 4deg 10deg)"
               : "repeating-conic-gradient(rgba(120,70,10,0.4) 0deg 4deg, transparent 4deg 10deg)", 
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 10px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
@@ -269,11 +263,11 @@ export default function CoinClicker({
           <div
             className="relative w-[140px] h-[140px] rounded-full flex items-center justify-center overflow-hidden"
             style={{
-              background: locked ? "#333" : localNeedsAd ? "#3f3f46" : "#1a1204",
+              background: locked ? "#333" : needsAd ? "#3f3f46" : "#1a1204",
               boxShadow: "inset 0 5px 10px rgba(0,0,0,0.85)"
             }}
           >
-            {!locked && !localNeedsAd ? (
+            {!locked && !needsAd ? (
               <>
                 <div
                   className="absolute w-[124px] h-[124px]"
@@ -298,7 +292,7 @@ export default function CoinClicker({
                   </span>
                 </div>
               </>
-            ) : localNeedsAd && !locked ? (
+            ) : needsAd && !locked ? (
               <Timer size={44} className="text-zinc-300 animate-pulse" />
             ) : (
               <span className="text-3xl">🔒</span>
