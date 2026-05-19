@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion"; // 🚀 SUNTIK IMPORT VARIANTS
 
 interface Particle {
   id: number;
@@ -34,7 +34,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
     setTimeout(() => {
       const generatedParticles = Array.from({ length: 28 }).map((_, i) => {
         const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 130 + 60; // Muncratan lebih luas biar megah
+        const distance = Math.random() * 130 + 60; 
         return {
           id: i,
           targetX: Math.cos(angle) * distance,
@@ -43,77 +43,76 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
       });
       setParticles(generatedParticles);
       setStage("freeze");
-    }, 900); // Durasi lemparan awal + 4 kali flip dibikin 900ms biar putarannya kelihatan jelas!
+    }, 900); 
 
     // 3. STAGE SUCTION: Blackhole muncul melintir, partikel kesedot pelan banget (Dramatis)
     setTimeout(() => {
       setStage("suction");
-    }, 2400); // Partikel didiemin membeku 1.5 detik penuh di udara!
+    }, 2400); 
 
     // 4. STAGE OVERLOAD: Partikel habis ketelan, Blackhole DIEM TOTAL 1 DETIK, baru GETAR DAHSYAT
     setTimeout(() => {
-      setParticles([]); // Semua partikel lenyap ketelan
+      setParticles([]); 
       setStage("overload");
-    }, 4400); // Proses penyedotan dibikin lambat merayap selama 2 detik penuh (2000ms)
+    }, 4400); 
 
     // 5. STAGE REBIRTH: BOOM! Koin dimuntahin keluar, NGE-FLIP HORIZONTAL 4 PUTARAN (1440deg)
     setTimeout(() => {
       setStage("rebirth");
-      // State data ZP/needsAd ORI lu baru berubah pas koin meledak keluar di sini
       onClick(savedEvent as any);
-    }, 5900); // Blackhole diem 1 detik + getar overload 0.5 detik (Total 1500ms)
+    }, 5900); 
 
     // 6. RESET TO IDLE: Koin selesai nge-flip, ngerem empuk di posisi awal, lock dibuka kembali
     setTimeout(() => {
       setStage("idle");
-    }, 7700); // Durasi koin dimuntahin sambil muter-muter dibikin 1.8 detik biar super smooth
+    }, 7700); 
   };
 
-  // 🪙 TRACKING ANIMASI KOIN EMAS LU
-  const coinVariants = {
+  // 🪙 KONTROL ANIMASI KOIN EMAS LU (Dikasih type data Variants agar Vercel Lolos Build)
+  const coinVariants: Variants = {
     idle: { scale: 1, opacity: 1, rotateY: 0 },
     impact: { 
-      scale: [1, 0.82, 1.8],    // Mundur dikit langsung nge-zoom mendekat ke layar
-      opacity: [1, 1, 0],       // Lenyap tepat di ujung skala terbesar
-      rotateY: [0, 0, 1440],    // Mundur dulu baru NGE-FLIP HORIZONTAL 4 PUTARAN PENUH!
+      scale: [1, 0.82, 1.8],    
+      opacity: [1, 1, 0],       
+      rotateY: [0, 0, 1440],    
       transition: { 
         times: [0, 0.15, 1],
-        duration: 0.9,          // Waktu dikasih longgar biar 4 putaran flip-nya kelihatan tajam
-        ease: "easeInOut" 
+        duration: 0.9,          
+        ease: "easeInOut" as const // 🌟 SUNTIKAN KUNCI: Dipaksa sebagai konstanta literal
       }
     },
     freeze: { scale: 0, opacity: 0, rotateY: 0 },
     suction: { scale: 0, opacity: 0, rotateY: 0 },
     overload: { scale: 0, opacity: 0, rotateY: 0 },
     rebirth: { 
-      scale: [0, 1.4, 1],       // Keluar dari titik pusaran tengah, membesar, membal manis ke 1
+      scale: [0, 1.4, 1],       
       opacity: [0, 1, 1],
-      rotateY: [0, 1440],       // DIMUNTAHIN SAMBIL NGE-FLIP HORIZONTAL 4 PUTARAN PENUH!
+      rotateY: [0, 1440],       
       transition: { 
-        duration: 1.8,          // Proses peluncuran koin dibikin megah dan lambat
-        ease: "easeOut",
-        rotateY: { type: "spring", stiffness: 45, damping: 13 } // Efek spring berat biar gak kayak mainan plastik
+        duration: 1.8,          
+        ease: "easeOut" as const, // 🌟 SUNTIKAN KUNCI
+        rotateY: { type: "spring", stiffness: 45, damping: 13 } 
       }
     }
   };
 
-  // 🌀 TRACKING ANIMASI BLACKHOLE
-  const blackholeVariants = {
+  // 🌀 KONTROL ANIMASI BLACKHOLE (Dikasih type data Variants agar Vercel Lolos Build)
+  const blackholeVariants: Variants = {
     hidden: { scale: 0, rotate: 0, opacity: 0 },
     visible: { 
       scale: [0, 1.1, 1], 
-      rotate: [0, -1440],       // Pusaran melintir masuk lebih dalam
+      rotate: [0, -1440],       
       opacity: 1,
-      transition: { duration: 0.8, ease: "backOut" }
+      transition: { duration: 0.8, ease: "backOut" as const } // 🌟 SUNTIKAN KUNCI
     },
     shake: {
-      scale: [1, 1, 1.15, 1.1, 1.15, 1], // Diem dulu di awal (nahan energi), baru nge-getar
+      scale: [1, 1, 1.15, 1.1, 1.15, 1], 
       x: [0, 0, -4, 4, -5, 5, -3, 3, 0],
       y: [0, 0, 3, -3, 4, -4, 2, -2, 0],
       transition: { 
-        times: [0, 0.65, 0.7, 0.75, 0.85, 0.95, 1], // Mengunci logic "Diem 1 detik baru getar" lewat timeline f-m
+        times: [0, 0.65, 0.7, 0.75, 0.85, 0.95, 1], 
         duration: 1.5, 
-        ease: "linear" 
+        ease: "linear" as const // 🌟 SUNTIKAN KUNCI
       }
     }
   };
@@ -129,9 +128,8 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
         onClick={handleTriggerAnimasi}
         className="absolute z-30 outline-none select-none bg-transparent border-none p-0 cursor-pointer"
         style={{ WebkitTapHighlightColor: "transparent" }}
-        disabled={stage !== "idle" && !locked} // Kunci total klik biar gak ngerusak siklus kosmik
+        disabled={stage !== "idle" && !locked} 
       >
-        {/* Matikan floating ambient bawaan koin lu pas lagi mode pertempuran kosmik */}
         <div style={{ animation: stage !== "idle" ? "none" : undefined }}>
           {children}
         </div>
@@ -149,8 +147,8 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
                   y: 0, 
                   scale: 0.05, 
                   opacity: 0,
-                  rotate: 1080, // Partikel melintir pusing pas kesedot
-                  transition: { duration: 1.8, ease: "circIn" } // Sedotan dibikin merayap lambat & berat
+                  rotate: 1080, 
+                  transition: { duration: 1.8, ease: "circIn" as const } // 🌟 SUNTIKAN KUNCI
                 }
               : { 
                   x: p.targetX, 
@@ -170,14 +168,13 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
             variants={blackholeVariants}
             animate={stage === "overload" ? "shake" : "visible"}
             initial="hidden"
-            exit={{ scale: 0, opacity: 0, transition: { duration: 0.25 } }} // Menyusut mulus pas ketembak koin keluar
+            exit={{ scale: 0, opacity: 0, transition: { duration: 0.25 } }} 
             className="absolute w-[160px] h-[160px] rounded-full z-20 flex items-center justify-center"
             style={{
               background: "radial-gradient(circle, #000000 35%, #15032a 65%, #ffb700 95%, transparent 100%)",
               boxShadow: "0 0 55px 18px rgba(139, 92, 246, 0.5), inset 0 0 30px #000",
             }}
           >
-            {/* Efek rotasi piringan cakram dalam blackhole */}
             <div className="absolute inset-2 rounded-full animate-spin [animation-duration:0.8s]" style={{
               border: "3px dashed rgba(255, 183, 0, 0.35)",
               filter: "blur(0.5px)"
