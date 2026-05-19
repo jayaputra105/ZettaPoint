@@ -20,20 +20,6 @@ export const ROOMS: Room[] = [
   { id: "diamond", name: "DIAMOND", short: "Diamond",minCoins: 100000,  prizeUsdt: 1000, accent: "#7DE3FF" },
 ];
 
-function fmtCountdown(ms: number) {
-  if (ms <= 0) return "Resetting...";
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / (3600 * 24));
-  const h = Math.floor((s % (3600 * 24)) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-
-  if (d >= 1) {
-    return `${d} hari ${h} jam ${m} menit`;
-  }
-  return `${h} jam ${m} menit ${sec} detik`;
-}
-
 export default function RoomSelector() {
   const { 
     coins, 
@@ -52,15 +38,26 @@ export default function RoomSelector() {
     diamond: qualifiedDiamond
   };
 
-  const active = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
+  // =========================================================
+  // 🛡️ SECURITY BARIKADE GERBANG UTAMA: ANTI-BYPASS EXPLOIT
+  // =========================================================
+  // Tiap kali balik ke halaman Home, cek apakah room aktif saat ini valid.
+  // Jika tidak lolos kualifikasi / koin kurang, TENDANG LANGSUNG ke Bronze!
+  useEffect(() => {
+    const activeRoomData = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
+    const isUnlocked = coins >= activeRoomData.minCoins && qualificationMap[currentRoom];
+    
+    if (!isUnlocked && currentRoom !== "bronze") {
+      console.warn(`[SECURITY] Player mencoba bypass ke room: ${currentRoom}. Akses ditolak, tendang ke bronze!`);
+      setCurrentRoom("bronze"); // Paksa balik ke jalan yang benar!
+    }
+  }, [currentRoom, coins, qualifiedSilver, qualifiedGold, qualifiedDiamond]);
 
-  // =========================================================
-  // 🛰️ FETCH TIMEOUT ENGINE: AMBIL DATA SISA WAKTU SINKRON DARI DB
-  // =========================================================
+  const active = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
   const [countdown, setCountdown] = useState<number>(0);
 
+  // Fetch sisa waktu asli dari DB berdasarkan kamar aktif yang sah
   useEffect(() => {
-    // Tiap user ganti tab room, fetch sisa waktu real dari database
     fetch(`/api/rooms?id=${currentRoom}`)
       .then((res) => res.json())
       .then((data) => {
@@ -71,7 +68,6 @@ export default function RoomSelector() {
       .catch((err) => console.error("Room selector fetch error:", err));
   }, [currentRoom]);
 
-  // Kunci linear TICK pengurang 1 detik (Anti-manipulasi jam lokal HP)
   useEffect(() => {
     if (countdown <= 0) return;
 
@@ -81,6 +77,18 @@ export default function RoomSelector() {
 
     return () => clearInterval(timer);
   }, [countdown]);
+
+  function fmtCountdown(ms: number) {
+    if (ms <= 0) return "Resetting...";
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / (3600 * 24));
+    const h = Math.floor((s % (3600 * 24)) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+
+    if (d >= 1) return `${d} hari ${h} jam ${m} menit`;
+    return `${h} jam ${m} menit ${sec} detik`;
+  }
 
   return (
     <div
@@ -97,10 +105,7 @@ export default function RoomSelector() {
         <div>
           <h2
             className="font-black tracking-wider text-xl leading-none italic"
-            style={{
-              color: active.accent,
-              textShadow: `0 0 15px ${active.accent}aa`,
-            }}
+            style={{ color: active.accent, textShadow: `0 0 15px ${active.accent}aa` }}
           >
             {active.name}
           </h2>
