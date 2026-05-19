@@ -137,7 +137,7 @@ export default function CoinClicker({
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 12px), #000 calc(100% - 4px), transparent calc(100% - 2px))" 
           }} />
 
-          {/* Inner medallion - INI BLOK YANG DIGANTI TOTAL COK */}
+          {/* Inner medallion */}
           <div
             className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center overflow-hidden"
             style={{
@@ -181,7 +181,7 @@ export default function CoinClicker({
                       repeat: Infinity
                     }
                   }}
-                  className="absolute w-[92px] h-[92px]"
+                  className="absolute w-[92px] h-[92px] relative z-10"
                   style={{
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
@@ -194,7 +194,7 @@ export default function CoinClicker({
                     rgba(10,0,20,1) 100%)
                     `,
 
-                    filter: "blur(8px)",
+                    filter: "blur(6px)",
                     boxShadow:
                       "0 0 18px rgba(180,60,255,.8)"
                   }}
@@ -202,7 +202,7 @@ export default function CoinClicker({
 
                 {/* HEXAGON FRAME */}
                 <div
-                  className="absolute w-[100px] h-[100px]"
+                  className="absolute w-[100px] h-[100px] relative z-20"
                   style={{
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
@@ -232,7 +232,7 @@ export default function CoinClicker({
                 <div
                   className="absolute w-[46px] h-[46px] rounded-full"
                   style={{
-                    zIndex: 5,
+                    zIndex: 30,
                     background:
                       "radial-gradient(circle at 35% 30%,#FFE680,#E8A317,#8A5A0E)",
 
@@ -248,7 +248,7 @@ export default function CoinClicker({
                 <span
                   className="absolute font-black text-[68px] leading-none select-none"
                   style={{
-                    zIndex: 20,
+                    zIndex: 40,
                     color: "#7A4A08",
                     textShadow:
                       "0 2px 0 rgba(255,240,180,.7)"
