@@ -52,7 +52,6 @@ export default function Home() {
   const [now, setNow] = useState(Date.now());
   const [isAdVerified, setIsAdVerified] = useState(false);
 
-  // 1. AMBIL PROFILE LANGSUNG DARI TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
@@ -70,7 +69,6 @@ export default function Home() {
     }
   }, []);
 
-  // 2. TIMER & LOCAL STORAGE
   useEffect(() => {
     const stored = localStorage.getItem("zetta_last_free");
     const storedAds = localStorage.getItem("zetta_ads_used");
@@ -80,7 +78,6 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
   
-  // PENENTU LOGIC ALUR BARU
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
   
@@ -91,14 +88,12 @@ export default function Home() {
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
   
-  // 3. FUNGSI REWARD (DIBENERIN BIAR TIDAK STALE CLOSURE PAS TIMER 5 DETIK KELAR)
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     
     if (!tid) return;
 
-    // Gunakan prev state biar saldonya akurat ngambil yang paling update dari server
     setZp(currentRoom, currentZp + amount);
     
     try {
@@ -113,19 +108,16 @@ export default function Home() {
       });
     } catch (err) {
       console.error("Save error:", err);
-      setZp(currentRoom, currentZp); // Rollback ke poin awal jika gagal patch
+      setZp(currentRoom, currentZp); 
     }
   }, [currentRoom, currentZp, setZp]);
   
-  // ⚡ DEPENDENCIES DIKALIBRASI BIAR OPERAN DATA ANTAR MODAL IKLAN DAN KOIN KLIKER SYNC SINKRON
   const handleCoinClick = useCallback(() => {
     if (isLocked) return;
 
     if (canEarnPoints) {
-      // Kucurkan poinnya dulu masuk ke database lu!
       giveRewards(100);
 
-      // Setelah reward cair, baru eksekusi update state cooldown pelindung
       if (isFreeAvailable) {
         const ts = Date.now();
         setLastFreeClick(ts);
