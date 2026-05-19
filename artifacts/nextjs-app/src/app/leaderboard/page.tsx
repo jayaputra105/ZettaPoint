@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNav";
-import { useApp } from "@/context/AppProvider";
 import { Trophy, Medal, Award } from "lucide-react";
 
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
@@ -23,7 +22,7 @@ interface RoomData {
   id: string;
   prizePool: number;
   resetAt: string;
-  remainingMs: number; // Menangkap data milidetik bersih dari server
+  remainingMs: number;
 }
 
 const ROOMS = [
@@ -40,7 +39,13 @@ function formatNumber(n: number): string {
 }
 
 export default function LeaderboardPage() {
-  const { currentRoom, setCurrentRoom } = useApp();
+  // =========================================================
+  // 🛡️ ANTI-EXPLOIT ENGINE: GUNAKAN STATE LOKAL UNTUK INTIP ROOM
+  // =========================================================
+  // Kita ganti penggunaan currentRoom global menjadi local state 'activeTab'
+  // secara default dia bakal nampilin 'bronze' atau room polosan dulu tanpa ngerusak home!
+  const [activeTab, setActiveTab] = useState<string>("bronze");
+  
   const [users, setUsers] = useState<LeaderUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [myTgId, setMyTgId] = useState<string | null>(null);
@@ -50,41 +55,38 @@ export default function LeaderboardPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Sinkron ID User dari Telegram WebApp
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
     if (tid) setMyTgId(tid);
   }, []);
 
-  // 2. Fetch Data Anggota Leaderboard sesuai Room Tab
+  // Fetch data klasemen berdasarkan tab lokal yang sedang dilihat
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/leaderboard?room=${currentRoom}`)
+    fetch(`/api/leaderboard?room=${activeTab}`)
       .then((r) => r.json())
       .then((data) => { 
         setUsers(Array.isArray(data) ? data : []); 
         setLoading(false); 
       })
       .catch(() => setLoading(false));
-  }, [currentRoom]);
+  }, [activeTab]);
 
-  // 3. Fetch Informasi Target Prize Pool & Reset dari DB Server
+  // Fetch info sisa waktu berdasarkan tab lokal yang sedang dilihat
   useEffect(() => {
-    fetch(`/api/rooms?id=${currentRoom}`)
+    fetch(`/api/rooms?id=${activeTab}`)
       .then(res => res.json())
       .then(data => {
         setRoomInfo(data);
         if (data && typeof data.remainingMs === "number") {
-          setCountdown(data.remainingMs); // Kunci angka sisa waktu ke state lokal
+          setCountdown(data.remainingMs);
         }
       })
       .catch(err => console.error("Room fetch error:", err));
-  }, [currentRoom]);
+  }, [activeTab]);
 
-  // 4. TIMER ENGINE LOGIC: PENGURANGAN BERBASIS TICK LINEAR (ANTI TIMEZONE BUG)
   useEffect(() => {
-    // Jalankan timer pengurang detik jika nilai hitungan mundur valid di atas nol
     if (countdown <= 0) {
       setTimeLeft("Resetting...");
       return;
@@ -99,13 +101,11 @@ export default function LeaderboardPage() {
           return 0;
         }
 
-        // Jalankan kalkulasi pembagian waktu harian / jam-jaman
         const d = Math.floor(nextValue / (1000 * 60 * 60 * 24));
         const h = Math.floor((nextValue % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const m = Math.floor((nextValue % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((nextValue % (1000 * 60)) / 1000);
         
-        // Aturan Lu: Kalo sisa waktu >= 1 hari pake format days, kalo <= 1 hari pake jam murni
         if (d >= 1) {
           setTimeLeft(`${d}d ${h}j ${m}m`);
         } else {
@@ -119,22 +119,17 @@ export default function LeaderboardPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const activeRoomStatic = ROOMS.find(r => r.id === currentRoom) || ROOMS[0];
+  const activeRoomStatic = ROOMS.find(r => r.id === activeTab) || ROOMS[0];
 
-  // Pemotongan grup Top 3 Pemenang Podium
   const top1 = users.find(u => u.position === 1);
   const top2 = users.find(u => u.position === 2);
   const top3 = users.find(u => u.position === 3);
-  
-  // Barisan kontender peringkat 4 ke bawah
   const regularPlayers = users.filter(u => u.position > 3);
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col bg-black">
       <ShootingStars />
-      
       <div className="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full pb-28">
-        
         <header className="pt-6 px-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -149,7 +144,6 @@ export default function LeaderboardPage() {
             </div>
           </div>
 
-          {/* Panel Atas Kolam Prize Pool */}
           <div className="flex flex-col items-center justify-center py-4 rounded-2xl bg-zinc-900/40 border border-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md">
             <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Room Prize Pool</p>
             <h2 className="text-3xl font-black text-[#4ade80] drop-shadow-[0_0_10px_rgba(74,222,128,0.2)]">
@@ -158,14 +152,13 @@ export default function LeaderboardPage() {
             <p className="text-[9px] font-black text-zinc-500 mt-1 uppercase tracking-wider">Top 3 Shares: 50% | 30% | 20%</p>
           </div>
 
-          {/* Menu Horizontal Pengganti Tab Kamar */}
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto no-scrollbar py-1">
             {ROOMS.map((r) => (
               <button
                 key={r.id}
-                onClick={() => setCurrentRoom(r.id)}
+                onClick={() => setActiveTab(r.id)} // FIX: Mengubah tab lokal, bukan room utama game!
                 className={`flex-shrink-0 px-5 py-2 rounded-xl border transition-all duration-300 ${
-                  currentRoom === r.id 
+                  activeTab === r.id 
                   ? "bg-zinc-900 border-white/20 scale-105 shadow-lg" 
                   : "bg-transparent border-white/5 opacity-30 grayscale"
                 }`}
@@ -180,10 +173,8 @@ export default function LeaderboardPage() {
           <div className="py-40 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
         ) : (
           <>
-            {/* 🏆 COMPONENT PODIUM 3D - CLEAN EDITION (NO USDT REWARDS TEXT) */}
             <div className="px-4 mt-6 flex justify-between items-end h-56 relative w-full mb-4">
-              
-              {/* JUARA 2 (PODIUM KIRI - SILVER) */}
+              {/* JUARA 2 */}
               <div className="flex flex-col items-center flex-1 z-10">
                 <AnimatePresence>
                   {top2 ? (
@@ -199,13 +190,12 @@ export default function LeaderboardPage() {
                     <div className="h-20 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
-                {/* Blok Tiang Podium Silver */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-16 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-xl font-black text-zinc-400 italic tracking-tighter">#2</span>
                 </div>
               </div>
 
-              {/* JUARA 1 (PODIUM TENGAH - EMAS UTAMA) */}
+              {/* JUARA 1 */}
               <div className="flex flex-col items-center flex-1 z-20 px-1">
                 <AnimatePresence>
                   {top1 ? (
@@ -221,13 +211,12 @@ export default function LeaderboardPage() {
                     <div className="h-24 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
-                {/* Blok Tiang Podium Gold */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900 border border-[#FFD700]/20 rounded-t-2xl h-24 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.05)]">
                   <span className="text-2xl font-black text-[#FFD700] italic tracking-tighter drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]">#1</span>
                 </div>
               </div>
 
-              {/* JUARA 3 (PODIUM KANAN - PERUNGGU) */}
+              {/* JUARA 3 */}
               <div className="flex flex-col items-center flex-1 z-10">
                 <AnimatePresence>
                   {top3 ? (
@@ -243,14 +232,12 @@ export default function LeaderboardPage() {
                     <div className="h-20 w-12 border border-dashed border-white/10 rounded-xl mb-1 flex items-center justify-center opacity-20"><span className="text-[9px]">Empty</span></div>
                   )}
                 </AnimatePresence>
-                {/* Blok Tiang Podium Bronze */}
                 <div className="w-full bg-gradient-to-t from-zinc-950 to-zinc-900/60 border border-zinc-800 rounded-t-2xl h-12 flex flex-col items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <span className="text-lg font-black text-amber-600 italic tracking-tighter">#3</span>
                 </div>
               </div>
             </div>
 
-            {/* TABEL LIST SISA PERINGKAT 4 KEOBAWAH */}
             <div className="px-4 mt-2 flex flex-col gap-2">
               {regularPlayers.length === 0 ? (
                 <p className="text-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest py-10">No Contenders Left</p>
@@ -268,16 +255,13 @@ export default function LeaderboardPage() {
                       <div className="w-8 font-black text-center text-xs opacity-30" style={isMe ? { color: activeRoomStatic.color, opacity: 1 } : {}}>
                         #{user.position}
                       </div>
-                      
                       <img src={user.avatar || `https://api.dicebear.com/9.x/pixel-art/svg?seed=${user.id}`} alt="avatar" className="w-9 h-9 rounded-full bg-white/5 border border-zinc-800 object-cover" />
-
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-xs truncate text-white">
                           {user.name} {isMe && <span className="text-[9px] font-black text-[#FFD700] uppercase tracking-wider ml-1 bg-white/5 px-1 py-0.5 rounded">You</span>}
                         </p>
                         <p className="text-[9px] font-medium opacity-30 truncate">@{user.username || 'player'}</p>
                       </div>
-
                       <div className="text-right">
                         <p className="text-xs font-black text-white">{formatNumber(user.zp)}</p>
                         <p className="text-[8px] font-black uppercase tracking-widest opacity-30" style={{ color: activeRoomStatic.color }}>ZP</p>
@@ -290,7 +274,6 @@ export default function LeaderboardPage() {
           </>
         )}
       </div>
-
       <BottomNav />
     </div>
   );
