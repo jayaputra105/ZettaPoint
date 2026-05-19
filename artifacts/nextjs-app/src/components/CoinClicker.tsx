@@ -157,11 +157,12 @@ export default function CoinClicker({
             {/* MODE NORMAL SAJA */}
             {!locked && !needsAd ? (
               <>
-                {/* 🟢 1. HEXAGON FRAME (Sekarang di bawah Plasma) */}
+                {/* 🟢 1. HEXAGON FRAME */}
                 <div
                   className="absolute w-[110px] h-[110px]"
                   style={{
                     zIndex: 10,
+                    transform: "rotate(90deg)", // 🔄 DIPUTER 90 DERAJAT DI SINI
                     clipPath:
                       "polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%)",
 
@@ -186,10 +187,10 @@ export default function CoinClicker({
                   />
                 </div>
 
-                {/* 🟣 2. PURPLE PLASMA (Sekarang di atas Hexagon) */}
+                {/* 🟣 2. PURPLE PLASMA */}
                 <motion.div
                   animate={{
-                    rotate: 360,
+                    rotate: [90, 450, 90], // 🔄 START DARI 90 DERAJAT BIAR LANCIP DI ATAS, TRUS MUTER (+360 DERAJAT)
                     scale: [1, 1.04, 1],
                     opacity: [0.9, 1, 0.9]
                   }}
