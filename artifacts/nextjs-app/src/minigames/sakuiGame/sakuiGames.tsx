@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import MatterInstance from "matter-js"; // Tetap sediakan static type check biar compiler Vercel tenang
+import MatterInstance from "matter-js"; 
 
 // ─── Cyber Config ───
 const TIERS = [

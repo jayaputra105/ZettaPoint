@@ -54,18 +54,7 @@ export default function MinigamesHub() {
   }
 
   return (
-    <div className="min-h-screen bg-[#12111a] text-white px-4 py-6 font-sans">
-      
-      {/* Header Top Nav ala Telegram Mini App */}
-      <div className="flex items-center justify-between mb-6">
-        <button className="text-slate-400 text-lg">‹</button>
-        <h1 className="text-base font-bold tracking-wide">Games</h1>
-        <button className="text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full font-medium text-purple-400">
-          🏆 Ranking
-        </button>
-      </div>
 
-      {/* GRID 2 KOLOM KONSISTEN SEIMBANG (MIRIP 100% SAMA REFERENSI LU) */}
       <div className="grid grid-cols-2 gap-3">
         
         {/* Game 1: MATRIX CYBER FALL */}
@@ -97,7 +86,7 @@ export default function MinigamesHub() {
         >
           <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-fuchsia-500/[0.03] group-hover:bg-fuchsia-500/[0.06] transition-colors">
             <Image 
-              src="/image/sakuigames.png" 
+              src="/image/suika.png" 
               alt="Cosmic Suika" 
               width={90} 
               height={90} 
@@ -115,7 +104,7 @@ export default function MinigamesHub() {
         >
           <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-indigo-500/[0.03] group-hover:bg-indigo-500/[0.06] transition-colors">
             <Image 
-              src="/image/gridtower.png" 
+              src="/image/stack.png" 
               alt="Neon Stack" 
               width={90} 
               height={90} 
@@ -133,7 +122,7 @@ export default function MinigamesHub() {
         >
           <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-cyan-500/[0.03] group-hover:bg-cyan-500/[0.06] transition-colors">
             <Image 
-              src="/image/colorShooter.png" 
+              src="/image/shooter.png" 
               alt="Laser Match" 
               width={90} 
               height={90} 
