@@ -7,9 +7,9 @@ import CardGames from "@/components/cardGames";
 
 // Import game asli lu
 import SakuiGames from "@/minigames/sakuiGame/sakuiGames"; 
-import MatrixHackGame from "@/minigames/matrixHack/MatrixHack"; 
-import GridTowerGame from "@/minigames/gridTower/GridTower"; 
-import ColorShooterGame from "@/minigames/colorShooter/ColorShooter"; 
+import MatrixHackGame from "@/minigames/matrixGame/matrixGame"; 
+import GridTowerGame from "@/minigames/gridTower/gridTower"; 
+import ColorShooterGame from "@/minigames/colorShooter/colorShooter"; 
 
 export default function MiniGamesPage() {
   const { coins, playSFX } = useApp();
