@@ -1,157 +1,148 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useApp } from "@/context/AppProvider";
-import CardGames from "@/components/cardGames";
-import { image } from "@/public/image"
-
+import { useState } from "react";
+import Image from "next/image";
 import SakuiGames from "@/minigames/sakuiGame/sakuiGames"; 
-import MatrixHackGame from "@/minigames/matrixGame/matrixGanes"; // Perhatikan 'matrixGanes' pake n sesuai file lu
+import MatrixHackGame from "@/minigames/matrixGame/matrixGanes"; 
 import GridTowerGame from "@/minigames/gridTower/gridTower"; 
-import ColorShooterGame from "@/minigames/colorShooter/colorShooter";
+import ColorShooterGame from "@/minigames/colorShooter/colorShooter"; 
 
-export default function MiniGamesPage() {
-  const { coins, playSFX } = useApp();
-  const [activeGame, setActiveGame] = useState<string | null>(null);
-  
-  const [userProfile, setUserProfile] = useState({
-    name: "Zetta Player",
-    avatar: ""
-  });
-  
-  useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    const user = tg?.initDataUnsafe?.user;
-    if (user) {
-      setUserProfile({
-        name: user.first_name || "Zetta Player",
-        avatar: user.photo_url || ""
-      });
-    }
-  }, []);
+type GameType = "matrix" | "suika" | "stack" | "shooter" | null;
 
-  const handleSelectGame = (gameId: string) => {
-    if (typeof playSFX === "function") playSFX("click");
-    setActiveGame(gameId);
-  };
+export default function MinigamesHub() {
+  const [activeGame, setActiveGame] = useState<GameType>(null);
+
+  if (activeGame === "suika") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0b14] p-4">
+        <button 
+          onClick={() => setActiveGame(null)}
+          className="mb-4 px-4 py-2 text-xs font-bold text-slate-400 border border-slate-800 rounded-xl hover:bg-slate-900 transition-all"
+        >
+          ← BACK TO HUB
+        </button>
+        <SakuiGames />
+      </div>
+    );
+  }
+
+  if (activeGame === "matrix") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0b14] p-4">
+        <button onClick={() => setActiveGame(null)} className="mb-4 px-4 py-2 text-xs font-bold text-slate-400 border border-slate-800 rounded-xl">← BACK</button>
+        <MatrixHackGame />
+      </div>
+    );
+  }
+
+  if (activeGame === "stack") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0b14] p-4">
+        <button onClick={() => setActiveGame(null)} className="mb-4 px-4 py-2 text-xs font-bold text-slate-400 border border-slate-800 rounded-xl">← BACK</button>
+        <GridTowerGame />
+      </div>
+    );
+  }
+
+  if (activeGame === "shooter") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d0b14] p-4">
+        <button onClick={() => setActiveGame(null)} className="mb-4 px-4 py-2 text-xs font-bold text-slate-400 border border-slate-800 rounded-xl">← BACK</button>
+        <ColorShooterGame />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full bg-[#0d0b14] text-slate-200 select-none p-4 pb-12 font-mono">
-      <div className="max-w-md mx-auto flex flex-col gap-4">
+    <div className="min-h-screen bg-[#12111a] text-white px-4 py-6 font-sans">
+      
+      {/* Header Top Nav ala Telegram Mini App */}
+      <div className="flex items-center justify-between mb-6">
+        <button className="text-slate-400 text-lg">‹</button>
+        <h1 className="text-base font-bold tracking-wide">Games</h1>
+        <button className="text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full font-medium text-purple-400">
+          🏆 Ranking
+        </button>
+      </div>
+
+      {/* GRID 2 KOLOM KONSISTEN SEIMBANG (MIRIP 100% SAMA REFERENSI LU) */}
+      <div className="grid grid-cols-2 gap-3">
         
-        {/* CONDITION 1: SCREEN SAAT MAIN GAME */}
-        {activeGame ? (
-          <div className="w-full flex flex-col items-center animate-fadeIn">
-            <div className="w-full flex justify-start mb-4">
-              <button 
-                onClick={() => {
-                  if (typeof playSFX === "function") playSFX("click");
-                  setActiveGame(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-[#1b1926] border border-slate-800 text-[10px] font-black text-slate-400 active:scale-95 transition-all tracking-wider uppercase"
-              >
-                ⬅ Exit to Hub
-              </button>
-            </div>
-
-            <div className="w-full flex justify-center bg-slate-950/40 p-2 rounded-3xl border border-slate-900/60 shadow-inner">
-              {activeGame === "suika" && <SakuiGames />}
-              {activeGame === "matrix" && <MatrixHackGame />}
-              {activeGame === "stack" && <GridTowerGame />}
-              {activeGame === "shooter" && <ColorShooterGame />}
-            </div>
+        {/* Game 1: MATRIX CYBER FALL */}
+        <div 
+          onClick={() => setActiveGame("matrix")}
+          className="relative flex flex-col bg-[#1c1b24] border border-white/[0.04] rounded-2xl p-3 active:scale-95 transition-all cursor-pointer overflow-hidden group"
+        >
+          {/* Badge New ijo neon ala mockup */}
+          <span className="absolute top-2 left-2 bg-[#10b981] text-[9px] font-black text-black px-1.5 py-0.5 rounded-md uppercase tracking-wider scale-90 z-10">
+            New
+          </span>
+          <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-emerald-500/[0.03] group-hover:bg-emerald-500/[0.06] transition-colors">
+            <Image 
+              src="/image/matrix.png" 
+              alt="Matrix Fall" 
+              width={90} 
+              height={90} 
+              className="object-contain drop-shadow-[0_8px_16px_rgba(16,185,129,0.2)]"
+            />
           </div>
-        ) : (
+          <h2 className="text-xs font-bold leading-tight mb-1">Matrix Fall</h2>
+          <p className="text-[10px] text-slate-400 font-medium leading-tight line-clamp-2">Bypass binary circuits speed.</p>
+        </div>
 
-          /* CONDITION 2: MAIN MENU HUB (POLOS TANPA TIER) */
-          <>
-            {/* TOP BAR */}
-            <div className="flex items-center justify-between w-full border-b border-slate-900/60 pb-3">
-              <div>
-                <h1 className="text-base font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 uppercase">
-                  Mini Games
-                </h1>
-                <p className="text-[8px] text-slate-600 tracking-wider">SELECT A PROTOCOL TO PLAY</p>
-              </div>
-              <Link href="/">
-                <button 
-                  onClick={() => { if (typeof playSFX === "function") playSFX("click"); }}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#1b1926] border border-slate-800 text-slate-400 text-sm active:scale-90 transition-transform"
-                >
-                  ↩️
-                </button>
-              </Link>
-            </div>
+        {/* Game 2: COSMIC SUIKA */}
+        <div 
+          onClick={() => setActiveGame("suika")}
+          className="flex flex-col bg-[#1c1b24] border border-white/[0.04] rounded-2xl p-3 active:scale-95 transition-all cursor-pointer overflow-hidden group"
+        >
+          <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-fuchsia-500/[0.03] group-hover:bg-fuchsia-500/[0.06] transition-colors">
+            <Image 
+              src="/image/sakuigames.png" 
+              alt="Cosmic Suika" 
+              width={90} 
+              height={90} 
+              className="object-contain drop-shadow-[0_8px_16px_rgba(236,72,153,0.2)]"
+            />
+          </div>
+          <h2 className="text-xs font-bold leading-tight mb-1">Cosmic Suika</h2>
+          <p className="text-[10px] text-slate-400 font-medium leading-tight line-clamp-2">Trigger fusion mini planets.</p>
+        </div>
 
-            {/* PROFILE BOX */}
-            <div className="w-full flex items-center justify-between rounded-2xl p-4 bg-[#1b1926]/40 backdrop-blur-md border border-slate-900/50 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex-shrink-0">
-                  {userProfile.avatar ? (
-                    <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo-950 to-slate-900 flex items-center justify-center text-xs font-black text-indigo-400">Z</div>
-                  )}
-                </div>
-                <div>
-                  <p className="font-black text-xs text-slate-100 tracking-tight">{userProfile.name}</p>
-                  <p className="text-[8px] text-emerald-400 font-bold tracking-widest uppercase mt-0.5">• ONLINE</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[8px] font-black text-slate-600 uppercase tracking-wider">BALANCE</p>
-                <p className="font-black text-sm text-yellow-400 tracking-tight mt-0.5">
-                  🪙 {coins?.toLocaleString() ?? "0"} <span className="text-[8px] text-slate-500">ZP</span>
-                </p>
-              </div>
-            </div>
+        {/* Game 3: NEON STACK */}
+        <div 
+          onClick={() => setActiveGame("stack")}
+          className="flex flex-col bg-[#1c1b24] border border-white/[0.04] rounded-2xl p-3 active:scale-95 transition-all cursor-pointer overflow-hidden group"
+        >
+          <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-indigo-500/[0.03] group-hover:bg-indigo-500/[0.06] transition-colors">
+            <Image 
+              src="/image/gridtower.png" 
+              alt="Neon Stack" 
+              width={90} 
+              height={90} 
+              className="object-contain drop-shadow-[0_8px_16px_rgba(99,102,241,0.2)]"
+            />
+          </div>
+          <h2 className="text-xs font-bold leading-tight mb-1">Neon Stack</h2>
+          <p className="text-[10px] text-slate-400 font-medium leading-tight line-clamp-2">Stack precision cyber blocks.</p>
+        </div>
 
-            {/* ASYMMETRIC BENTO GRID (TANPA EMBLASEM TIER) */}
-            <div className="grid grid-cols-2 gap-3 mt-1">
-              
-              {/* Game Panjang / Row-Span-2 */}
-              <CardGames
-                title="MATRIX CYBER FALL"
-                description="Bypass gerbang sirkuit biner kecepatan tinggi sebelum firewall jebol."
-                imageSrc="/images/matrix.png"
-                className="row-span-2 min-h-[220px]"
-                onClick={() => handleSelectGame("matrix")}
-              />
-
-              <CardGames
-                title="COSMIC SUIKA"
-                description="Trigger fusi planet mini jadi matahari raksasa."
-                imageSrc="/images/suika.png"
-                onClick={() => handleSelectGame("suika")}
-              />
-
-              <CardGames
-                title="NEON STACK"
-                description="Tumpuk transmisi blok siber secara presisi."
-                imageSrc="/images/stack.png"
-                onClick={() => handleSelectGame("stack")}
-              />
-
-              {/* Game Lebar Penuh di Bawah */}
-              <CardGames
-                title="LASER COLOR MATCH"
-                description="Sinkronisasikan tembakan core tepat saat warna laser selaras dengan inti."
-                imageSrc="/images/shooter.png"
-                className="col-span-2"
-                onClick={() => handleSelectGame("shooter")}
-              />
-
-            </div>
-
-            {/* FOOTER */}
-            <div className="text-center mt-6 border-t border-slate-900/40 pt-4">
-              <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.3em]">
-                Zetta Core Engine v1.2.0 // System Secured
-              </p>
-            </div>
-          </>
-        )}
+        {/* Game 4: LASER COLOR MATCH */}
+        <div 
+          onClick={() => setActiveGame("shooter")}
+          className="flex flex-col bg-[#1c1b24] border border-white/[0.04] rounded-2xl p-3 active:scale-95 transition-all cursor-pointer overflow-hidden group"
+        >
+          <div className="w-full aspect-square relative flex items-center justify-center mb-2 rounded-xl bg-cyan-500/[0.03] group-hover:bg-cyan-500/[0.06] transition-colors">
+            <Image 
+              src="/image/colorShooter.png" 
+              alt="Laser Match" 
+              width={90} 
+              height={90} 
+              className="object-contain drop-shadow-[0_8px_16px_rgba(6,182,212,0.2)]"
+            />
+          </div>
+          <h2 className="text-xs font-bold leading-tight mb-1">Laser Match</h2>
+          <p className="text-[10px] text-slate-400 font-medium leading-tight line-clamp-2">Sync core laser colors.</p>
+        </div>
 
       </div>
     </div>
