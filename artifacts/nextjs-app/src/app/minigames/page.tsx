@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useApp } from "@/context/AppProvider";
 import CardGames from "@/components/cardGames";
-
+import { image } from "@/public/image"
 
 import SakuiGames from "@/minigames/sakuiGame/sakuiGames"; 
 import MatrixHackGame from "@/minigames/matrixGame/matrixGanes"; // Perhatikan 'matrixGanes' pake n sesuai file lu
