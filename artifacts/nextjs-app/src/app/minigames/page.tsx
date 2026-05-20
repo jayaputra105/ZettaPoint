@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useApp } from "@/context/AppProvider";
 import CardGames from "@/components/cardGames";
 
-// Import game asli lu
+
 import SakuiGames from "@/minigames/sakuiGame/sakuiGames"; 
-import MatrixHackGame from "@/minigames/sakuiGame/MatrixHack"; 
-import GridTowerGame from "@/minigames/sakuiGame/GridTower"; 
-import ColorShooterGame from "@/minigames/sakuiGame/ColorShooter"; 
+import MatrixHackGame from "@/minigames/matrixGame/matrixGanes"; // Perhatikan 'matrixGanes' pake n sesuai file lu
+import GridTowerGame from "@/minigames/gridTower/gridTower"; 
+import ColorShooterGame from "@/minigames/colorShooter/colorShooter";
 
 export default function MiniGamesPage() {
   const { coins, playSFX } = useApp();
