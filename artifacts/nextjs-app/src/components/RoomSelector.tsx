@@ -51,8 +51,6 @@ export default function RoomSelector() {
 
   const active = ROOMS.find((r) => r.id === currentRoom) ?? ROOMS[0];
   const [countdown, setCountdown] = useState<number>(0);
-
-  // Fetch sisa waktu asli dari DB berdasarkan kamar aktif yang sah
   useEffect(() => {
     fetch(`/api/rooms?id=${currentRoom}`)
       .then((res) => res.json())
