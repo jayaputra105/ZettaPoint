@@ -60,7 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Atur volume masing-masing sfx biar seimbang
     if (type === "spin") sfx.volume = 0.6;
     else if (type === "win") sfx.volume = 0.7;
-    else sfx.volume = 0.4; // click volume
+    else sfx.volume = 0.2; // click volume
 
     sfx.play().catch(() => {});
   };
