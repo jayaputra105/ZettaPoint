@@ -8,11 +8,23 @@ import ArcadePortal from "@/components/arcade/ArcadePortal";
 const GAME_LIST = [
   { 
     id: 'g1', 
-    title: 'Ludo King', 
-    url: 'https://zv1y2i8p.play.gamezop.com/g/SkhljT2fdgb',
-    image: '/images/ludoking.jpg' 
+    title: 'Fruit Match', 
+    url: 'https://html5.gamedistribution.com/4254dba037de4b798541d2c97eae5016/?gd_sdk_referrer_url=https://gamedistribution.com/games/fruit-match-1/',
+    image: '/images/fruitmatch.jpg' 
   },
   { 
+    id: 'g2', 
+    title: 'Neon Stack', 
+    url: 'https://link-game-lain.com',
+    image: '/images/stack.png' 
+  },
+   { 
+    id: 'g2', 
+    title: 'Neon Stack', 
+    url: 'https://link-game-lain.com',
+    image: '/images/stack.png' 
+  },
+   { 
     id: 'g2', 
     title: 'Neon Stack', 
     url: 'https://link-game-lain.com',

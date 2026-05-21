@@ -34,14 +34,14 @@ export default function ArcadePortal({ url, onClose }: { url: string; onClose: (
             </div>
           )}
 
-          {/* Iframe */}
-          <iframe 
-            src={url} 
-            className={`w-full h-full ${isLoading ? 'hidden' : 'block'}`}
-            onLoad={() => setIsLoading(false)}
-            allow="autoplay; fullscreen"
-            frameBorder="0"
-          />
+         <iframe 
+  src={url} 
+  className={`w-full h-full ${isLoading ? 'hidden' : 'block'}`}
+  onLoad={() => setIsLoading(false)}
+  allow="autoplay; fullscreen; microphone; camera"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
+  frameBorder="0"
+/>
         </div>
       </div>
     </div>
