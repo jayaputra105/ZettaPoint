@@ -16,7 +16,7 @@ const GAME_LIST = [
     id: 'g2', 
     title: 'Hexagon', 
     url: '"https://html5.gamedistribution.com/882e8405283041b7922818fa6ff892b6/?gd_sdk_referrer_url=https://gamedistribution.com/games/hexagon-3/',
-    image: '/images/logo-mark.svg' 
+    image: '/images/hexagon_image.zip' 
   },
    { 
     id: 'g3', 
@@ -58,7 +58,7 @@ export default function MiniGamesPage() {
         <header className="flex justify-between items-end border-b border-[#D4AF37]/40 pb-4 mb-8">
           <div>
             <h1 className="text-xl font-black text-[#D4AF37] tracking-tighter uppercase">Galaxi Minigames</h1>
-            <p className="text-[10px] text-purple-300 tracking-widest">POWERED BY GAMEZOP</p>
+            <p className="text-[10px] text-purple-300 tracking-widest">POWERED BY GANE DISTRIBUTION</p>
           </div>
           <div className="text-right">
             <p className="text-[8px] font-bold text-slate-500 uppercase">Balance</p>
