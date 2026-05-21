@@ -14,15 +14,15 @@ const GAME_LIST = [
   },
   { 
     id: 'g2', 
-    title: 'Neon Stack', 
-    url: 'https://link-game-lain.com',
-    image: '/images/stack.png' 
+    title: 'Hexagon', 
+    url: '"https://html5.gamedistribution.com/882e8405283041b7922818fa6ff892b6/?gd_sdk_referrer_url=https://gamedistribution.com/games/hexagon-3/',
+    image: '/images/logo-mark.svg' 
   },
    { 
-    id: 'g2', 
-    title: 'Neon Stack', 
-    url: 'https://link-game-lain.com',
-    image: '/images/stack.png' 
+    id: 'g3', 
+    title: 'ninja survivor', 
+    url: 'https://html5.gamedistribution.com/6ff158a48fed4f3aa40877422662a71a/?gd_sdk_referrer_url=https://gamedistribution.com/games/ninja-survivor/',
+    image: '/images/ninjasurvivor.jpg' 
   },
    { 
     id: 'g2', 
