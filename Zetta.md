@@ -12,7 +12,7 @@ pnpm workspace monorepo menggunakan TypeScript. Setiap package mengelola depende
 - **TypeScript version**: 5.9
 - **Frontend framework**: Next.js 15 (App Router)
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: PostgreSQL + Drizzle ORM neonserverless
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (dari OpenAPI spec)
 - **Styling**: Tailwind CSS v4
@@ -34,7 +34,7 @@ pnpm workspace monorepo menggunakan TypeScript. Setiap package mengelola depende
 
 ## Project: Zetta Clicker (Telegram Mini App Style)
 
-Dark glossy black + gold aesthetic, Telegram mini-app style clicker game.
+Dark glossy galaxy black + gold aesthetic, Telegram mini-app style clicker game.
 
 ### Pages
 room selector
@@ -43,7 +43,8 @@ room selector
 - `/tasks` — Misi Harian: Social tasks (Verify button) + screenshot upload tasks
 - `/spin` — Spin & Menang: 6-segment roulette wheel, daily free spin + ad-based spins (max 5/hari)
 - `/leaderboard` — Leaderboard: Podium top 3 + daftar top 100
-- `/wallet` — Dompet: Saldo koin + USDT, withdraw ke TON/USDT/DANA/GoPay
+- `/wallet` — Dompet: Saldo koin + USDT, withdraw ke TON/USDT/
+- `/minigames` _ minigames: Gamezop
 
 ### Database Tables (PostgreSQL)
 
@@ -52,6 +53,7 @@ room selector
 - `task_completions` — id, user_id, task_id, status, screenshot_url
 - `spin_records` — id, user_id, last_free_spin_at, ads_spins_today, ads_reset_at
 - `transactions` — id, user_id, type, amount, currency, method, wallet_address, status
+- `room` — zp_bronze dll
 
 ### API Routes (via api-server at /api/*)
 
