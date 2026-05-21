@@ -10,7 +10,7 @@ const GAME_LIST = [
     id: 'g1', 
     title: 'Ludo King', 
     url: 'https://zv1y2i8p.play.gamezop.com/g/SkhljT2fdgb',
-    image: '/images/ludoking.png' // Pastikan file ada di public/images/matrix.png
+    image: '/images/ludoking.png' 
   },
   { 
     id: 'g2', 
@@ -48,33 +48,23 @@ export default function MiniGamesPage() {
           </div>
         </header>
 
-<main className="grid grid-cols-2 gap-4">
-  {GAME_LIST.map((game) => (
-    <button
-      key={game.id}
-      onClick={() => setActiveUrl(game.url)}
-      className="group relative h-32 rounded-2xl p-1 overflow-hidden active:scale-95 transition-all
-                 bg-[url('/images/bordergame.jpg')] bg-cover bg-center shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-    >
-      {/* Layer Gambar Game */}
-      <div 
-        className="w-full h-full rounded-xl bg-cover bg-center flex flex-col justify-end p-3 border border-[#D4AF37]/50 relative"
-        style={{ backgroundImage: `url(${game.image})` }} 
-      >
-        {/* Overlay gelap biar teks kebaca */}
-        <div className="absolute inset-0 bg-black/50 group-hover:bg-black/30 transition-colors rounded-xl" />
-        
-        <span className="text-xs font-black text-white relative z-10 drop-shadow-md">
-          {game.title}
-        </span>
-      </div>
-    </button>
-  ))}
-</main>
-              {/* TOMBOL UTAMA (mainmenu.jpg) */}
-              <div className="w-full h-full rounded-xl bg-[url('/images/mainmenu.jpg')] bg-cover bg-center 
-                              flex flex-col justify-end p-3 border border-[#D4AF37]/50 relative">
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors rounded-xl" />
+        {/* Grid Game */}
+        <main className="grid grid-cols-2 gap-4">
+          {GAME_LIST.map((game) => (
+            <button
+              key={game.id}
+              onClick={() => setActiveUrl(game.url)}
+              className="group relative h-32 rounded-2xl p-1 overflow-hidden active:scale-95 transition-all
+                         bg-[url('/images/bordergame.jpg')] bg-cover bg-center shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+            >
+              {/* Layer Gambar Game & Teks */}
+              <div 
+                className="w-full h-full rounded-xl bg-cover bg-center flex flex-col justify-end p-3 border border-[#D4AF37]/50 relative"
+                style={{ backgroundImage: `url(${game.image})` }} 
+              >
+                {/* Overlay gelap */}
+                <div className="absolute inset-0 bg-black/50 group-hover:bg-black/30 transition-colors rounded-xl" />
+                
                 <span className="text-xs font-black text-white relative z-10 drop-shadow-md">
                   {game.title}
                 </span>
