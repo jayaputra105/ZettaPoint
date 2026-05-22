@@ -83,18 +83,21 @@ export async function GET(req: Request) {
           const nextColString = nextRoomMap[room.id];
           
           if (nextColString) {
-            const topIds = topPlayers
-              .map(p => p.telegramId)
-              .filter((id): id is string => id !== null);
+  const topIds = topPlayers.map(p => p.telegramId).filter((id): id is string => id !== null);
 
-            if (topIds.length > 0) {
-              // PERBAIKAN 1: Menggunakan fungsi inArray bawaan Drizzle agar SQL valid
-              await db.update(users)
-                .set({ [nextColString]: true })
-                .where(inArray(users.telegramId, topIds));
-            }
-          }
-        }
+  if (topIds.length > 0) {
+    // Pakai cara manual biar Drizzle gak bingung
+    if (nextColString === "qualified_silver") {
+      await db.update(users).set({ qualifiedSilver: true }).where(inArray(users.telegramId, topIds));
+    } else if (nextColString === "qualified_gold") {
+      await db.update(users).set({ qualifiedGold: true }).where(inArray(users.telegramId, topIds));
+    } else if (nextColString === "qualified_diamond") {
+      await db.update(users).set({ qualifiedDiamond: true }).where(inArray(users.telegramId, topIds));
+    }
+  }
+}
+            
+            
 
         // PERBAIKAN 2: Bersihkan poin kamar terkait menggunakan properti name dari kolom Drizzle
         await db.update(users).set({ [activeZpCol.name]: 0 });
