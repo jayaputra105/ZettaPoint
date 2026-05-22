@@ -65,10 +65,19 @@ export default function RoomSelector() {
   useEffect(() => {
     if (countdown <= 0) return;
 
-    const timer = setInterval(() => {
-      setCountdown((prev) => (prev <= 1000 ? 0 : prev - 1000));
-    }, 1000);
-
+    // Ganti bagian di dalam setInterval kamu
+const timer = setInterval(() => {
+  setCountdown((prev) => {
+    if (prev <= 1000) {
+      // Kalau habis, fetch ulang ke API buat dapet resetAt terbaru
+      fetch(`/api/rooms?id=${currentRoom}`)
+        .then(res => res.json())
+        .then(data => setCountdown(data.remainingMs));
+      return 0;
+    }
+    return prev - 1000;
+  });
+}, 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
