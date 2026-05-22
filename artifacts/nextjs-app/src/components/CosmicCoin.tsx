@@ -44,9 +44,9 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
         return {
           id: i,
           initialAngle: Math.random() * Math.PI * 2, // Sudut sebaran awal
-          initialDistance: Math.random() * 110 + 60, // Jarak ledakan awal
-          randomSpeed: Math.random() * 1.5 + 2.5,    // Waktu pusaran spiral (2.5s - 4.0s)
-          randomDelay: Math.random() * 2.0,          // Delay mengular sekuensial panjang (0s - 2s)
+          initialDistance: Math.random() * 150 + 100, // Jarak ledakan awal
+          randomSpeed: Math.random() * 2 + 3.5,    // Waktu pusaran spiral (2.5s - 4.0s)
+          randomDelay: Math.random() * 3.0,          // Delay mengular sekuensial panjang (0s - 2s)
         };
       });
       setParticles(generatedParticles);
@@ -81,7 +81,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
     idle: { scale: 1, opacity: 1, rotateX: 0, z: 0, filter: "brightness(1)", transformPerspective: 1000 },
     impact: {
       scale: [1, 0.85, 2.2],
-      z: [0, 100, 350], // Melompat nabrak muka user
+      z: [0, 100, 250], // Melompat nabrak muka user
       opacity: [1, 1, 0],
       rotateX: [0, -50, 1440], // Guling vertikal bertenaga 4 putaran
       filter: ["brightness(1)", "brightness(1.4)", "brightness(0.6)"], // Efek shading cahaya pas muter

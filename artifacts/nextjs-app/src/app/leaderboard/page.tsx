@@ -42,7 +42,7 @@ export default function LeaderboardPage() {
   // =========================================================
   // 🛡️ ANTI-EXPLOIT ENGINE: GUNAKAN STATE LOKAL UNTUK INTIP ROOM
   // =========================================================
-  // Kita ganti penggunaan currentRoom global menjadi local state 'activeTab'
+  // ganti penggunaan currentRoom global menjadi local state 'activeTab'
   // secara default dia bakal nampilin 'bronze' atau room polosan dulu tanpa ngerusak home!
   const [activeTab, setActiveTab] = useState<string>("bronze");
   
