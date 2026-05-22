@@ -39,8 +39,8 @@ export async function POST(req: Request) {
           const [user] = await sql`SELECT telegram_id FROM users WHERE id = ${tx.user_id}`;
           if (user && user.telegram_id) {
             const teksUser = isConfirm 
-              ? `🎉 WD dana lu sebesar $${tx.amount} USDT udah dicairkan admin!`
-              : `⚠️ WD dana lu sebesar $${tx.amount} USDT DITOLAK oleh admin.`;
+              ? `🎉 your withdraw $${tx.amount} USDT wiil be SUCCESSFULY💸!`
+              : `⚠️ your withdraw $${tx.amount} USDT was REJECTED.`;
 
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         }
 
         // URL WebApp yang nempel di tombol raksasa bawah
-        const targetWebAppUrl = `https://zetta-point-api-server.vercel.app/?v=1${finalInviterParam}`;
+        const targetWebAppUrl = `https://zetta-point-nextjs-app.vercel.app/${finalInviterParam}`;
 
         // Kirim tombol menu raksasa tanpa ketikan teks kotor
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

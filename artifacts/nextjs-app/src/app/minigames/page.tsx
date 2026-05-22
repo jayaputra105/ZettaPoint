@@ -16,7 +16,7 @@ const GAME_LIST = [
     id: 'g2', 
     title: 'Hexagon', 
     url: '"https://html5.gamedistribution.com/882e8405283041b7922818fa6ff892b6/?gd_sdk_referrer_url=https://gamedistribution.com/games/hexagon-3/',
-    image: '/images/hexagon_image.zip' 
+    image: '/images/image1.jpg' 
   },
    { 
     id: 'g3', 
@@ -68,12 +68,15 @@ export default function MiniGamesPage() {
 
         <main className="grid grid-cols-2 gap-4">
           {GAME_LIST.map((game) => (
-            <button
-              key={game.id}
-              onClick={() => setActiveUrl(game.url)}
-              className="group relative h-32 rounded-2xl p-1 overflow-hidden active:scale-95 transition-all
-                         bg-[url('/images/bordergame.jpg')] bg-cover bg-center shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-            >
+            
+
+<button
+  key={game.id}
+  // Menggunakan window.open agar game terbuka di tab baru browser pengguna
+  onClick={() => window.open(game.url, "_blank", "noopener,noreferrer")}
+  className="group relative h-32 rounded-2xl p-1 overflow-hidden active:scale-95 transition-all
+             bg-[url('/images/bordergame.jpg')] bg-cover bg-center shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+>
               <div 
                 className="w-full h-full rounded-xl bg-cover bg-center flex flex-col justify-end p-3 border border-[#D4AF37]/50 relative"
                 style={{ backgroundImage: `url(${game.image})` }} 
