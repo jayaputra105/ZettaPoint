@@ -11,19 +11,17 @@ export default function MiniGamesPage() {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Mengambil data game via Proxy gratisan agar tidak diblokir CORS oleh browser
+    // Mengambil data game dari API internal Next.js Anda sendiri
   useEffect(() => {
     async function fetchGames() {
       try {
-        const targetUrl = encodeURIComponent('https://feeds.gamepix.com/v2/json?sid=OO6AO&pagination=12&page=1');
-        const res = await fetch(`https://allorigins.win{targetUrl}`);
+        // Panggil API buatan kita di Langkah 1
+        const res = await fetch('/api/minigames');
         
         if (!res.ok) throw new Error('Gagal memuat katalog');
         
-        const responseData = await res.json();
-        const result = JSON.parse(responseData.contents); // Membongkar data asli dari proxy
-        
-        setGames(result.data || []);
+        const data = await res.json();
+        setGames(data); // Simpan data game langsung ke state
       } catch (error) {
         console.error("Error fetching games:", error);
       } finally {
@@ -61,7 +59,7 @@ export default function MiniGamesPage() {
             onClick={() => router.push('/')} // Ganti '/' dengan path home Anda jika berbeda (misal: '/home')
             className="flex items-center gap-1 px-3 py-1.5 bg-[#1a0b2e] border border-[#D4AF37]/60 rounded-xl text-[10px] font-black uppercase tracking-wider text-[#D4AF37] active:scale-95 transition-transform shadow-[0_0_10px_rgba(212,175,55,0.1)]"
           >
-            Home ➡️
+             ➡️
           </button>
         </header>
 
