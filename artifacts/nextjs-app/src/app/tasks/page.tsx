@@ -17,6 +17,7 @@ interface Task {
   rewardCoins: number;
   link: string | null;
   active: boolean;
+  taskKey: string | null;
   completion: { status: string; screenshotUrl?: string } | null;
 }
 
@@ -29,6 +30,10 @@ export default function TasksPage() {
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  
+  // Logic helper baru
+  const isDirectClaim = (t: Task) => ["daily_login", "seven_day_streak"].includes(t.taskKey || "");
+  const sortedTasks = [...tasks].sort((a, b) => (!!a.completion === !!b.completion ? 0 : !!a.completion ? 1 : -1));
   
   const getTelegramId = () => {
     if (typeof window === "undefined") return "12345";
@@ -125,10 +130,10 @@ export default function TasksPage() {
     }
   };
   
-  // Pemisahan Kategori Tugas
-  const social = tasks.filter((t) => t.type === "social");
-  const gameGoals = tasks.filter((t) => t.type === "system");
-  const screenshot = tasks.filter((t) => t.type === "screenshot");
+  // Pemisahan Kategori Tugas (tetap menggunakan sortedTasks)
+  const social = sortedTasks.filter((t) => t.type === "social");
+  const gameGoals = sortedTasks.filter((t) => t.type === "system");
+  const screenshot = sortedTasks.filter((t) => t.type === "screenshot");
   const completedCount = tasks.filter((t) => t.completion?.status === "completed").length;
   
   return (
@@ -172,7 +177,7 @@ export default function TasksPage() {
                 <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">Social Networks</h3>
                 <div className="flex flex-col gap-3">
                   {social.map(task => (
-                    <div key={task.id} className="p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl">
+                    <div key={task.id} className={`p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl ${task.completion ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/10 text-xl">🔹</div>
                         <div>
@@ -187,16 +192,10 @@ export default function TasksPage() {
                         <CheckCircle size={24} className="text-green-500" />
                       ) : (
                         <div className="flex gap-2">
-                          {task.link && (
-                            <a href={task.link} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:scale-90 transition-transform">
-                              <ExternalLink size={16} className="text-[#FFD700]"/>
-                            </a>
-                          )}
-                          <button 
-                            onClick={() => handleVerify(task)} 
-                            disabled={submitting === task.id}
-                            className="px-4 py-2 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 disabled:opacity-30"
-                          >
+                           <a href={task.link || "#"} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:scale-90 transition-transform">
+                             <ExternalLink size={16} className="text-[#FFD700]"/>
+                           </a>
+                          <button onClick={() => handleVerify(task)} disabled={submitting === task.id} className="px-4 py-2 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 disabled:opacity-30">
                             {submitting === task.id ? "..." : "Claim"}
                           </button>
                         </div>
@@ -213,7 +212,7 @@ export default function TasksPage() {
                 <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">In-Game Goals</h3>
                 <div className="flex flex-col gap-3">
                   {gameGoals.map(task => (
-                    <div key={task.id} className="p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl">
+                    <div key={task.id} className={`p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl ${task.completion ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/10 text-xl">⚡</div>
                         <div>
@@ -228,11 +227,12 @@ export default function TasksPage() {
                         <CheckCircle size={24} className="text-green-500" />
                       ) : (
                         <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleVerify(task)} 
-                            disabled={submitting === task.id}
-                            className="px-4 py-2 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 disabled:opacity-30"
-                          >
+                          {!isDirectClaim(task) && (
+                             <a href={task.link || "#"} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:scale-90 transition-transform">
+                               <ExternalLink size={16} className="text-[#FFD700]"/>
+                             </a>
+                          )}
+                          <button onClick={() => handleVerify(task)} disabled={submitting === task.id} className="px-4 py-2 bg-[#FFD700] text-black text-[10px] font-black rounded-xl uppercase active:scale-95 disabled:opacity-30">
                             {submitting === task.id ? "..." : "Claim"}
                           </button>
                         </div>
@@ -249,7 +249,7 @@ export default function TasksPage() {
                 <h3 className="text-[10px] font-black opacity-20 uppercase tracking-[0.5em] mb-4 px-2">Manual Verification</h3>
                 <div className="flex flex-col gap-3">
                   {screenshot.map(task => (
-                    <div key={task.id} className="rounded-[28px] bg-zinc-900/40 border border-white/5 overflow-hidden shadow-xl">
+                    <div key={task.id} className={`rounded-[28px] bg-zinc-900/40 border border-white/5 overflow-hidden shadow-xl ${task.completion ? "opacity-50" : ""}`}>
                       <div className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/10 text-xl">📸</div>
@@ -286,19 +286,12 @@ export default function TasksPage() {
                                   <button onClick={() => setUploadUrl("")} className="absolute top-2 right-2 w-8 h-8 bg-black/80 rounded-full flex items-center justify-center border border-white/10">✕</button>
                                 </div>
                               ) : (
-                                <button 
-                                  onClick={() => fileRef.current?.click()} 
-                                  className="w-full py-10 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/5 transition-all"
-                                >
+                                <button onClick={() => fileRef.current?.click()} className="w-full py-10 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center gap-2 hover:bg-white/5 transition-all">
                                   <Upload size={20} className="opacity-20" />
                                   <span className="text-[10px] uppercase font-black opacity-20">Browse Image</span>
                                 </button>
                               )}
-                              <button 
-                                onClick={() => handleScreenshotSubmit(task)} 
-                                disabled={!uploadUrl || submitting === task.id} 
-                                className="w-full py-4 bg-[#FFD700] text-black font-black rounded-2xl text-[10px] uppercase shadow-lg disabled:opacity-20 transition-all"
-                              >
+                              <button onClick={() => handleScreenshotSubmit(task)} disabled={!uploadUrl || submitting === task.id} className="w-full py-4 bg-[#FFD700] text-black font-black rounded-2xl text-[10px] uppercase shadow-lg disabled:opacity-20 transition-all">
                                 {submitting === task.id ? "Uploading..." : "Confirm Submission"}
                               </button>
                             </div>
@@ -316,15 +309,9 @@ export default function TasksPage() {
 
       <BottomNav />
       
-      {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
-          <motion.div 
-            initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-            className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl ${
-              toast.type === "success" ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400"
-            }`}
-          >
+          <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl ${toast.type === "success" ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
             {toast.msg}
           </motion.div>
         )}
