@@ -15,7 +15,7 @@ export default function MiniGamesPage() {
   useEffect(() => {
     async function fetchGames() {
       try {
-        const res = await fetch('https://gamepix.com');
+        const res = await fetch('https://feeds.gamepix.com/v2/json?sid=OO6AO&pagination=12&page=1');
         if (!res.ok) throw new Error('Gagal memuat katalog');
         const result = await res.json();
         setGames(result.data || []); // Menyimpan array game dari GamePix
