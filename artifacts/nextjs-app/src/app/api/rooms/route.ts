@@ -8,8 +8,7 @@ export async function GET(req: Request) {
   const roomId = searchParams.get("id");
   const authHeader = req.headers.get('authorization');
 
-  // 1. LOGIKA UNTUK FRONTEND (RoomSelector)
-  // Tidak butuh secret key, hanya butuh id room untuk hitung sisa waktu
+  // --- MODE PUBLIC (Untuk Leaderboard UI) ---
   if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     if (roomId) {
       const roomData = await db.select().from(rooms).where(eq(rooms.id, roomId));
@@ -17,32 +16,31 @@ export async function GET(req: Request) {
         const now = new Date();
         const resetTime = new Date(roomData[0].resetAt);
         const remainingMs = Math.max(0, resetTime.getTime() - now.getTime());
-        return NextResponse.json({ remainingMs });
+        return NextResponse.json({ 
+          remainingMs, 
+          prizePool: roomData[0].prizePool 
+        });
       }
     }
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // 2. LOGIKA UNTUK CRON JOB (Reset Data)
-  // Hanya jalan jika Auth Header benar (Secret Key)
+  // --- MODE CRON JOB (Reset Otomatis) ---
   try {
     const allRooms = await db.select().from(rooms);
     const now = new Date();
 
     for (const room of allRooms) {
       if (now >= new Date(room.resetAt)) {
-        
-        // --- A. PROSES PEMENANG ---
         const zpColumnMap: Record<string, any> = {
           bronze: users.zpBronze, silver: users.zpSilver,
           gold: users.zpGold, diamond: users.zpDiamond
         };
         const activeZpCol = zpColumnMap[room.id];
-
+        
         const topPlayers = await db.select().from(users).where(sql`${activeZpCol} > 0`).orderBy(desc(activeZpCol)).limit(150);
 
         if (topPlayers.length > 0) {
-          // Update pemenang (Top 3)
           for (let i = 0; i < Math.min(3, topPlayers.length); i++) {
             const winner = topPlayers[i];
             const prizeAmount = [room.prizePool * 0.5, room.prizePool * 0.3, room.prizePool * 0.2][i];
@@ -54,7 +52,6 @@ export async function GET(req: Request) {
             });
           }
 
-          // --- B. PROMOSI USER ---
           const topIds = topPlayers.map(p => p.telegramId).filter((id): id is string => id !== null);
           if (topIds.length > 0) {
             if (room.id === "bronze") await db.update(users).set({ qualifiedSilver: true }).where(inArray(users.telegramId, topIds));
@@ -63,12 +60,7 @@ export async function GET(req: Request) {
           }
         }
 
-        // --- C. RESET DATA ---
-        await db.update(users).set({ 
-            zpBronze: 0, zpSilver: 0, zpGold: 0, zpDiamond: 0 
-        }); // Sesuaikan reset poin tiap room
-
-        // --- D. SET WAKTU RESET BARU ---
+        await db.update(users).set({ zpBronze: 0, zpSilver: 0, zpGold: 0, zpDiamond: 0 });
         const nextReset = new Date();
         nextReset.setUTCDate(nextReset.getUTCDate() + room.durationDays);
         await db.update(rooms).set({ resetAt: nextReset }).where(eq(rooms.id, room.id));
