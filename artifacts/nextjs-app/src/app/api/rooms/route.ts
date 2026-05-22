@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, rooms, leaderboardWinners, transactions } from "@/db/schema";
-import { eq, desc, sql, inArray } from "drizzle-orm"; // Ditambahkan inArray
+import { eq, desc, sql, inArray } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  // PROTECTION LAYER: Validasi Vercel Cron Secret
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
@@ -17,9 +16,8 @@ export async function GET(req: Request) {
     for (const room of allRooms) {
       const roomTargetReset = new Date(room.resetAt);
 
-      // Eksekusi berjalan jika waktu sekarang sudah melewati batas reset database
       if (now >= roomTargetReset) {
-        
+        // Pemetaan kolom ZP
         const zpColumnMap: Record<string, any> = {
           bronze: users.zpBronze,
           silver: users.zpSilver,
@@ -28,10 +26,8 @@ export async function GET(req: Request) {
         };
         const activeZpCol = zpColumnMap[room.id];
 
-        // Jika kamar tidak valid dalam map, lewati keamanan
         if (!activeZpCol) continue;
 
-        // Fetch top kontender musim ini
         const topPlayers = await db
           .select()
           .from(users)
@@ -48,12 +44,10 @@ export async function GET(req: Request) {
 
             if (winner.telegramId && prizeAmount > 0) {
               await db.transaction(async (tx) => {
-                // 1. Tambah saldo USDT global
                 await tx.update(users)
                   .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
                   .where(eq(users.id, winner.id));
 
-                // 2. Catat sejarah podium juara
                 await tx.insert(leaderboardWinners).values({
                   roomId: room.id,
                   userId: winner.id,
@@ -61,7 +55,6 @@ export async function GET(req: Request) {
                   prizeAmount: prizeAmount.toString(),
                 });
 
-                // 3. Catat riwayat mutasi transaksi wallet
                 await tx.insert(transactions).values({
                   userId: winner.id,
                   type: "room_rewards",
@@ -74,42 +67,33 @@ export async function GET(req: Request) {
             }
           }
 
-          // ATURAN SAKTI LU: Promosi otomatis Top 150
-          const nextRoomMap: Record<string, string> = {
-            bronze: "qualified_silver",
-            silver: "qualified_gold",
-            gold: "qualified_diamond"
-          };
-          const nextColString = nextRoomMap[room.id];
-          
-          if (nextColString) {
-  const topIds = topPlayers.map(p => p.telegramId).filter((id): id is string => id !== null);
+          // PROMOSI USER (Update manual agar tidak error)
+          const topIds = topPlayers
+            .map(p => p.telegramId)
+            .filter((id): id is string => id !== null);
 
-  if (topIds.length > 0) {
-    // Pakai cara manual biar Drizzle gak bingung
-    if (nextColString === "qualified_silver") {
-      await db.update(users).set({ qualifiedSilver: true }).where(inArray(users.telegramId, topIds));
-    } else if (nextColString === "qualified_gold") {
-      await db.update(users).set({ qualifiedGold: true }).where(inArray(users.telegramId, topIds));
-    } else if (nextColString === "qualified_diamond") {
-      await db.update(users).set({ qualifiedDiamond: true }).where(inArray(users.telegramId, topIds));
-    }
-  }
-}
-            
-            
-
-        // PERBAIKAN 2: Bersihkan poin kamar terkait menggunakan properti name dari kolom Drizzle
-        await db.update(users).set({ [activeZpCol.name]: 0 });
-
-        // PENENTUAN DURASI DURAKA KAKU
-        let durationDays = 1; // Bronze 1 hari
-        if (room.id === "silver") {
-          durationDays = 3;   // Silver 3 hari
-        } else if (room.id === "gold" || room.id === "diamond") {
-          durationDays = 7;   // Gold & Diamond 7 hari
+          if (topIds.length > 0) {
+            if (room.id === "bronze") {
+              await db.update(users).set({ qualifiedSilver: true }).where(inArray(users.telegramId, topIds));
+            } else if (room.id === "silver") {
+              await db.update(users).set({ qualifiedGold: true }).where(inArray(users.telegramId, topIds));
+            } else if (room.id === "gold") {
+              await db.update(users).set({ qualifiedDiamond: true }).where(inArray(users.telegramId, topIds));
+            }
+          }
         }
-    
+
+        // RESET POIN (Menggunakan string nama kolom secara eksplisit)
+        const zpResetMap: Record<string, any> = {
+          bronze: { zpBronze: 0 },
+          silver: { zpSilver: 0 },
+          gold: { zpGold: 0 },
+          diamond: { zpDiamond: 0 }
+        };
+        await db.update(users).set(zpResetMap[room.id]);
+
+        // UPDATE WAKTU RESET
+        let durationDays = (room.id === "bronze") ? 1 : (room.id === "silver" ? 3 : 7);
         const nextReset = new Date();
         nextReset.setUTCHours(0, 0, 0, 0); 
         nextReset.setUTCDate(nextReset.getUTCDate() + durationDays);
