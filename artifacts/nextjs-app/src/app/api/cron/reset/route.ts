@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         };
         const activeZpCol = zpColumnMap[room.id];
 
-        // Fetch top kontender musim inii
+        // Fetch top kontender musim ini
         const topPlayers = await db
           .select()
           .from(users)
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         // KUNCI MATI: Bersihkan poin kamar terkait kembali ke nol
         await db.update(users).set({ [activeZpString]: 0 });
 
-      
+        // PENENTUAN DURASI DURAKA KAKU SESUAI SPEK LU
         let durationDays = 1; // Bronze 1 hari
         if (room.id === "silver") {
           durationDays = 3;   // Silver 3 hari
@@ -113,7 +113,7 @@ export async function GET(req: Request) {
 
     
         const nextReset = new Date();
-        nextReset.setUTCHours(24, 0, 0, 0); 
+        nextReset.setUTCHours(0, 0, 0, 0); 
         nextReset.setUTCDate(nextReset.getUTCDate() + durationDays);
 
         await db.update(rooms)
