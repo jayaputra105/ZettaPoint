@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion"; // 🌟 AMANKAN IMPORT MOTION DI SINI
+import { motion } from "framer-motion"; 
 import BottomNav from "@/components/BottomNav";
 import CoinClicker from "@/components/CoinClicker";
 import AdModal from "@/components/AdModal";
@@ -11,7 +11,7 @@ import { useApp } from "@/context/AppProvider";
 import Link from "next/link"
 const ShootingStars = dynamic(() => import("@/components/ShootingStars"), { ssr: false });
 
-const MAX_ADS = 15;
+const MAX_ADS = 10;
 const COOLDOWN_MS = 60 * 60 * 1000;
 
 function formatNumber(n: number): string {
@@ -152,7 +152,7 @@ export default function Home() {
     statusLabel = "✅ Free click available!";
     statusColor = "#4ade80";
   } else if (isAdVerified) {
-    statusLabel = "⚡ Core Unlocked! Tap Matrix to claim +100 ZP";
+    statusLabel = "⚡ Core Unlocked! Tap Matrix to claim  ZP";
     statusColor = "#f59e0b";
   } else if (isLocked) {
     statusLabel = <>🔒 Overclock Limit! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
@@ -209,8 +209,8 @@ export default function Home() {
       {/* Pendaran Cahaya Biru Neon pelan */}
       <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
       
-      {/* Ikon Game Stick Flat Anti-Beban */}
-      <div className="relative text-xl">🕹️</div> 
+      
+      <div className="relative text-xl">🎮</div> 
     </motion.button>
   </Link>
 </div>
@@ -234,7 +234,7 @@ export default function Home() {
           </div>
 
           <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
-            +100 ZP ({currentRoom.toUpperCase()})
+            +ZP ({currentRoom.toUpperCase()})
           </p>
         </div>
       </div>

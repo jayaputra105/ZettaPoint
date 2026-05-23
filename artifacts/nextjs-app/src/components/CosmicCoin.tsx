@@ -137,7 +137,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
                 transformStyle: "preserve-3d" 
             }}
           >
-            {/* Blackhole elements tetap sama persis seperti kode asli lu */}
+            
             <motion.div animate={{ rotate: -720 }} transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }} className="absolute w-[180px] h-[180px] rounded-full opacity-30" style={{ background: "conic-gradient(from 0deg, transparent, rgba(147, 51, 234, 0.4), transparent, rgba(255, 215, 0, 0.2), transparent)" }} />
             <motion.div animate={{ rotate: -360 }} transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }} className="absolute inset-1 rounded-full opacity-40 border-2 border-dotted border-[#ff0055]" />
             <div className="absolute inset-2 rounded-full animate-spin [animation-duration:0.4s]" style={{ border: "1.5px dashed rgba(255, 215, 0, 0.3)" }} />

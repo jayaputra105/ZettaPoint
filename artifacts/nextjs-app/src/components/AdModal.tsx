@@ -17,7 +17,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
   
   if (!open) return null;
   
-  // ⚡ FUNGSI INSTAN: Panggil SDK Adsgram murni tanpa useEffect loop jancok
+  
   const handleWatchAd = () => {
     const windowObj = window as any;
     
