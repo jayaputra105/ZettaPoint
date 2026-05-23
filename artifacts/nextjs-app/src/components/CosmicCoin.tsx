@@ -1,89 +1,84 @@
 "use client";
 
-import { useState } from "react";
-import { motion, Variants } from "framer-motion";
+import { useState, useMemo, memo } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
+
+// 1. MEMOIZED PARTICLE: Mencegah re-render massal
+const Particle = memo(({ p, stage }: { p: any; stage: string }) => {
+  const spiralX = [
+    Math.cos(p.initialAngle) * p.initialDistance,
+    Math.cos(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7),
+    Math.cos(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35),
+    0
+  ];
+  const spiralY = [
+    Math.sin(p.initialAngle) * p.initialDistance - 40,
+    Math.sin(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7) - 25,
+    Math.sin(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35) - 10,
+    0
+  ];
+
+  return (
+    <motion.div
+      initial={{ x: Math.cos(p.initialAngle) * p.initialDistance, y: Math.sin(p.initialAngle) * p.initialDistance - 40 }}
+      animate={stage === "suction" ? {
+        x: spiralX,
+        y: spiralY,
+        scale: [1, 0],
+        opacity: [1, 0],
+      } : {}}
+      transition={{ duration: p.randomSpeed, delay: p.randomDelay, ease: "linear" }}
+      className="absolute w-2 h-2 rounded-sm bg-yellow-400 z-40"
+    />
+  );
+});
 
 export default function CosmicCoin({ onClick, locked, needsAd, children }: any) {
-  const [stage, setStage] = useState<string>("idle");
+  const [stage, setStage] = useState("idle");
+  const controls = useAnimation();
+  
+  const particles = useMemo(() => Array.from({ length: 50 }).map((_, i) => ({
+    id: i,
+    initialAngle: Math.random() * Math.PI * 2,
+    initialDistance: Math.random() * 150 + 100,
+    randomSpeed: Math.random() * 2 + 2,
+    randomDelay: Math.random() * 1.5,
+  })), []);
 
-  const handleTrigger = (e: any) => {
-    if (locked || needsAd) { onClick(e); return; }
+  const startSequence = async () => {
     if (stage !== "idle") return;
-
     setStage("impact");
-    setTimeout(() => setStage("suction"), 1200);
-    setTimeout(() => setStage("overload"), 8000);
-    setTimeout(() => {
-      setStage("rebirth");
-      onClick(e);
-    }, 10500);
-    setTimeout(() => setStage("idle"), 12500);
-  };
-
-  // REVISI: Z-index diperhalus biar gak terlalu "nabrak" mata
-  const coinVariants: Variants = {
-    idle: { scale: 1, rotateX: 0, z: 0 },
-    impact: {
-      scale: [1, 0.9, 1.8], // Diperkecil dari 2.2 ke 1.8 biar gak terlalu dekat
-      z: [0, 50, 150],      // Z dikurangi biar gak "keluar" layar
-      rotateX: [0, -20, 1080], 
-      transition: { duration: 1.2, ease: "easeOut" }
-    },
-    suction: { scale: 0, opacity: 0 },
-    rebirth: {
-      scale: [0, 1.2, 1],
-      z: [-200, 50, 0],
-      rotateX: [-1080, 0],
-      transition: { duration: 1.5, ease: "backOut" }
-    }
+    await controls.start("impact");
+    setStage("freeze");
+    await new Promise(r => setTimeout(r, 500)); // Freeze durasi
+    setStage("suction");
+    await new Promise(r => setTimeout(r, 6000));
+    setStage("overload");
+    await new Promise(r => setTimeout(r, 1000));
+    setStage("rebirth");
+    await controls.start("rebirth");
+    onClick();
+    setStage("idle");
   };
 
   return (
-    <div 
-      className="relative flex items-center justify-center w-[260px] h-[260px]" 
-      style={{ perspective: "1200px" }} // Perspective diperlebar biar gak gepeng
-    >
+    <div className="relative w-[260px] h-[260px]" style={{ perspective: "1000px" }}>
       <motion.button
-        variants={coinVariants}
-        animate={stage}
-        className="relative z-30 outline-none cursor-pointer"
-        style={{
-          transformStyle: "preserve-3d", // Penting buat 3D
-          backfaceVisibility: "hidden", // Mencegah flicker pas muter
+        animate={controls}
+        variants={{
+          idle: { scale: 1, rotateX: 0, z: 0 },
+          impact: { scale: [1, 0.8, 1.8], z: [0, 100, 150], rotateX: [0, -20, 1080] },
+          rebirth: { scale: [0, 1.2, 1], z: [-200, 0], rotateX: [-1080, 0] }
         }}
-        onClick={handleTrigger}
+        transition={{ duration: 1.2, ease: "easeInOut" }}
+        className="relative z-30"
+        onClick={startSequence}
+        style={{ transformStyle: "preserve-3d" }}
       >
-        {/* REVISI: Tambahkan border/shadow buat ngasih kesan tebal koin */}
-        <div className="rounded-full shadow-[0_10px_20px_rgba(0,0,0,0.4),inset_0_-5px_10px_rgba(255,255,255,0.2)]">
-          {children}
-        </div>
+        {children}
       </motion.button>
 
-      {/* Partikel tetap di sini, tapi kita kurangi jumlahnya jadi 40 (cukup buat visual) */}
-      {stage === "suction" && (
-        <ParticleSystem />
-      )}
+      {stage === "suction" && particles.map((p) => <Particle key={p.id} p={p} stage={stage} />)}
     </div>
-  );
-}
-
-// Pisahkan Particle biar gak re-render koin utama
-function ParticleSystem() {
-  return (
-    <>
-      {[...Array(40)].map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ x: 0, y: 0, opacity: 0 }}
-          animate={{
-            x: [0, (Math.random() - 0.5) * 300],
-            y: [0, (Math.random() - 0.5) * 300],
-            opacity: [0, 1, 0],
-          }}
-          transition={{ duration: 2, repeat: Infinity, delay: Math.random() * 2 }}
-          className="absolute w-2 h-2 bg-yellow-400 rounded-full blur-[1px]"
-        />
-      ))}
-    </>
   );
 }
