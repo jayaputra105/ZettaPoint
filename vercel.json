@@ -4,5 +4,11 @@
       "path": "/api/cron/reset",
       "schedule": "0 0 * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/ads.txt",
+      "destination": "/artifacts/nextjs-app/public/ads.txt"
+    }
   ]
 }
