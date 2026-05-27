@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Server Next.js Anda menembak langsung ke GamePix (Aman & Bebas CORS)
+
     const res = await fetch('https://gamepix.com', {
-      next: { revalidate: 60 } // Simpan cache 60 detik agar web Anda super cepat
+      next: { revalidate: 60 } 
     });
 
     if (!res.ok) {

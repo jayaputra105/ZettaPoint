@@ -51,10 +51,10 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
   const coinVariants: Variants = {
     idle: { scale: 1, opacity: 1, rotateX: 0, z: 0, filter: "brightness(1)", transformPerspective: 1000 },
     impact: {
-      scale: [1, 0.85, 1.6], // POLES: Max zoom 1.6 biar gak keluar layar
+      scale: [1, 0.85, 1.6], 
       z: [0, 100, 250],
       opacity: [1, 1, 0],
-      rotateX: [0, 50, -1440], // POLES: Putar ke arah atas/positif biar gak kaku
+      rotateX: [0, 50, -1440], 
       filter: ["brightness(1)", "brightness(1.4)", "brightness(0.6)"],
       transformPerspective: 1000,
       transition: { times: [0, 0.2, 1], duration: 1.2, ease: "easeOut" }

@@ -81,10 +81,14 @@ artifacts/nextjs-app/src/
 │   ├── spin/page.tsx      # Roulette Spin
 │   ├── leaderboard/page.tsx
 │   ├── wallet/page.tsx
+|   ├── minigames.tsx       # minigames
 │   └── api/               # Unused (routing goes to api-server)
 └── components/
     ├── BottomNav.tsx       # Navigation (uses Next.js Link + usePathname)
     ├── CoinClicker.tsx     # Animated golden coin
-    ├── AdModal.tsx         # 5s fake ad modal
-    └── ShootingStars.tsx   # Canvas background animation
+    ├── AdModal.tsx         #  ad modal
+    ├── ShootingStars.tsx   # Canvas background
+    ├── RoomSelector.tsx    # room
+    ├── CosmicCoin.tsx      # animasi coin 
+    └──  arcadePortal.tsx    # inframe dkk
 ```
