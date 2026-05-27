@@ -5,10 +5,12 @@
       "schedule": "0 0 * * *"
     }
   ],
-  "rewrites": [
+  
+  "redirects": [
     {
       "source": "/ads.txt",
-      "destination": "/ads.txt"
+      "destination": "https://zetta-point-nextjs-app.vercel.app/ads.txt",
+      "permanent": true
     }
   ]
 }
