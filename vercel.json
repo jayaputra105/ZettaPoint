@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/ads.txt",
-      "destination": "/ads.txt"
+      "destination": "/artifacts/nextjs-app/public/ads.txt"
     }
   ]
 }
