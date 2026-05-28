@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNav";
+import AdModal from "@/components/AdModal";
 import { useApp } from "@/context/AppProvider";
 import { Coins, Flame, Zap } from "lucide-react";
 
@@ -27,6 +28,7 @@ const SEGMENTS = [
 
 const NUM_SEG = SEGMENTS.length;
 const SEG_ANGLE = 360 / NUM_SEG; // Pas 30 Derajat
+const SPIN_ANIMATION_DURATION_MS = 3000; // 3 detik animasi smooth
 
 function formatCountdown(ms: number): string {
   const t = Math.max(0, Math.ceil(ms / 1000));
@@ -46,10 +48,8 @@ export default function SpinPage() {
   const [lastPrize, setLastPrize] = useState<any>(null);
   const [showResult, setShowResult] = useState(false);
   const [showAdModal, setShowAdModal] = useState(false);
-  const [adTimer, setAdTimer] = useState(5);
-  const [adDone, setAdDone] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const adIntervalRef = useRef<any>(null);
+  const pendingAdSpinRef = useRef(false);
 
   const getTelegramId = () => {
     const tg = (window as any).Telegram?.WebApp;
@@ -125,7 +125,7 @@ export default function SpinPage() {
       if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
       
       fetchSpinState();
-    }, 3500);
+    }, SPIN_ANIMATION_DURATION_MS + 500);
   } catch (e: any) {
     setIsSpinning(false);
     alert(e.message);
@@ -135,19 +135,22 @@ export default function SpinPage() {
 
   const handleAdSpin = () => {
     if (spinState?.adsRemaining <= 0 || isSpinning) return;
-    setAdTimer(5);
-    setAdDone(false);
+    pendingAdSpinRef.current = true;
     setShowAdModal(true);
-    adIntervalRef.current = setInterval(() => {
-      setAdTimer((t) => {
-        if (t <= 1) {
-          clearInterval(adIntervalRef.current!);
-          setAdDone(true);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
+  };
+
+  const handleAdComplete = () => {
+    // Ad selesai ditonton, trigger spin
+    if (pendingAdSpinRef.current) {
+      pendingAdSpinRef.current = false;
+      doSpin("ads");
+    }
+    setShowAdModal(false);
+  };
+
+  const handleAdClose = () => {
+    pendingAdSpinRef.current = false;
+    setShowAdModal(false);
   };
 
   const conicGradient = SEGMENTS.map((seg, i) => `${seg.color} ${i * SEG_ANGLE}deg ${(i + 1) * SEG_ANGLE}deg`).join(", ");
@@ -202,7 +205,9 @@ export default function SpinPage() {
                 width: 300, 
                 height: 300, 
                 rotate: totalRotation, 
-                transition: isSpinning ? "transform 2.5s cubic-bezier(0.1, 0, 0.1, 1)" : "none" 
+                transition: isSpinning 
+                  ? `transform ${SPIN_ANIMATION_DURATION_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)` 
+                  : "none" 
               }}
               className="relative rounded-full border-4 border-zinc-950 overflow-hidden"
             >
@@ -253,7 +258,7 @@ export default function SpinPage() {
               <button
                 onClick={() => doSpin("premium")}
                 disabled={isSpinning}
-                className="relative flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-amber-700 bg-zinc-900 border border-amber-500/20 text-[#FFD700] font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 shadow-xl"
+                className="relative flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-amber-700 bg-zinc-900 border border-amber-500/20 text-[#FFD700] font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 disabled:border-b-0 shadow-xl hover:shadow-[0_0_15px_rgba(255,215,0,0.3)] disabled:hover:shadow-xl"
               >
                 <div className="flex items-center gap-1.5">
                     <Flame size={12} />
@@ -266,7 +271,7 @@ export default function SpinPage() {
                 <button
                   onClick={() => doSpin("free")}
                   disabled={isSpinning}
-                  className="flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-amber-600 bg-[#FFD700] text-black font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all shadow-xl"
+                  className="flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-amber-600 bg-[#FFD700] text-black font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 disabled:border-b-0 shadow-xl hover:shadow-[0_0_15px_rgba(255,215,0,0.4)]"
                 >
                   <div className="flex items-center gap-1.5">
                       <Zap size={12} />
@@ -277,7 +282,7 @@ export default function SpinPage() {
                 <button
                   onClick={handleAdSpin}
                   disabled={spinState?.adsRemaining <= 0 || isSpinning}
-                  className="flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-zinc-800 bg-zinc-900 border border-white/5 text-[#FFD700] font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 disabled:border-b-0 shadow-xl"
+                  className="flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-zinc-800 bg-zinc-900 border border-white/5 text-[#FFD700] font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 disabled:border-b-0 shadow-xl hover:shadow-[0_0_15px_rgba(255,215,0,0.2)] disabled:hover:shadow-xl"
                 >
                   <span>Ads {spinState ? spinState.adsRemaining : 5}/{spinState ? spinState.maxAds : 5}</span>
                 </button>
@@ -298,46 +303,48 @@ export default function SpinPage() {
       <AnimatePresence>
         {showResult && lastPrize && (
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md"
           >
-            <div className="w-full max-w-xs p-10 rounded-[36px] text-center border border-white/10 bg-[#070707] shadow-[0_0_50px_rgba(255,215,0,0.2)] relative overflow-hidden">
+            <motion.div 
+              className="w-full max-w-xs p-10 rounded-[36px] text-center border border-white/10 bg-[#070707] shadow-[0_0_50px_rgba(255,215,0,0.2)] relative overflow-hidden"
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut", delay: 0.1 }}
+            >
               <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
               <p className="text-[10px] font-black text-white/20 mb-2 uppercase tracking-[0.4em]">Jackpot!</p>
               <h2 className="text-sm font-bold text-white/60 mb-1 uppercase">You Received</h2>
-              <p className="text-[#FFD700] text-4xl font-black italic tracking-tighter mb-8 drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]">{lastPrize.label}</p>
+              <motion.p 
+                className="text-[#FFD700] text-4xl font-black italic tracking-tighter mb-8 drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]"
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, ease: "easeOut", delay: 0.2 }}
+              >
+                {lastPrize.label}
+              </motion.p>
               <button 
                 onClick={() => setShowResult(false)} 
-                className="w-full py-4 rounded-2xl bg-[#FFD700] text-black font-black uppercase text-[10px] tracking-widest border-b-4 border-amber-600 active:translate-y-0.5 active:border-b-0 transition-all"
+                className="w-full py-4 rounded-2xl bg-[#FFD700] text-black font-black uppercase text-[10px] tracking-widest border-b-4 border-amber-600 active:translate-y-0.5 active:border-b-0 transition-all hover:shadow-[0_0_15px_rgba(255,215,0,0.4)] shadow-xl"
               >
                 Claim to Wallet
               </button>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ADS MODAL */}
-      <AnimatePresence>
-        {showAdModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/98 backdrop-blur-2xl">
-             <div className="text-center">
-                <div className="w-20 h-20 mb-8 mx-auto relative flex items-center justify-center border-4 border-[#FFD700] rounded-full shadow-[0_0_25px_rgba(255,215,0,0.25)]">
-                   <span className="text-2xl font-black text-[#FFD700] tabular-nums animate-pulse">{adTimer}</span>
-                </div>
-                <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.4em] mb-10">Loading Sponsor Video...</p>
-                {adDone && (
-                  <button 
-                    onClick={() => { setShowAdModal(false); doSpin("ads"); }} 
-                    className="px-10 py-4 rounded-xl bg-[#FFD700] text-black font-black uppercase text-[10px] tracking-widest shadow-xl border-b-4 border-amber-600 active:translate-y-0.5 active:border-b-0 transition-all"
-                  >
-                    Claim Reward Spin
-                  </button>
-                )}
-             </div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* AD MODAL - PAKAI COMPONENT YANG SUDAH ADA */}
+      <AdModal 
+        open={showAdModal}
+        adNumber={spinState ? spinState.maxAds - spinState.adsRemaining + 1 : 1}
+        maxAds={spinState ? spinState.maxAds : 5}
+        onComplete={handleAdComplete}
+        onClose={handleAdClose}
+      />
       
       <BottomNav />
     </div>
