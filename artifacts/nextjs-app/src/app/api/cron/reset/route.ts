@@ -100,10 +100,10 @@ export async function GET(req: Request) {
           }
         }
 
-        // KUNCI MATI: Bersihkan poin kamar terkait kembali ke nol
+
         await db.update(users).set({ [activeZpString]: 0 });
 
-        // PENENTUAN DURASI DURAKA KAKU SESUAI SPEK LU
+
         let durationDays = 1; // Bronze 1 hari
         if (room.id === "silver") {
           durationDays = 3;   // Silver 3 hari

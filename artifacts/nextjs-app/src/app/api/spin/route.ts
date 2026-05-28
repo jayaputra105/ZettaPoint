@@ -15,7 +15,7 @@ const PRIZES = [
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
   { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "5 USDT", coins: 0, usdt: 5, weight: 0.2 },
-  { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, // Jimat Pajangan Kasino 0%
+  { label: "25 USDT", coins: 0, usdt: 25, weight: 0.0 }, 
   { label: "1 USDT", coins: 0, usdt: 1, weight: 1.0 },
   { label: "1000 Koin", coins: 1000, usdt: 0, weight: 5.0 },
   { label: "500 Koin", coins: 500, usdt: 0, weight: 5.6 },
@@ -101,9 +101,8 @@ export async function POST(req: Request) {
     const prize = PRIZES[prizeIndex];
     
     await db.transaction(async (tx) => {
-      // FIX UTAMA: Kunci baris data spinRecords dengan logic Upsert terbarikade
+
       if (spin) {
-        // Jika data spin milik user sudah terdaftar di database, lakukan update biasa
         if (spinType === "ads") {
           await tx.update(spinRecords)
             .set({
@@ -117,7 +116,6 @@ export async function POST(req: Request) {
             .where(eq(spinRecords.userId, user.id));
         }
       } else {
-        // Jika user baru pertama kali spin seumur hidup (data baris kosong), buat row baru (INSERT)
         await tx.insert(spinRecords).values({
           userId: user.id,
           lastFreeSpinAt: spinType === "free" ? new Date() : undefined,
