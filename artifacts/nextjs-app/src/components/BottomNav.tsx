@@ -18,7 +18,7 @@ export default function BottomNav() {
   
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-3"
+      className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-3"
       style={{
         background:
           "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.95) 100%)",
