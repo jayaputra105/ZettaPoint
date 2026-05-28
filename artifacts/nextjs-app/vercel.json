@@ -4,5 +4,12 @@
       "path": "/api/cron/reset",
       "schedule": "0 0 * * *"
     }
+  ],
+  
+  "rewrites": [
+    {
+      "source": "/ads.txt",
+      "destination": "/public/ads.txt"
+    }
   ]
 }
