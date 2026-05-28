@@ -3,7 +3,9 @@ adsgram.ai, 52779, DIRECT, 56f9c9ab7e9e4f7984a8e6b4a19b9ea9
 
 # Gamezop (Tunggu instruksi dari Paras, biasanya mereka kasih format seperti ini)
 gamezop.com, [ID_LO_GAMEZOP], DIRECT, [TOKEN_GAMEZOP]
-#properti-gpx-Z3Z6O
+rhythmone.com, 3611299104, RESELLER
+
+#properti-gpx-5P313
 #gpx-terakhir-diperbarui-2024-11-21
 #gpx-reviq
 rev.iq, Kf077RYmx6XvWT8mhSbYq7LIQTU, LANGSUNG
@@ -65,9 +67,9 @@ smartadserver.com, 4016, RESELLER
 smartadserver.com, 4071, RESELLER
 smartadserver.com, 4073, RESELLER
 smartadserver.com, 4074, RESELLER
-criteo.com, B-068838, DIRECT, 9fac4a4a87c2a44f
+criteo.com, B-068838, LANGSUNG, 9fac4a4a87c2a44f
 themediagrid.com, Q6VXLE, DIRECT, 35d5010d7789b49d
-aps.amazon.com, 5d8ed25e-57cc-441a-b62a-127b34faae4e, DIRECT
+aps.amazon.com, 5d8ed25e-57cc-441a-b62a-127b34faae4e, LANGSUNG
 yahoo.com, 59704, RESELLER, e1a5b5b6e3255540 #VM-tag
 sharethrough.com, ZXZlB4L7, DIRECT, d53b998a7bd4ecd2
 rubiconproject.com, 18694, RESELLER, 0bfd66d529a55807
@@ -76,20 +78,20 @@ openx.com, 540274407, RESELLER, 6a698e2ec38604c6
 smaato.com, 1100047713, RESELLER, 07bcf65f187117b4
 yahoo.com, 59531, RESELLER, e1a5b5b6e3255540
 smartadserver.com, 4342, RESELLER
-teads.tv, 25843, DIRECT, 15a9c44f6d26cbe1z
-rwadx.com, rw209mtasduinzgsxqpriqyfejxvmubnylu63e2356c0a23b, DIRECT
-readwhere.digital, rd891fiofzktecyodvubtsyqhutsincexqe63e23569bf264, DIRECT
-freewheel.tv, 1599079, DIRECT
-freewheel.tv, 1599080, RESELLER
-incrementx.com, 100161, DIRECT, 8728b7e97e589da4
+teads.tv, 25843, LANGSUNG, 15a9c44f6d26cbe1z
+rwadx.com, rw209mtasduinzgsxqpriqyfejxvmubnylu63e2356c0a23b, LANGSUNG
+readwhere.digital, rd891fiofzktecyodvubtsyqhutsincexqe63e23569bf264, LANGSUNG
+freewheel.tv, 1599079, LANGSUNG
+freewheel.tv, 1599080, PENJUAL KEMBALI
+incrementx.com, 100161, LANGSUNG, 8728b7e97e589da4
 pubmatic.com, 163277, RESELLER, 5d62403b186f2ace
 lijit.com, 381276-eb, RESELLER, fafdf38b16bf6b2b
 rubiconproject.com, 22884, RESELLER, 0bfd66d529a55807
 # Adagio
-adagio.io, 1416, DIRECT
+adagio.io, 1416, LANGSUNG
 rubiconproject.com, 19116, RESELLER, 0bfd66d529a55807
 pubmatic.com, 159110, RESELLER, 5d62403b186f2ace
-improvedigital.com, 1790, RESELLER
+improvedigital.com, 1790, PENJUAL KEMBALI
 onetag.com, 6b859b96c564fbe, RESELLER
 appnexus.com, 13099, RESELLER
 pubmatic.com, 161593, RESELLER, 5d62403b186f2ace
@@ -105,29 +107,29 @@ indexexchange.com, 191973, RESELLER, 50b1c356f2c5c8fc
 lijit.com, 367236, RESELLER, fafdf38b16bf6b2b
 openx.com, 538959099, RESELLER, 6a698e2ec38604c6
 rubiconproject.com, 17960, RESELLER, 0bfd66d529a55807
-freewheel.tv, 1568036, RESELLER
-freewheel.tv, 1568041, RESELLER
+freewheel.tv, 1568036, PENJUAL KEMBALI
+freewheel.tv, 1568041, PENJUAL KEMBALI
 openx.com, 558899373, RESELLER, 6a698e2ec38604c6
 e-planning.net, 83c06e81531537f4, RESELLER, c1ba615865ed87b2
 pubmatic.com, 156631, RESELLER, 5d62403b186f2ace
 openx.com, 541031350, RESELLER, 6a698e2ec38604c6
 rubiconproject.com, 12186, RESELLER, 0bfd66d529a55807
-video.unrulymedia.com, 5672421953199218469, RESELLER
-indexexchange.com, 194558, RESELLER
+video.unrulymedia.com, 5672421953199218469, PENJUAL KEMBALI
+indexexchange.com, 194558, PENJUAL KEMBALI
 smartadserver.com, 3554, RESELLER
-video.unrulymedia.com, 2564526802, RESELLER
+video.unrulymedia.com, 2564526802, PENJUAL KEMBALI
 sharethrough.com, OAW69Fon, RESELLER, d53b998a7bd4ecd2
 triplelift.com, 13482, RESELLER, 6c33edb13117fd86
 # Adapex
-yahoo.com, 59988, DIRECT, e1a5b5b6e3255540
-pubmatic.com, 157007, DIRECT, 5d62403b186f2ace
-aps.amazon.com, 1ad7261b-91ea-4b6f-b9e9-b83522205b75, DIRECT
+yahoo.com, 59988, LANGSUNG, e1a5b5b6e3255540
+pubmatic.com, 157007, LANGSUNG, 5d62403b186f2ace
+aps.amazon.com, 1ad7261b-91ea-4b6f-b9e9-b83522205b75, LANGSUNG
 appnexus.com, 7847, RESELLER, f5ab79cb980f11d1
 rubiconproject.com, 18020, RESELLER, 0bfd66d529a55807
 openx.com, 540191398, RESELLER, 6a698e2ec38604c6
 smaato.com, 1100044650, RESELLER, 07bcf65f187117b4
-ad-generation.jp, 12474, RESELLER, 7f4ea9029ac04e53
-districtm.io, 100962, RESELLER, 3fd707be9c4527c3
+ad-generasi.jp, 12474, RESELLER, 7f4ea9029ac04e53
+distrikm.io, 100962, RESELLER, 3fd707be9c4527c3
 appnexus.com, 3663, RESELLER, f5ab79cb980f11d1
 rhythmone.com, 1654642120, RESELLER, a670c89d4a324e47
 gumgum.com, 14141, RESELLER, ffdef49475d318a9
@@ -143,21 +145,21 @@ mintegral.com, 10043, RESELLER, 0aeed750c80d6423
 sonobi.com, 7f5fa520f8, RESELLER, d1a215d9eb5aee9e
 indexexchange.com, 192410, RESELLER, 50b1c356f2c5c8fc
 smartadserver.com, 4125, RESELLER, 060d053dcf45cbf3
-ogury.com, 0846bb3e-49b2-4f45-97f2-eb808c71c416, RESELLER
+ogury.com, 0846bb3e-49b2-4f45-97f2-eb808c71c416, PENJUAL KEMBALI
 gumgum.com, 15875, RESELLER, ffdef49475d318a9
 rubiconproject.com, 23434, RESELLER, 0bfd66d529a55807
 pubmatic.com, 157897, RESELLER, 5d62403b186f2ace
-appnexus.com, 2758, RESELLER, f5ab79cb980f11d1
+appnexus.com, 2758, Pengecer, f5ab79cb980f11d1
 contextweb.com, 558355, RESELLER, 89ff185a4c4e857c
 openx.com, 537149485, RESELLER, 6a698e2ec38604c6
-improvedigital.com, 1884, RESELLER
+improvedigital.com, 1884, PENJUAL KEMBALI
 smartadserver.com, 4005, RESELLER, 060d053dcf45cbf3
 imds.tv, 82151, RESELLER, ae6c32151e71f19d
 admanmedia.com, 799, RESELLER
-revcontent.com, 110029, RESELLER
+revcontent.com, 110029, PENJUAL KEMBALI
 google.com, pub-3848273848634341, RESELLER, f08c47fec0942fa0
 xandr.com, 7847, RESELLER, f5ab79cb980f11d1 #Hb #tam
-conversantmedia.com, 40824, DIRECT, 03113cd04947736d
+conversantmedia.com, 40824, LANGSUNG, 03113cd04947736d
 admanmedia.com, 2050, RESELLER
 rubiconproject.com, 23644, RESELLER, 0bfd66d529a55807
 yahoo.com, 55771, RESELLER, e1a5b5b6e3255540
@@ -167,12 +169,12 @@ pubmatic.com, 158100, RESELLER, 5d62403b186f2ace
 lijit.com, 411121, RESELLER, fafdf38b16bf6b2b #SOVRN
 conversantmedia.com, 42046, RESELLER, 03113cd04947736d
 appnerve.com, 187287, RESELLER
-criteo.com, B-068074, DIRECT, 9fac4a4a87c2a44f
-themediagrid.com, Q1VB5D, DIRECT, 35d5010d7789b49d
-improvedigital.com, 1914, RESELLER
+criteo.com, B-068074, LANGSUNG, 9fac4a4a87c2a44f
+themediagrid.com, Q1VB5D, LANGSUNG, 35d5010d7789b49d
+improvedigital.com, 1914, PENJUAL KEMBALI
 improvedigital.com, 2309, RESELLER
 indexexchange.com, 184311, RESELLER, 50b1c356f2c5c8fc
-indexexchange.com, 194311, RESELLER
+indexexchange.com, 194311, PENJUAL KEMBALI
 indexexchange.com, 191876, RESELLER, 50b1c356f2c5c8fc
 indexexchange.com, 202400, RESELLER, 50b1c356f2c5c8fc #tam
 indexexchange.com, 187063, RESELLER, 50b1c356f2c5c8fc #ob
@@ -183,8 +185,8 @@ openx.com, 537144083, RESELLER, 6a698e2ec38604c6
 openx.com, 540251318, RESELLER, 6a698e2ec38604c6
 openx.com, 543531784, RESELLER, 6a698e2ec38604c6 #ob
 openx.com, 559611024, RESELLER, 6a698e2ec38604c6 #TAM
-rhythmone.com, 1022945102, DIRECT, a670c89d4a324e47
-rhythmone.com, 1223411471, DIRECT, a670c89d4a324e47 #ob
+rhythmone.com, 1022945102, LANGSUNG, a670c89d4a324e47
+rhythmone.com, 1223411471, LANGSUNG, a670c89d4a324e47 #ob
 sharethrough.com, c7f387ce, DIRECT, d53b998a7bd4ecd2
 sharethrough.com, 9kfhLUI1, DIRECT, d53b998a7bd4ecd2
 sharethrough.com, c7f387ce, RESELLER, d53b998a7bd4ecd2
@@ -436,7 +438,4 @@ Media.net, 8CUV34PJ4, DIRECT
 openx.com, 537100188, RESELLER, 6a698e2ec38604c6
 pubmatic.com, 159463, RESELLER, 5d62403b186f2ace
 Appnexus.com, 1356, RESELLER, f5ab79cb980f11d1
-rubiconproject.com, 19396, RESELLER, 0bfd66d529a55807
-onetag.com, 5d49f482552c9b6, RESELLER
-sonobi.com, 83729e979b, RESELLER
-rhythmone.com, 3611299104, RESELLER
+rubiconproject.com, 19396, RESELLER, 0bfd66d529a
