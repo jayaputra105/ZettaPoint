@@ -148,7 +148,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   opacity: loadingAd ? 0.5 : 1
                 }}
               >
-                {loadingAd ? "Processing..." : "Verify Coin Unlock"}
+                {loadingAd ? "Processing..." : "Verify watch ad"}
               </button>
             </div>
 
