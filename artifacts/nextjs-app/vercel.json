@@ -5,7 +5,6 @@
       "schedule": "0 0 * * *"
     }
   ],
-  
   "rewrites": [
     {
       "source": "/ads.txt",
