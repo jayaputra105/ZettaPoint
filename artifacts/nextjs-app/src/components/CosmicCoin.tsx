@@ -104,7 +104,25 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
         <div className="relative" style={{ transform: "translateZ(0)" }}>{children}</div>
       </motion.button>
 
-      
+      {stage !== "idle" && particles.map((p) => {
+
+        const spiralKeyframesX = [Math.cos(p.initialAngle) * p.initialDistance, Math.cos(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7), Math.cos(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35), 0];
+        const spiralKeyframesY = [Math.sin(p.initialAngle) * p.initialDistance - 40, Math.sin(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7) - 25, Math.sin(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35) - 10, 0];
+
+        return (
+          <motion.div
+            key={p.id}
+            initial={{ x: Math.cos(p.initialAngle) * p.initialDistance, y: Math.sin(p.initialAngle) * p.initialDistance - 40 }}
+            animate={ (stage === "suction" || stage === "overload") ? 
+              { x: spiralKeyframesX, y: spiralKeyframesY, scale: [0.95, 0.75, 0.4, 0], opacity: [1, 0.95, 0.6, 0], z: [0, -50, -180, -350] } 
+              : { x: Math.cos(p.initialAngle) * p.initialDistance, y: Math.sin(p.initialAngle) * p.initialDistance - 40 }
+            }
+            transition={{ duration: (stage === "suction" || stage === "overload") ? p.randomSpeed : 1, delay: p.randomDelay, ease: "linear" }}
+            className="absolute w-2.5 h-2.5 rounded-sm z-40 bg-gradient-to-br from-white via-yellow-400 to-amber-600"
+            style={{ willChange: "transform", transform: "translateZ(0)" }}
+          />
+        );
+      })}
 
       <AnimatePresence>
         {(stage === "suction" || stage === "overload") && (
