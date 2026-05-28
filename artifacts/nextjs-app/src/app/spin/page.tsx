@@ -50,6 +50,7 @@ export default function SpinPage() {
   const [showAdModal, setShowAdModal] = useState(false);
   const [now, setNow] = useState(Date.now());
   const pendingAdSpinRef = useRef(false);
+  const spinDataRef = useRef<any>(null); // Simpan data spin temporary
 
   const getTelegramId = () => {
     const tg = (window as any).Telegram?.WebApp;
@@ -74,64 +75,77 @@ export default function SpinPage() {
   };
 
   const doSpin = async (type: "premium" | "free" | "ads") => {
-  const tid = getTelegramId(); // 📝 WAJIB: Ambil Telegram ID dulu di paling atas fungsi
-  if (isSpinning || !tid) return;
-  
-  setIsSpinning(true);
-  setShowResult(false);
-  
-  try {
-    const res = await fetch("/api/spin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        spinType: type,
-        useAd: type === "ads",
-        telegramId: tid
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const tid = getTelegramId();
+    if (isSpinning || !tid) return;
     
-    // =========================================================
-    // 🏎️ JALUR AKUMULASI SPIN (ANCANG-ANCANG KE NOL BARU LANJUT)
-    // =========================================================
-    const currentDegrees = totalRotation % 360;
-    const degreesToReset = (360 - currentDegrees) % 360;
+    setIsSpinning(true);
+    setShowResult(false);
     
-    const baseAngle = (NUM_SEG - data.prizeIndex) % NUM_SEG * SEG_ANGLE;
-    const segmentCenter = baseAngle - (SEG_ANGLE / 2);
-    const targetDegrees = (segmentCenter + 270 + 360) % 360;
-    
-    const finalAngle = totalRotation + degreesToReset + (360 * 5) + targetDegrees;
-    
-    setTotalRotation(finalAngle);
-    setLastPrize(data.prize);
-    // =========================================================
-    
-    if (type === "premium") {
-      setCoins(coins - 200);
-    }
-    
-    setTimeout(() => {
-      setIsSpinning(false);
-      setShowResult(true);
+    try {
+      const res = await fetch("/api/spin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spinType: type,
+          useAd: type === "ads",
+          telegramId: tid
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       
+      // =========================================================
+      // 🏎️ JALUR AKUMULASI SPIN (ANCANG-ANCANG KE NOL BARU LANJUT)
+      // =========================================================
+      const currentDegrees = totalRotation % 360;
+      const degreesToReset = (360 - currentDegrees) % 360;
+      
+      const baseAngle = (NUM_SEG - data.prizeIndex) % NUM_SEG * SEG_ANGLE;
+      const segmentCenter = baseAngle - (SEG_ANGLE / 2);
+      const targetDegrees = (segmentCenter + 270 + 360) % 360;
+      
+      const finalAngle = totalRotation + degreesToReset + (360 * 5) + targetDegrees;
+      
+      setTotalRotation(finalAngle);
+      setLastPrize(data.prize);
+      spinDataRef.current = data; // Simpan untuk later use
+      // =========================================================
+      
+      // UPDATE COINS SEBELUM SPIN (untuk premium deduct)
       if (type === "premium") {
-        if (data.prize.coins > 0) setCoins(coins - 200 + data.prize.coins);
-      } else {
-        if (data.prize.coins > 0) setCoins(coins + data.prize.coins);
+        setCoins(Math.max(0, coins - 200));
       }
-      if (data.prize.usdt > 0) setUsdtBalance(usdtBalance + data.prize.usdt);
       
+      setTimeout(() => {
+        setIsSpinning(false);
+        setShowResult(true);
+        
+        // UPDATE COINS SETELAH SPIN (add prize)
+        if (type === "premium") {
+          if (data.prize.coins > 0) {
+            setCoins(Math.max(0, coins - 200) + data.prize.coins);
+          }
+        } else {
+          if (data.prize.coins > 0) {
+            setCoins(coins + data.prize.coins);
+          }
+        }
+        
+        if (data.prize.usdt > 0) {
+          setUsdtBalance(usdtBalance + data.prize.usdt);
+        }
+        
+        fetchSpinState();
+        spinDataRef.current = null;
+      }, SPIN_ANIMATION_DURATION_MS + 500);
+    } catch (e: any) {
+      setIsSpinning(false);
+      console.error("Spin error:", e.message);
+      alert("❌ " + e.message);
       fetchSpinState();
-    }, SPIN_ANIMATION_DURATION_MS + 500);
-  } catch (e: any) {
-    setIsSpinning(false);
-    alert(e.message);
-    fetchSpinState();
-  }
-}; // 📝 Tutup kurung fungsi doSpin
+      spinDataRef.current = null;
+    }
+  };
 
   const handleAdSpin = () => {
     if (spinState?.adsRemaining <= 0 || isSpinning) return;
@@ -257,7 +271,7 @@ export default function SpinPage() {
               {/* TOMBOL KIRI (PREMIUM 200 COIN) */}
               <button
                 onClick={() => doSpin("premium")}
-                disabled={isSpinning}
+                disabled={isSpinning || coins < 200}
                 className="relative flex flex-col items-center justify-center py-4 rounded-2xl border-b-4 border-amber-700 bg-zinc-900 border border-amber-500/20 text-[#FFD700] font-black uppercase text-[11px] tracking-widest active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-20 disabled:border-b-0 shadow-xl hover:shadow-[0_0_15px_rgba(255,215,0,0.3)] disabled:hover:shadow-xl"
               >
                 <div className="flex items-center gap-1.5">
