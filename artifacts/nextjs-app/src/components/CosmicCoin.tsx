@@ -104,7 +104,8 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
         <div className="relative" style={{ transform: "translateZ(0)" }}>{children}</div>
       </motion.button>
 
-      {particles.map((p) => {
+      {stage !== "idle" && particles.map((p) => {
+
         const spiralKeyframesX = [Math.cos(p.initialAngle) * p.initialDistance, Math.cos(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7), Math.cos(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35), 0];
         const spiralKeyframesY = [Math.sin(p.initialAngle) * p.initialDistance - 40, Math.sin(p.initialAngle + Math.PI * 1.5) * (p.initialDistance * 0.7) - 25, Math.sin(p.initialAngle + Math.PI * 3.5) * (p.initialDistance * 0.35) - 10, 0];
 
