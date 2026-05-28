@@ -4,13 +4,5 @@
       "path": "/api/cron/reset",
       "schedule": "0 0 * * *"
     }
-  ],
-  
-  "redirects": [
-    {
-      "source": "/ads.txt",
-      "destination": "https://zetta-point-nextjs-app.vercel.app/ads.txt",
-      "permanent": true
-    }
   ]
 }
