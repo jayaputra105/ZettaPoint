@@ -58,9 +58,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sfx = new Audio(`/audio/${type}.mp3`);
     
     // Atur volume masing-masing sfx biar seimbang
-    if (type === "spin") sfx.volume = 0.6;
-    else if (type === "win") sfx.volume = 0.7;
-    else sfx.volume = 0.2; // click volume
+    if (type === "spin") sfx.volume = 1.5;
+    else if (type === "win") sfx.volume = 1.5;
+    else sfx.volume = 3; // click volume
 
     sfx.play().catch(() => {});
   };

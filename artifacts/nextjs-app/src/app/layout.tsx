@@ -4,7 +4,7 @@ import { AppProvider } from "@/context/AppProvider";
 import Script from "next/script"; // 1. IMPORT SCRIPT NEXTJS
 
 export const metadata: Metadata = {
-  title: "Playzetta",
+  title: "ZettaPoint",
   description: "Tap to earn Zetta Points and USDT!",
 };
 

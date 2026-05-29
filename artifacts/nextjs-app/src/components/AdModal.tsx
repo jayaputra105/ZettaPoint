@@ -105,7 +105,7 @@ export default function AdModal({ open, adNumber, maxAds, onComplete, onClose }:
                   Sponsored Content
                 </p>
                 <p className="font-black text-lg text-yellow-500">
-                  Watch ad
+                  Watch ad 📺
                 </p>
               </div>
               <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20">

@@ -89,13 +89,10 @@ export async function POST(req: Request) {
             VALUES (${id.toString()}, ${first_name}, ${username || ''}, 0, 0, ${inviterDbId})
             ON CONFLICT (telegram_id) DO NOTHING
           `;
-
-          // Jika pengundangnya valid, kirim parameter ID Telegram-nya buat frontend (opsional)
           if (inviterTgId) {
             finalInviterParam = `&inviter=${inviterTgId}`;
           }
         } else {
-          // JIKA USER LAMA: Cek apakah dia punya referrer, kalau ada relasikan ID-nya ke frontend jika butuh
           if (existingUser.referrer_id) {
             const [currentInviter] = await sql`SELECT telegram_id FROM users WHERE id = ${existingUser.referrer_id}`;
             if (currentInviter) {
@@ -113,7 +110,7 @@ export async function POST(req: Request) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: id,
-            text: `Woi ${first_name}! Selamat datang di Playzetta.🪙🔥\n\nKlik tombol di bawah ini buat langsung buka game lu sekarang! 👇`,
+            text: `Woi ${first_name}! Welcome to  Zetta Point.🪙🔥\n\nClick the button below to open game now! 👇`,
             reply_markup: {
               keyboard: [
                 [
