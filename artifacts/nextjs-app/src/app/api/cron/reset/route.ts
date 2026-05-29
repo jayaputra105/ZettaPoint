@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, rooms, leaderboardWinners, transactions } from "@/db/schema";
-import { eq, desc, sql, inArray } from "drizzle-orm";
+import { eq, desc, gt, inArray } from "drizzle-orm";
 
 export async function GET(req: Request) {
   // PROTECTION LAYER: Validasi Vercel Cron Secret
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
         const topPlayers = await db
           .select()
           .from(users)
-          .where(sql`${activeZpCol} > 0`)
+          .where(gt(activeZpCol, 0))
           .orderBy(desc(activeZpCol))
           .limit(150);
 
@@ -46,8 +46,9 @@ export async function GET(req: Request) {
             if (winner.telegramId && prizeAmount > 0) {
               await db.transaction(async (tx) => {
                 // 1. Tambah saldo USDT global
+                const currentBalance = winner.usdtBalance || 0;
                 await tx.update(users)
-                  .set({ usdtBalance: sql`${users.usdtBalance} + ${prizeAmount}` })
+                  .set({ usdtBalance: currentBalance + prizeAmount })
                   .where(eq(users.id, winner.id));
 
                 // 2. Catat sejarah podium juara
@@ -92,7 +93,7 @@ export async function GET(req: Request) {
           }
         }
 
-        // FIX: Update hanya users yang punya score > 0 di room ini dengan proper column reference
+        // FIX: Update hanya users yang punya score > 0 di room ini
         const updateObj: any = {};
         if (room.id === "bronze") updateObj.zpBronze = 0;
         else if (room.id === "silver") updateObj.zpSilver = 0;
@@ -102,7 +103,7 @@ export async function GET(req: Request) {
         if (Object.keys(updateObj).length > 0) {
           await db.update(users)
             .set(updateObj)
-            .where(sql`${activeZpCol} > 0`);
+            .where(gt(activeZpCol, 0));
         }
 
         // Set next reset time
