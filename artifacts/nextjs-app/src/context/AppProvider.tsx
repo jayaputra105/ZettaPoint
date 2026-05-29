@@ -53,17 +53,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const playSFX = (type: "click" | "spin" | "win") => {
-    if (typeof window === "undefined") return;
-    const sfx = new Audio(`/audio/${type}.mp3`);
-    
-    // Atur volume masing-masing sfx biar seimbang
-    if (type === "spin") sfx.volume = 1.5;
-    else if (type === "win") sfx.volume = 1.5;
-    else sfx.volume = 3; // click volume
 
-    sfx.play().catch(() => {});
-  };
+const playSFX = (type: "click" | "spin" | "win") => {
+  const sfx = new Audio(`/audio/${type}.mp3`);
+  sfx.volume = 1.0;
+  sfx.play().catch(e => console.error("SFX Error:", e));
+};
+
 
   // Trigger BGM setelah user menyentuh layar pertama kali (Syarat mutlak Telegram WebApp)
   useEffect(() => {
@@ -73,6 +69,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener("click", handleFirstInteraction);
         window.removeEventListener("touchstart", handleFirstInteraction);
       };
+      
+      const handleVisibilityChange = () => {
+    if (document.hidden) {
+      bgmRef.current?.pause(); 
+    } else {
+      bgmRef.current?.play().catch(() => {}); // 
+    }
+  };
+  
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+
       
       window.addEventListener("click", handleFirstInteraction);
       window.addEventListener("touchstart", handleFirstInteraction);
