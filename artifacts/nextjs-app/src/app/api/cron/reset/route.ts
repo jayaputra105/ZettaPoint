@@ -20,14 +20,6 @@ export async function GET(req: Request) {
       // Eksekusi berjalan jika waktu sekarang sudah melewati batas reset database
       if (now >= roomTargetReset) {
         
-        const zpStringMap: Record<string, string> = {
-          bronze: "zp_bronze",
-          silver: "zp_silver",
-          gold: "zp_gold",
-          diamond: "zp_diamond"
-        };
-        const activeZpString = zpStringMap[room.id];
-
         const zpColumnMap: Record<string, any> = {
           bronze: users.zpBronze,
           silver: users.zpSilver,
@@ -100,10 +92,18 @@ export async function GET(req: Request) {
           }
         }
 
-        // FIX: Update hanya users yang punya score > 0 di room ini
-        await db.update(users)
-          .set({ [activeZpString]: 0 })
-          .where(sql`${activeZpCol} > 0`);
+        // FIX: Update hanya users yang punya score > 0 di room ini dengan proper column reference
+        const updateObj: any = {};
+        if (room.id === "bronze") updateObj.zpBronze = 0;
+        else if (room.id === "silver") updateObj.zpSilver = 0;
+        else if (room.id === "gold") updateObj.zpGold = 0;
+        else if (room.id === "diamond") updateObj.zpDiamond = 0;
+
+        if (Object.keys(updateObj).length > 0) {
+          await db.update(users)
+            .set(updateObj)
+            .where(sql`${activeZpCol} > 0`);
+        }
 
         // Set next reset time
         let durationDays = 1; // Bronze 1 hari
