@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { Home, CheckSquare, PieChart, Star, Wallet } from "lucide-react";
 
 const navItems = [
-  { id: "home", label: "Home", icon: Home, href: "/" },
   { id: "tasks", label: "Tasks", icon: CheckSquare, href: "/tasks" },
   { id: "spin", label: "Spin", icon: PieChart, href: "/spin" },
+  { id: "home", label: "Home", icon: Home, href: "/" },
   { id: "leaderboard", label: "Rank", icon: Star, href: "/leaderboard" },
   { id: "wallet", label: "Wallet", icon: Wallet, href: "/wallet" },
 ];
