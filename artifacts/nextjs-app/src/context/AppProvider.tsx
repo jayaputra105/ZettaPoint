@@ -41,57 +41,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qualifiedDiamond, setQualifiedDiamond] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 🌟 AUDIO LOGIC ENGINE (BGM & SFX)
-  const startBGM = () => {
-    if (typeof window === "undefined" || bgmAudio) return;
-    
-    bgmAudio = new Audio("/audio/bgm.mp3");
-    bgmAudio.loop = true;
-    bgmAudio.volume = 0.15; // Setel sayup-sayup pelan biar gak budek di HP player
-    bgmAudio.play().catch((err) => {
-      console.log("Autoplay diblokir browser, nunggu interaksi klik pertama:", err);
-    });
-  };
+import { useEffect, useRef } from "react";
 
+// Gunakan useRef agar instance audio tidak hilang saat re-render
+const bgmRef = useRef<HTMLAudioElement | null>(null);
+const sfxCache = useRef<Record<string, HTMLAudioElement>>({});
 
-const playSFX = (type: "click" | "spin" | "win") => {
-  const sfx = new Audio(`/audio/${type}.mp3`);
-  sfx.volume = 1.0;
-  sfx.play().catch(e => console.error("SFX Error:", e));
+const startBGM = () => {
+  if (typeof window === "undefined" || bgmRef.current) return;
+  
+  bgmRef.current = new Audio("/audio/bgm.mp3");
+  bgmRef.current.loop = true;
+  bgmRef.current.volume = 0.15;
+  bgmRef.current.play().catch((err) => console.log("BGM blocked:", err));
 };
 
+const playSFX = (type: "click" | "spin" | "win") => {
+  if (typeof window === "undefined") return;
 
-  // Trigger BGM setelah user menyentuh layar pertama kali (Syarat mutlak Telegram WebApp)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const handleFirstInteraction = () => {
-        startBGM();
-        window.removeEventListener("click", handleFirstInteraction);
-        window.removeEventListener("touchstart", handleFirstInteraction);
-      };
-      
-      const handleVisibilityChange = () => {
+  // Cek apakah sfx sudah di-load, kalau belum baru bikin baru
+  if (!sfxCache.current[type]) {
+    sfxCache.current[type] = new Audio(`/audio/${type}.mp3`);
+  }
+  
+  const sfx = sfxCache.current[type];
+  sfx.currentTime = 0; // Reset ke awal agar bisa di-spam klik
+  sfx.volume = 1.0;
+  sfx.play().catch((err) => console.error("SFX Error:", err));
+};
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  // 1. Logic buat handle interaksi pertama (Telegram WebApp)
+  const handleFirstInteraction = () => {
+    startBGM();
+    ["click", "touchstart", "pointerdown"].forEach(event => 
+      window.removeEventListener(event, handleFirstInteraction)
+    );
+  };
+
+  ["click", "touchstart", "pointerdown"].forEach(event => 
+    window.addEventListener(event, handleFirstInteraction)
+  );
+
+  // 2. Logic buat stop/resume BGM pas minimize
+  const handleVisibilityChange = () => {
     if (document.hidden) {
-      bgmRef.current?.pause(); 
+      bgmRef.current?.pause();
     } else {
-      bgmRef.current?.play().catch(() => {}); // 
+      // Resume hanya kalau BGM memang sudah pernah jalan
+      if (bgmRef.current) bgmRef.current.play().catch(() => {});
     }
   };
-  
+
   document.addEventListener("visibilitychange", handleVisibilityChange);
-  return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
 
-      
-      window.addEventListener("click", handleFirstInteraction);
-      window.addEventListener("touchstart", handleFirstInteraction);
-      
-      return () => {
-        window.removeEventListener("click", handleFirstInteraction);
-        window.removeEventListener("touchstart", handleFirstInteraction);
-      };
+  return () => {
+    ["click", "touchstart", "pointerdown"].forEach(event => 
+      window.removeEventListener(event, handleFirstInteraction)
+    );
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    
+    // Stop BGM kalau komponen unmount (misal refresh)
+    if (bgmRef.current) {
+      bgmRef.current.pause();
+      bgmRef.current = null;
     }
-  }, []);
-
+  };
+}, []);
   // INITIAL DATA SYNC TELEGRAM (Bawaan lu dijaga ketat)
   useEffect(() => {
     let retryCount = 0;

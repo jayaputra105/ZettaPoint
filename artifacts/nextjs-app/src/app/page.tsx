@@ -149,16 +149,16 @@ export default function Home() {
   let statusLabel: React.ReactNode;
   let statusColor: string;
   if (isFreeAvailable) {
-    statusLabel = "✅ Free click available!";
+    statusLabel = "✅ click available!";
     statusColor = "#4ade80";
   } else if (isAdVerified) {
-    statusLabel = "⚡ Core Unlocked! Tap Matrix to claim  ZP";
+    statusLabel = "⚡ watch ads";
     statusColor = "#f59e0b";
   } else if (isLocked) {
     statusLabel = <>🔒 Overclock Limit! Reset in <span className="text-yellow-500 font-black">{formatCountdown(timeUntilReset)}</span></>;
     statusColor = "rgba(255,100,100,0.85)";
   } else {
-    statusLabel = <>⏳ Overclock Ready: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap Matrix to Sync</>;
+    statusLabel = <>⏳ Overclock: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span> | Tap to unlock Coin</>;
     statusColor = "rgba(212,212,216,0.85)";
   }
   
@@ -166,7 +166,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-yellow-500 font-black animate-pulse tracking-[0.5em] uppercase text-xs">
-          𓂸✎﹏﹏﹏﹏﹏...
+          ✎﹏﹏﹏﹏﹏...
         </p>
       </div>
     );
