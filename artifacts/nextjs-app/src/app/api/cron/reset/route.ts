@@ -72,28 +72,26 @@ export async function GET(req: Request) {
             }
           }
 
-          // ATURAN SAKTI LU: Promosi otomatis Top 150 (TIDAK BERUBAH)
-          const nextRoomMap: Record<string, string> = {
-            bronze: "qualified_silver",
-            silver: "qualified_gold",
-            gold: "qualified_diamond"
-          };
-          const nextColString = nextRoomMap[room.id];
-          
-          if (nextColString) {
-            const topIds = topPlayers
-              .map(p => p.telegramId)
-              .filter((id): id is string => id !== null);
+          // ATURAN SAKTI LU: Promosi otomatis Top 150 dengan proper column reference
+          const topIds = topPlayers
+            .map(p => p.telegramId)
+            .filter((id): id is string => id !== null);
 
-            if (topIds.length > 0) {
+          if (topIds.length > 0) {
+            const promoteObj: any = {};
+            if (room.id === "bronze") promoteObj.qualifiedSilver = true;
+            else if (room.id === "silver") promoteObj.qualifiedGold = true;
+            else if (room.id === "gold") promoteObj.qualifiedDiamond = true;
+
+            if (Object.keys(promoteObj).length > 0) {
               await db.update(users)
-                .set({ [nextColString]: true })
+                .set(promoteObj)
                 .where(inArray(users.telegramId, topIds));
             }
           }
         }
 
-        // FIX: Update hanya users yang punya score > 0 di room ini
+        // FIX: Update hanya users yang punya score > 0 di room ini dengan proper column reference
         const updateObj: any = {};
         if (room.id === "bronze") updateObj.zpBronze = 0;
         else if (room.id === "silver") updateObj.zpSilver = 0;
