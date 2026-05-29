@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, rooms, leaderboardWinners, transactions } from "@/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 
 export async function GET(req: Request) {
   // PROTECTION LAYER: Validasi Vercel Cron Secret
@@ -95,15 +95,17 @@ export async function GET(req: Request) {
             if (topIds.length > 0) {
               await db.update(users)
                 .set({ [nextColString]: true })
-                .where(sql`telegram_id IN ${topIds}`);
+                .where(inArray(users.telegramId, topIds));
             }
           }
         }
 
+        // FIX: Update hanya users yang punya score > 0 di room ini
+        await db.update(users)
+          .set({ [activeZpString]: 0 })
+          .where(sql`${activeZpCol} > 0`);
 
-        await db.update(users).set({ [activeZpString]: 0 });
-
-
+        // Set next reset time
         let durationDays = 1; // Bronze 1 hari
         if (room.id === "silver") {
           durationDays = 3;   // Silver 3 hari
