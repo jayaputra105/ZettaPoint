@@ -166,7 +166,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-yellow-500 font-black animate-pulse tracking-[0.5em] uppercase text-xs">
-          ᶠᶸᶜᵏMe𓀐𓂸✎﹏﹏﹏﹏
+          𓂸✎﹏﹏﹏﹏﹏...
         </p>
       </div>
     );
