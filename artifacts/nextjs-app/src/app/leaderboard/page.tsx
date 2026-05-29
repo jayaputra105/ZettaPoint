@@ -26,9 +26,9 @@ interface RoomData {
 }
 
 const ROOMS = [
-  { id: "bronze", name: "Bronze", icon: "🔹", color: "#CD7F32" },
-  { id: "silver", name: "Silver", icon: "🔹", color: "#C0C0C0" },
-  { id: "gold", name: "Gold", icon: "🔹", color: "#FFD700" },
+  { id: "bronze", name: "Bronze", icon: "◆︎", color: "#CD7F32" },
+  { id: "silver", name: "Silver", icon: "❖", color: "#C0C0C0" },
+  { id: "gold", name: "Gold", icon: "𓆩♕𓆪", color: "#FFD700" },
   { id: "diamond", name: "Diamond", icon: "💎", color: "#00E5FF" },
 ];
 
@@ -136,7 +136,7 @@ export default function LeaderboardPage() {
             <div className="flex items-center gap-2">
               <span className="text-xl">{activeRoomStatic.icon}</span>
               <h1 className="text-2xl font-black italic tracking-tight" style={{ color: activeRoomStatic.color }}>
-                {activeRoomStatic.name.toUpperCase()} RANK
+                {activeRoomStatic.name.toUpperCase()} 
               </h1>
             </div>
             <div className="text-right">

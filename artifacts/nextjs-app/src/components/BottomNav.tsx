@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CheckSquare, Star, Trophy, Wallet } from "lucide-react";
+import { Home, CheckSquare, PieChart, CircleStar, Wallet } from "lucide-react";
 
 const navItems = [
   { id: "home", label: "Home", icon: Home, href: "/" },
   { id: "tasks", label: "Tasks", icon: CheckSquare, href: "/tasks" },
-  { id: "spin", label: "Spin", icon: Star, href: "/spin" },
-  { id: "leaderboard", label: "Rank", icon: Trophy, href: "/leaderboard" },
+  { id: "spin", label: "Spin", icon: PieChart, href: "/spin" },
+  { id: "leaderboard", label: "Rank", icon: Circlestar, href: "/leaderboard" },
   { id: "wallet", label: "Wallet", icon: Wallet, href: "/wallet" },
 ];
 

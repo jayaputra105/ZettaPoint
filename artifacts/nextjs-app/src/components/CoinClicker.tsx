@@ -200,7 +200,7 @@ export default function CoinClicker({
                     textShadow: locked ? "none" : "0 2px 0 rgba(255,240,180,0.7)",
                   }}
                 >
-                  {locked ? "🔒" : "Z"}
+                  {locked ? "🔒" : "Ꮓ"}
                 </span>
               )}
             </div>

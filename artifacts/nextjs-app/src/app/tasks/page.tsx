@@ -214,7 +214,7 @@ export default function TasksPage() {
                   {gameGoals.map(task => (
                     <div key={task.id} className={`p-4 rounded-[24px] bg-zinc-900/40 border border-white/5 flex items-center justify-between shadow-xl ${task.completion ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/10 text-xl">📑</div>
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/10 text-xl">📚</div>
                         <div>
                           <p className="text-sm font-black tracking-tight">{task.title}</p>
                           <div className="flex items-center gap-1 mt-0.5">

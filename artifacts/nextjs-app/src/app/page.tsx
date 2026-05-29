@@ -166,7 +166,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <p className="text-yellow-500 font-black animate-pulse tracking-[0.5em] uppercase text-xs">
-          Loading...
+          ᶠᶸᶜᵏMe𓀐𓂸✎﹏﹏﹏﹏
         </p>
       </div>
     );
@@ -210,7 +210,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-cyan-500/5 animate-pulse" />
       
       
-      <div className="relative text-xl">🎮</div> 
+      <div className="relative text-xl">👾</div> 
     </motion.button>
   </Link>
 </div>
