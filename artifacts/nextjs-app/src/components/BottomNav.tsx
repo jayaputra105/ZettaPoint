@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Home, CheckSquare, PieChart, Star, Wallet } from "lucide-react";
+import { useApp } from "@/context/AppProvider";
 
 const navItems = [
   { id: "tasks", label: "Tasks", icon: CheckSquare, href: "/tasks" },
