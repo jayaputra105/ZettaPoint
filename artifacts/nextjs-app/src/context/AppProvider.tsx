@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 // 🌟 Instance global di luar component biar gak ke-recreate tiap kali state berubah
 let bgmAudio: HTMLAudioElement | null = null;
@@ -41,9 +41,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qualifiedDiamond, setQualifiedDiamond] = useState(false);
   const [loading, setLoading] = useState(true);
 
-import { useEffect, useRef } from "react";
 
-// Gunakan useRef agar instance audio tidak hilang saat re-render
 const bgmRef = useRef<HTMLAudioElement | null>(null);
 const sfxCache = useRef<Record<string, HTMLAudioElement>>({});
 
