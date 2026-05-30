@@ -28,3 +28,19 @@ while loading=true. In Telegram, the user data is available and the app loads fu
 
 **Why:** Telegram WebApps only have user context inside Telegram. Browser preview will always show loading screen.
 **How to apply:** When testing functionality, use a real Telegram bot or inject mock data.
+
+## Mobile App (artifacts/zettapoint-mobile/)
+- Expo Router, 5 tabs: Home / Spin / Missions / Leaderboard / Wallet
+- Mode B: same direct fetch() pattern to /api/* via `${process.env.EXPO_PUBLIC_DOMAIN}` prefix
+- No Telegram context on native — onboarding generates random numeric userId (AsyncStorage), user enters display name → becomes telegramId for all API calls
+- Key files: context/AppContext.tsx (global state), lib/api.ts (fetch helpers), lib/storage.ts (AsyncStorage)
+- Spin wheel uses react-native-svg (SVG path math for 12 segments, 30°/segment)
+- Workflow: "artifacts/zettapoint-mobile: ZettaPoint Mobile" PORT=8000
+
+## Mobile Artifact Registration Quirk
+- Scaffold pre-existed but was NOT registered in listArtifacts() (no artifact.toml)
+- verifyAndReplaceArtifactToml fails when artifact.toml doesn't already exist (ENOENT)
+- Workaround: use configureWorkflow() directly — Metro dev server listens on PORT=8000
+- App bundles and runs correctly even without Replit artifact registry entry
+
+**Why:** Mobile companion works standalone — no Telegram required, uses AsyncStorage identity.
