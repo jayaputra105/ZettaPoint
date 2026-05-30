@@ -205,7 +205,6 @@ router.patch("/multiplier", async (req, res) => {
   }
 });
 
-// POST /api/user/auto-click/invoice — creates Telegram Stars invoice link
 router.post("/auto-click/invoice", async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -232,22 +231,20 @@ router.post("/auto-click/invoice", async (req, res) => {
       }),
     });
 
-    
+    const tgData = (await tgRes.json()) as { ok: boolean; description?: string; result?: string };
 
-const tgData = (await tgRes.json()) as { 
-  ok: boolean; 
-  description?: string; 
-  result?: string; 
-};
+    if (!tgData.ok) {
+      console.error("Telegram invoice error:", tgData);
+      return res.status(500).json({ error: tgData.description || "Failed to create invoice" });
+    }
 
-if (!tgData.ok) {
-  console.error("Telegram invoice error:", tgData);
-  return res.status(500).json({ error: tgData.description || "Failed to create invoice" });
-}
+    return res.json({ invoiceUrl: tgData.result });
+  } catch (e) {
+    console.error("Auto-click invoice Error:", e);
+    return res.status(500).json({ error: String(e) });
+  }
+}); // <--- PENUTUP INVOICE (PASTIKAN INI ADA)
 
-return res.json({ invoiceUrl: tgData.result });
-
-// POST /api/user/auto-click/activate — called after successful Stars payment
 router.post("/auto-click/activate", async (req, res) => {
   try {
     const { telegramId } = req.body;
@@ -265,6 +262,6 @@ router.post("/auto-click/activate", async (req, res) => {
     console.error("Auto-click activate Error:", e);
     return res.status(500).json({ error: String(e) });
   }
-});
+}); 
 
 export default router;
