@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm -r --filter @workspace/zettapoint run build",
-  "outputDirectory": "artifacts/zettapoint/dist/public",
+  "outputDirectory": "artifacts/zettapoint/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/artifacts/zettapoint/public/$1" }
   ],
