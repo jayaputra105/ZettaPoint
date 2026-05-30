@@ -84,4 +84,25 @@ router.patch("/", async (req, res) => {
   }
 });
 
+router.patch("/wallet", async (req, res) => {
+  try {
+    const { telegramId, tonWalletAddress } = req.body;
+    if (!telegramId) return res.status(400).json({ error: "Missing Telegram ID" });
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const [updated] = await db
+      .update(users)
+      .set({ tonWalletAddress: tonWalletAddress || null })
+      .where(eq(users.telegramId, telegramId))
+      .returning();
+
+    return res.json({ success: true, tonWalletAddress: updated.tonWalletAddress });
+  } catch (e) {
+    console.error("PATCH wallet Error:", e);
+    return res.status(500).json({ error: String(e) });
+  }
+});
+
 export default router;

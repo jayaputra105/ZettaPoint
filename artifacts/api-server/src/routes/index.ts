@@ -6,6 +6,7 @@ import roomsRouter from "./rooms";
 import spinRouter from "./spin";
 import tasksRouter from "./tasks";
 import walletRouter from "./wallet";
+import referralRouter from "./referral";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use("/rooms", roomsRouter);
 router.use("/spin", spinRouter);
 router.use("/tasks", tasksRouter);
 router.use("/wallet", walletRouter);
+router.use("/referral", referralRouter);
 
 export default router;

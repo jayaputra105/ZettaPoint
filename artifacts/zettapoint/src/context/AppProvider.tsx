@@ -9,6 +9,8 @@ interface AppContextType {
   qualifiedGold: boolean;
   qualifiedDiamond: boolean;
   loading: boolean;
+  telegramId: string | null;
+  tonWalletAddress: string | null;
   setCoins: (val: number) => void;
   setZp: (room: string, val: number) => void;
   setUsdtBalance: (val: number) => void;
@@ -16,6 +18,7 @@ interface AppContextType {
   setQualifiedSilver: (val: boolean) => void;
   setQualifiedGold: (val: boolean) => void;
   setQualifiedDiamond: (val: boolean) => void;
+  setTonWalletAddress: (addr: string | null) => void;
   playSFX: (type: "click" | "spin" | "win") => void;
 }
 
@@ -32,6 +35,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [qualifiedGold, setQualifiedGold] = useState(false);
   const [qualifiedDiamond, setQualifiedDiamond] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [telegramId, setTelegramId] = useState<string | null>(null);
+  const [tonWalletAddress, setTonWalletAddress] = useState<string | null>(null);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const sfxCache = useRef<Record<string, HTMLAudioElement>>({});
@@ -110,6 +115,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      setTelegramId(tid);
+
       try {
         const firstName = encodeURIComponent(user.first_name || "Zetta Player");
         const username = user.username || "";
@@ -132,6 +139,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setQualifiedSilver(!!data.qualifiedSilver);
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
+          setTonWalletAddress(data.tonWalletAddress || null);
+
+          const startParam: string | undefined = tg?.initDataUnsafe?.start_param;
+          if (startParam?.startsWith("ref_") && data.referrerId === null) {
+            const referrerTelegramId = startParam.replace("ref_", "");
+            fetch("/api/referral", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ telegramId: tid, referrerTelegramId }),
+            }).catch((e) => console.warn("Referral processing failed:", e));
+          }
         }
       } catch (e) {
         console.error("Initial Sync Error:", e);
@@ -154,8 +172,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         coins, zp, usdtBalance, currentRoom,
         qualifiedSilver, qualifiedGold, qualifiedDiamond, loading,
+        telegramId, tonWalletAddress,
         setCoins, setZp, setUsdtBalance, setCurrentRoom,
         setQualifiedSilver, setQualifiedGold, setQualifiedDiamond,
+        setTonWalletAddress,
         playSFX,
       }}
     >
