@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ZettaPoint"
+version = "1.0.0"
+id = "artifacts/zettapoint"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22136
+
+[services.development]
+run = "pnpm --filter @workspace/zettapoint run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zettapoint", "run", "build" ]
+publicDir = "artifacts/zettapoint/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22136"
+BASE_PATH = "/"

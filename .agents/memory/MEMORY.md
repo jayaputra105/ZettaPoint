@@ -1,0 +1,2 @@
+- [ZettaPoint Telegram WebApp](zettapoint-stack.md) — Next.js → Vite/React/wouter migration; DB schema built; requires Telegram context to load past spinner
+- [DB declarations rebuild](db-declarations-rebuild.md) — @workspace/db must have tsc run after schema changes or API server typecheck fails with "no exported member"
