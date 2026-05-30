@@ -1,12 +1,14 @@
 import { defineConfig } from "drizzle-kit";
+import path from "path";
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL, ensure the database is provisioned");
+}
 
 export default defineConfig({
-  
-  schema: "./src/schema/index.ts", 
-  out: "./drizzle",
+  schema: path.join(__dirname, "./src/schema/index.ts"),
   dialect: "postgresql",
   dbCredentials: {
-    // Memperbaiki potongan baris DATABASE_URL yang typo kemarin
-    url: process.env.DATABASE_URL!, 
+    url: process.env.DATABASE_URL,
   },
 });
