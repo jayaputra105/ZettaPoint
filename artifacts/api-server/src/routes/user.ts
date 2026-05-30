@@ -172,7 +172,6 @@ router.patch("/multiplier", async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     let currentLevel = user.multiplierLevel;
-
     if (currentLevel > 0 && !isSameUTCDay(user.multiplierResetAt)) {
       currentLevel = 0;
     }
@@ -202,6 +201,66 @@ router.patch("/multiplier", async (req, res) => {
     });
   } catch (e) {
     console.error("PATCH multiplier Error:", e);
+    return res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/user/auto-click/invoice — creates Telegram Stars invoice link
+router.post("/auto-click/invoice", async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+    if (!telegramId) return res.status(400).json({ error: "Missing Telegram ID" });
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (user.autoClickEnabled) return res.status(400).json({ error: "Already enabled" });
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      return res.status(503).json({ error: "Bot token not configured. Contact admin." });
+    }
+
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/createInvoiceLink`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Automatic free clicks every hour",
+        description: " ",
+        payload: `auto_click_${telegramId}`,
+        currency: "XTR",
+        prices: [{ label: "Auto Click", amount: 150 }],
+      }),
+    });
+
+    const tgData = await tgRes.json();
+    if (!tgData.ok) {
+      console.error("Telegram invoice error:", tgData);
+      return res.status(500).json({ error: tgData.description || "Failed to create invoice" });
+    }
+
+    return res.json({ invoiceUrl: tgData.result });
+  } catch (e) {
+    console.error("Auto-click invoice Error:", e);
+    return res.status(500).json({ error: String(e) });
+  }
+});
+
+// POST /api/user/auto-click/activate — called after successful Stars payment
+router.post("/auto-click/activate", async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+    if (!telegramId) return res.status(400).json({ error: "Missing Telegram ID" });
+
+    const [updated] = await db
+      .update(users)
+      .set({ autoClickEnabled: true })
+      .where(eq(users.telegramId, telegramId))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "User not found" });
+    return res.json({ success: true, autoClickEnabled: true });
+  } catch (e) {
+    console.error("Auto-click activate Error:", e);
     return res.status(500).json({ error: String(e) });
   }
 });

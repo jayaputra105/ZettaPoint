@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, TrendingUp, Zap, Lock } from "lucide-react";
+import { X, TrendingUp, Zap, Star } from "lucide-react";
 import { useApp } from "@/context/AppProvider";
 
 const MULTIPLIER_TIERS = [
@@ -38,8 +38,15 @@ interface Props {
 }
 
 export default function MultiplierShop({ open, onClose }: Props) {
-  const { coins, setCoins, multiplierLevel, setMultiplierLevel, telegramId } = useApp();
-  const [loading, setLoading] = useState(false);
+  const {
+    coins, setCoins,
+    multiplierLevel, setMultiplierLevel,
+    autoClickEnabled, setAutoClickEnabled,
+    telegramId,
+  } = useApp();
+
+  const [multLoading, setMultLoading] = useState(false);
+  const [starsLoading, setStarsLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [timeUntilReset, setTimeUntilReset] = useState("");
 
@@ -60,17 +67,20 @@ export default function MultiplierShop({ open, onClose }: Props) {
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
-    setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 2800);
   };
 
-  const handleBuy = async () => {
-    if (!telegramId || loading) return;
-    const nextLevel = multiplierLevel + 1;
-    if (nextLevel > 20) return showToast("Max multiplier reached!", false);
-    const tier = MULTIPLIER_TIERS[nextLevel - 1];
-    if (coins < tier.cost) return showToast("Not enough coins!", false);
+  const nextLevel = multiplierLevel + 1;
+  const nextTier = nextLevel <= 20 ? MULTIPLIER_TIERS[nextLevel - 1] : null;
+  const currentMultiplier = multiplierLevel === 0 ? 1.0 : MULTIPLIER_TIERS[multiplierLevel - 1].multiplier;
+  const canAfford = nextTier ? coins >= nextTier.cost : false;
+  const isMaxed = multiplierLevel >= 20;
 
-    setLoading(true);
+  const handleBuyMultiplier = async () => {
+    if (!telegramId || multLoading || !nextTier || isMaxed) return;
+    if (!canAfford) return showToast("Coins tidak cukup!", false);
+
+    setMultLoading(true);
     try {
       const res = await fetch("/api/user/multiplier", {
         method: "PATCH",
@@ -81,18 +91,56 @@ export default function MultiplierShop({ open, onClose }: Props) {
       if (!res.ok) throw new Error(data.error);
       setCoins(Number(data.coins));
       setMultiplierLevel(data.multiplierLevel);
-      showToast(`🚀 ${data.multiplierValue.toFixed(1)}x active!`);
+      showToast(`🚀 ${data.multiplierValue.toFixed(1)}× aktif!`);
     } catch (e: any) {
-      showToast(e.message || "Purchase failed", false);
+      showToast(e.message || "Gagal beli", false);
     } finally {
-      setLoading(false);
+      setMultLoading(false);
     }
   };
 
-  const nextLevel = multiplierLevel + 1;
-  const nextTier = nextLevel <= 20 ? MULTIPLIER_TIERS[nextLevel - 1] : null;
-  const currentMultiplier = multiplierLevel === 0 ? 1.0 : MULTIPLIER_TIERS[multiplierLevel - 1].multiplier;
-  const canAfford = nextTier ? coins >= nextTier.cost : false;
+  const handleBuyAutoClick = async () => {
+    if (!telegramId || starsLoading || autoClickEnabled) return;
+    setStarsLoading(true);
+
+    try {
+      const res = await fetch("/api/user/auto-click/invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegramId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const tg = (window as any).Telegram?.WebApp;
+      if (!tg?.openInvoice) throw new Error("Telegram WebApp not available");
+
+      tg.openInvoice(data.invoiceUrl, async (status: string) => {
+        if (status === "paid") {
+          const activateRes = await fetch("/api/user/auto-click/activate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegramId }),
+          });
+          const activateData = await activateRes.json();
+          if (activateRes.ok) {
+            setAutoClickEnabled(true);
+            showToast("⚡ Auto-click aktif!");
+          } else {
+            showToast(activateData.error || "Gagal aktifkan", false);
+          }
+        } else if (status === "cancelled") {
+          showToast("Dibatalkan", false);
+        } else if (status === "failed") {
+          showToast("Pembayaran gagal", false);
+        }
+        setStarsLoading(false);
+      });
+    } catch (e: any) {
+      showToast(e.message || "Gagal buka invoice", false);
+      setStarsLoading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -111,103 +159,126 @@ export default function MultiplierShop({ open, onClose }: Props) {
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
             className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto bg-[#0a0a0a] border-t border-white/10 rounded-t-[32px] overflow-hidden"
-            style={{ maxHeight: "70vh" }}
           >
             <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-4" />
 
+            {/* Header */}
             <div className="px-6 pb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-black text-[#FFD700] uppercase tracking-tight">Multiplier Upgrade</h2>
-                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Resets at 00:00 UTC · {timeUntilReset}</p>
+                <h2 className="text-lg font-black text-[#FFD700] uppercase tracking-tight">Power Upgrades</h2>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                  Multiplier resets · {timeUntilReset}
+                </p>
               </div>
-              <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-transform">
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-transform"
+              >
                 <X size={16} className="text-white/40" />
               </button>
             </div>
 
+            {/* Current Multiplier Display */}
             <div className="mx-6 mb-5 p-4 rounded-[20px] bg-[#FFD700]/5 border border-[#FFD700]/20 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Current Multiplier</p>
-                <p className="text-3xl font-black text-[#FFD700] tracking-tighter">{currentMultiplier.toFixed(1)}×</p>
-                <p className="text-[10px] text-white/30 font-bold">Level {multiplierLevel} / 20</p>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Multiplier Kamu</p>
+                <p className="text-4xl font-black text-[#FFD700] tracking-tighter">{currentMultiplier.toFixed(1)}×</p>
+                <p className="text-[10px] text-white/30 font-bold mt-0.5">Level {multiplierLevel} / 20</p>
               </div>
-              <TrendingUp size={36} className="text-[#FFD700]/30" />
+              <TrendingUp size={40} className="text-[#FFD700]/20" />
             </div>
 
-            <div className="px-6 pb-safe-or-6 overflow-y-auto" style={{ maxHeight: "calc(70vh - 200px)" }}>
-              {multiplierLevel >= 20 ? (
-                <div className="py-8 text-center">
-                  <p className="text-2xl mb-2">🏆</p>
-                  <p className="text-sm font-black text-[#FFD700]">Maximum Multiplier!</p>
-                  <p className="text-[10px] text-white/30 mt-1">3.0× — resets tomorrow</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3 pb-8">
-                  {MULTIPLIER_TIERS.map((tier) => {
-                    const isOwned = tier.level <= multiplierLevel;
-                    const isNext = tier.level === multiplierLevel + 1;
-                    const isLocked = tier.level > multiplierLevel + 1;
+            {/* Buttons */}
+            <div className="px-6 pb-8 flex flex-col gap-4">
 
-                    return (
-                      <div
-                        key={tier.level}
-                        className={`flex items-center justify-between p-4 rounded-[18px] border transition-all ${
-                          isOwned
-                            ? "bg-white/[0.03] border-white/5 opacity-40"
-                            : isNext
-                            ? "bg-[#FFD700]/5 border-[#FFD700]/30"
-                            : "bg-white/[0.02] border-white/5 opacity-30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                            isOwned ? "bg-green-500/10" : isNext ? "bg-[#FFD700]/10" : "bg-white/5"
-                          }`}>
-                            {isOwned ? (
-                              <span className="text-green-400 text-sm">✓</span>
-                            ) : isLocked ? (
-                              <Lock size={14} className="text-white/20" />
-                            ) : (
-                              <Zap size={14} className="text-[#FFD700]" />
-                            )}
-                          </div>
-                          <div>
-                            <p className={`text-sm font-black ${isOwned ? "text-green-400" : isNext ? "text-white" : "text-white/40"}`}>
-                              {tier.multiplier.toFixed(1)}× Multiplier
-                            </p>
-                            <p className="text-[10px] text-white/30 font-bold">Level {tier.level}</p>
-                          </div>
-                        </div>
-                        {!isOwned && isNext && (
-                          <button
-                            onClick={handleBuy}
-                            disabled={loading || !canAfford}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 ${
-                              canAfford
-                                ? "bg-[#FFD700] text-black hover:shadow-[0_0_15px_rgba(255,215,0,0.4)]"
-                                : "bg-white/5 text-white/30 border border-white/10"
-                            } disabled:opacity-50`}
-                          >
-                            {loading ? "..." : `🪙 ${formatCost(tier.cost)}`}
-                          </button>
-                        )}
-                        {!isOwned && !isNext && (
-                          <span className="text-[10px] font-black text-white/20">🪙 {formatCost(tier.cost)}</span>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* BUTTON 1 — Multiplier Upgrade */}
+              <div className="rounded-[22px] border bg-white/[0.03] border-white/8 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-xl bg-[#FFD700]/10 flex items-center justify-center">
+                    <Zap size={14} className="text-[#FFD700]" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-white uppercase tracking-wide">
+                      {isMaxed ? "Max Multiplier" : `Upgrade ke ${nextTier?.multiplier.toFixed(1)}×`}
+                    </p>
+                    <p className="text-[10px] text-white/30 font-bold">
+                      {isMaxed ? "Level 20 / 20 — 3.0× tercapai 🏆" : `Level ${nextLevel} / 20`}
+                    </p>
+                  </div>
                 </div>
-              )}
+
+                <button
+                  onClick={handleBuyMultiplier}
+                  disabled={multLoading || isMaxed || !canAfford}
+                  className={`w-full py-3 rounded-2xl font-black text-sm uppercase tracking-wide transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isMaxed
+                      ? "bg-white/5 text-white/30 border border-white/10"
+                      : canAfford
+                      ? "bg-[#FFD700] text-black shadow-[0_0_20px_rgba(255,215,0,0.25)] hover:shadow-[0_0_30px_rgba(255,215,0,0.4)]"
+                      : "bg-white/5 text-white/30 border border-white/10"
+                  }`}
+                >
+                  {multLoading
+                    ? "Memproses..."
+                    : isMaxed
+                    ? "🏆 Max Level Tercapai"
+                    : canAfford
+                    ? `🪙 Beli — ${formatCost(nextTier!.cost)} coins`
+                    : `🪙 Butuh ${formatCost(nextTier!.cost)} coins`}
+                </button>
+              </div>
+
+              {/* BUTTON 2 — Auto Click with Stars */}
+              <div className={`rounded-[22px] border p-4 transition-all ${
+                autoClickEnabled
+                  ? "bg-cyan-500/5 border-cyan-500/20"
+                  : "bg-white/[0.03] border-white/8"
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                    autoClickEnabled ? "bg-cyan-500/15" : "bg-white/5"
+                  }`}>
+                    <Star size={14} className={autoClickEnabled ? "text-cyan-400" : "text-white/40"} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-white uppercase tracking-wide">
+                      Automatic free clicks every hour
+                    </p>
+                    <p className="text-[10px] text-white/30 font-bold">
+                      {autoClickEnabled ? "✅ Aktif" : "150 ⭐ Telegram Stars · Permanen"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Deskripsi kosong — user akan isi sendiri */}
+                <p className="text-[10px] text-white/20 mb-3 min-h-[16px]" />
+
+                <button
+                  onClick={handleBuyAutoClick}
+                  disabled={starsLoading || autoClickEnabled}
+                  className={`w-full py-3 rounded-2xl font-black text-sm uppercase tracking-wide transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed ${
+                    autoClickEnabled
+                      ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                      : "bg-[#229ED9] text-white shadow-[0_0_20px_rgba(34,158,217,0.2)] hover:shadow-[0_0_30px_rgba(34,158,217,0.35)]"
+                  }`}
+                >
+                  {autoClickEnabled
+                    ? "⚡ Sudah Aktif"
+                    : starsLoading
+                    ? "Membuka..."
+                    : "⭐ Beli — 150 Stars"}
+                </button>
+              </div>
             </div>
 
+            {/* Toast */}
             <AnimatePresence>
               {toast && (
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 20, opacity: 0 }}
-                  className={`absolute bottom-8 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl whitespace-nowrap ${
+                  className={`absolute bottom-10 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl whitespace-nowrap ${
                     toast.ok
                       ? "bg-green-500/10 border-green-500/30 text-green-400"
                       : "bg-red-500/10 border-red-500/30 text-red-400"
