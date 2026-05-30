@@ -6,12 +6,14 @@ import SpinPage from "@/pages/SpinPage";
 import TasksPage from "@/pages/TasksPage";
 import WalletPage from "@/pages/WalletPage";
 import MiniGamesPage from "@/pages/MiniGamesPage";
+import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={HomePage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/spin" component={SpinPage} />
       <Route path="/tasks" component={TasksPage} />

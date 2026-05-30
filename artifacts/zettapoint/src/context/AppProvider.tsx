@@ -11,6 +11,8 @@ interface AppContextType {
   loading: boolean;
   telegramId: string | null;
   tonWalletAddress: string | null;
+  multiplierLevel: number;
+  autoClickEnabled: boolean;
   setCoins: (val: number) => void;
   setZp: (room: string, val: number) => void;
   setUsdtBalance: (val: number) => void;
@@ -19,6 +21,8 @@ interface AppContextType {
   setQualifiedGold: (val: boolean) => void;
   setQualifiedDiamond: (val: boolean) => void;
   setTonWalletAddress: (addr: string | null) => void;
+  setMultiplierLevel: (val: number) => void;
+  setAutoClickEnabled: (val: boolean) => void;
   playSFX: (type: "click" | "spin" | "win") => void;
 }
 
@@ -37,6 +41,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [telegramId, setTelegramId] = useState<string | null>(null);
   const [tonWalletAddress, setTonWalletAddress] = useState<string | null>(null);
+  const [multiplierLevel, setMultiplierLevelState] = useState(0);
+  const [autoClickEnabled, setAutoClickEnabledState] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const sfxCache = useRef<Record<string, HTMLAudioElement>>({});
@@ -140,6 +146,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setQualifiedGold(!!data.qualifiedGold);
           setQualifiedDiamond(!!data.qualifiedDiamond);
           setTonWalletAddress(data.tonWalletAddress || null);
+          setMultiplierLevelState(Number(data.multiplierLevel || 0));
+          setAutoClickEnabledState(!!data.autoClickEnabled);
 
           const startParam: string | undefined = tg?.initDataUnsafe?.start_param;
           if (startParam?.startsWith("ref_") && data.referrerId === null) {
@@ -166,6 +174,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setZp = (room: string, val: number) => {
     setZpState((prev) => ({ ...prev, [room]: val }));
   };
+  const setMultiplierLevel = (val: number) => setMultiplierLevelState(val);
+  const setAutoClickEnabled = (val: boolean) => setAutoClickEnabledState(val);
 
   return (
     <AppContext.Provider
@@ -173,9 +183,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         coins, zp, usdtBalance, currentRoom,
         qualifiedSilver, qualifiedGold, qualifiedDiamond, loading,
         telegramId, tonWalletAddress,
+        multiplierLevel, autoClickEnabled,
         setCoins, setZp, setUsdtBalance, setCurrentRoom,
         setQualifiedSilver, setQualifiedGold, setQualifiedDiamond,
         setTonWalletAddress,
+        setMultiplierLevel, setAutoClickEnabled,
         playSFX,
       }}
     >

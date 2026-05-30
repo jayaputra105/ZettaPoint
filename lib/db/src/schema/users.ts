@@ -23,6 +23,9 @@ export const users = pgTable("users", {
   dailyAdsWatched: integer("daily_ads_watched").default(0).notNull(),
   streakDays: integer("streak_days").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  multiplierLevel: integer("multiplier_level").default(0).notNull(),
+  multiplierResetAt: timestamp("multiplier_reset_at"),
+  autoClickEnabled: boolean("auto_click_enabled").default(false).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

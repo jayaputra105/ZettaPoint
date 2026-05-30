@@ -5,6 +5,45 @@ import { eq, sql } from "drizzle-orm";
 
 const router = Router();
 
+const MULTIPLIER_TIERS = [
+  { level: 1, multiplier: 1.1, cost: 300 },
+  { level: 2, multiplier: 1.2, cost: 600 },
+  { level: 3, multiplier: 1.3, cost: 1000 },
+  { level: 4, multiplier: 1.4, cost: 1500 },
+  { level: 5, multiplier: 1.5, cost: 2500 },
+  { level: 6, multiplier: 1.6, cost: 4000 },
+  { level: 7, multiplier: 1.7, cost: 6000 },
+  { level: 8, multiplier: 1.8, cost: 9000 },
+  { level: 9, multiplier: 1.9, cost: 13000 },
+  { level: 10, multiplier: 2.0, cost: 18000 },
+  { level: 11, multiplier: 2.1, cost: 25000 },
+  { level: 12, multiplier: 2.2, cost: 35000 },
+  { level: 13, multiplier: 2.3, cost: 48000 },
+  { level: 14, multiplier: 2.4, cost: 65000 },
+  { level: 15, multiplier: 2.5, cost: 85000 },
+  { level: 16, multiplier: 2.6, cost: 110000 },
+  { level: 17, multiplier: 2.7, cost: 140000 },
+  { level: 18, multiplier: 2.8, cost: 175000 },
+  { level: 19, multiplier: 2.9, cost: 215000 },
+  { level: 20, multiplier: 3.0, cost: 260000 },
+];
+
+function getMultiplierValue(level: number): number {
+  if (level <= 0) return 1.0;
+  if (level >= 20) return 3.0;
+  return MULTIPLIER_TIERS[level - 1].multiplier;
+}
+
+function isSameUTCDay(date: Date | null): boolean {
+  if (!date) return false;
+  const now = new Date();
+  return (
+    date.getUTCFullYear() === now.getUTCFullYear() &&
+    date.getUTCMonth() === now.getUTCMonth() &&
+    date.getUTCDate() === now.getUTCDate()
+  );
+}
+
 router.get("/", async (req, res) => {
   try {
     const { telegramId, firstName, username, photoUrl } = req.query as Record<string, string>;
@@ -26,6 +65,8 @@ router.get("/", async (req, res) => {
         qualifiedSilver: false,
         qualifiedGold: false,
         qualifiedDiamond: false,
+        multiplierLevel: 0,
+        autoClickEnabled: false,
       })
       .onConflictDoUpdate({
         target: users.telegramId,
@@ -37,7 +78,21 @@ router.get("/", async (req, res) => {
       })
       .returning();
 
-    return res.json(user);
+    let result = user;
+
+    if (result.multiplierLevel > 0 && !isSameUTCDay(result.multiplierResetAt)) {
+      const [reset] = await db
+        .update(users)
+        .set({ multiplierLevel: 0, multiplierResetAt: null })
+        .where(eq(users.telegramId, telegramId))
+        .returning();
+      result = reset;
+    }
+
+    return res.json({
+      ...result,
+      multiplierValue: getMultiplierValue(result.multiplierLevel),
+    });
   } catch (e) {
     console.error("GET User Error:", e);
     return res.status(500).json({ error: String(e) });
@@ -101,6 +156,52 @@ router.patch("/wallet", async (req, res) => {
     return res.json({ success: true, tonWalletAddress: updated.tonWalletAddress });
   } catch (e) {
     console.error("PATCH wallet Error:", e);
+    return res.status(500).json({ error: String(e) });
+  }
+});
+
+router.patch("/multiplier", async (req, res) => {
+  try {
+    const { telegramId, targetLevel } = req.body;
+    if (!telegramId) return res.status(400).json({ error: "Missing Telegram ID" });
+    if (!targetLevel || targetLevel < 1 || targetLevel > 20) {
+      return res.status(400).json({ error: "Invalid target level" });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    let currentLevel = user.multiplierLevel;
+
+    if (currentLevel > 0 && !isSameUTCDay(user.multiplierResetAt)) {
+      currentLevel = 0;
+    }
+
+    if (targetLevel !== currentLevel + 1) {
+      return res.status(400).json({ error: `Must buy level ${currentLevel + 1} next` });
+    }
+
+    const tier = MULTIPLIER_TIERS[targetLevel - 1];
+    if (user.coins < tier.cost) {
+      return res.status(400).json({ error: "Insufficient coins" });
+    }
+
+    const [updated] = await db
+      .update(users)
+      .set({
+        coins: sql`${users.coins} - ${tier.cost}`,
+        multiplierLevel: targetLevel,
+        multiplierResetAt: new Date(),
+      })
+      .where(eq(users.telegramId, telegramId))
+      .returning();
+
+    return res.json({
+      ...updated,
+      multiplierValue: getMultiplierValue(updated.multiplierLevel),
+    });
+  } catch (e) {
+    console.error("PATCH multiplier Error:", e);
     return res.status(500).json({ error: String(e) });
   }
 });

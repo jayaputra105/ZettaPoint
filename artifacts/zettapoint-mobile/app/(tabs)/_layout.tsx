@@ -22,6 +22,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "checkmark.circle", selected: "checkmark.circle.fill" }} />
         <Label>Missions</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="minigames">
+        <Icon sf={{ default: "gamecontroller", selected: "gamecontroller.fill" }} />
+        <Label>Games</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="leaderboard">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
         <Label>Ranks</Label>
@@ -37,7 +41,6 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colors = useColors();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -93,6 +96,15 @@ function ClassicTabLayout() {
           title: "Missions",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="minigames"
+        options={{
+          title: "Games",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "game-controller" : "game-controller-outline"} size={22} color={color} />
           ),
         }}
       />
