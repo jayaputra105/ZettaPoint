@@ -17,6 +17,7 @@ interface AppUser {
   zpDiamond: number;
   tonWalletAddress: string | null;
   streakDays: number;
+  referrerId: number | null;
 }
 
 interface AppContextType {
@@ -93,10 +94,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setTonWalletAddress = (addr: string | null) => setTonWalletAddressState(addr);
 
   return (
-    <AppContext.Provider value={{
-      user, loading, onboarded, currentRoom, coins, usdtBalance, zp, tonWalletAddress,
-      setCoins, setUsdtBalance, setCurrentRoom, setTonWalletAddress, setOnboarded, refreshUser,
-    }}>
+    <AppContext.Provider
+      value={{
+        user, loading, onboarded, currentRoom, coins, usdtBalance, zp, tonWalletAddress,
+        setCoins, setUsdtBalance, setCurrentRoom, setTonWalletAddress, setOnboarded, refreshUser,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

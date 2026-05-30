@@ -9,28 +9,6 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "artifacts/zettapoint-mobile: ZettaPoint Mobile"
-
-[[workflows.workflow]]
-name = "artifacts/zettapoint-mobile: ZettaPoint Mobile"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=8000 pnpm --filter @workspace/zettapoint-mobile run dev"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -51,3 +29,11 @@ externalPort = 80
 [[ports]]
 localPort = 22136
 externalPort = 3000
+
+[[ports]]
+localPort = 26142
+externalPort = 3002
+
+[[ports]]
+localPort = 26143
+externalPort = 3003

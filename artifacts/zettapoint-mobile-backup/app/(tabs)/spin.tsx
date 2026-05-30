@@ -49,11 +49,15 @@ function getSegmentPath(index: number, total: number, r: number, innerR: number)
   const endAngle = ((index + 1) * 360) / total - 90;
   const s = startAngle * (Math.PI / 180);
   const e = endAngle * (Math.PI / 180);
-  const x1 = r + r * Math.cos(s), y1 = r + r * Math.sin(s);
-  const x2 = r + r * Math.cos(e), y2 = r + r * Math.sin(e);
-  const ix1 = r + innerR * Math.cos(s), iy1 = r + innerR * Math.sin(s);
-  const ix2 = r + innerR * Math.cos(e), iy2 = r + innerR * Math.sin(e);
-  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  const x1 = r + r * Math.cos(s);
+  const y1 = r + r * Math.sin(s);
+  const x2 = r + r * Math.cos(e);
+  const y2 = r + r * Math.sin(e);
+  const ix1 = r + innerR * Math.cos(s);
+  const iy1 = r + innerR * Math.sin(s);
+  const ix2 = r + innerR * Math.cos(e);
+  const iy2 = r + innerR * Math.sin(e);
+  const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
   return `M ${ix1} ${iy1} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${innerR} ${innerR} 0 ${largeArc} 0 ${ix1} ${iy1} Z`;
 }
 
@@ -61,7 +65,11 @@ function getLabelPosition(index: number, total: number, r: number) {
   const angle = ((index + 0.5) * 360) / total - 90;
   const rad = angle * (Math.PI / 180);
   const dist = r * 0.68;
-  return { x: r + dist * Math.cos(rad), y: r + dist * Math.sin(rad), angle: angle + 90 };
+  return {
+    x: r + dist * Math.cos(rad),
+    y: r + dist * Math.sin(rad),
+    angle: angle + 90,
+  };
 }
 
 function formatCountdown(ms: number): string {
@@ -75,7 +83,7 @@ function formatCountdown(ms: number): string {
 export default function SpinScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { coins, setCoins, usdtBalance, setUsdtBalance } = useApp();
+  const { coins, setCoins, setUsdtBalance, usdtBalance } = useApp();
 
   const [spinState, setSpinState] = useState<any>(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -98,7 +106,7 @@ export default function SpinScreen() {
       const data = await getSpinState(tid);
       setSpinState(data);
     } catch (e) {
-      console.error(e);
+      console.error("Spin state error:", e);
     }
   };
 
@@ -117,19 +125,25 @@ export default function SpinScreen() {
     setIsSpinning(true);
     setLastPrize(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
       const tid = await getUserId();
       if (!tid) throw new Error("No user");
       const data = await doSpin(tid, type);
-      const targetAngle = (data.segmentIndex ?? 0) * SEG_ANGLE;
+
+      const targetIndex = data.segmentIndex ?? 0;
+      const targetAngle = targetIndex * SEG_ANGLE;
       const spins = 5 * 360 + (360 - targetAngle);
       const newTotal = totalRotationRef.current + spins;
       totalRotationRef.current = newTotal;
+
       rotation.value = withTiming(newTotal, {
         duration: 3000,
         easing: Easing.out(Easing.cubic),
       }, (done) => {
-        if (done) runOnJS(onSpinEnd)(data);
+        if (done) {
+          runOnJS(onSpinEnd)(data);
+        }
       });
     } catch (e: any) {
       setIsSpinning(false);
@@ -151,6 +165,7 @@ export default function SpinScreen() {
   }));
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const s = styles(colors, insets);
 
   return (
     <View style={[s.container, { paddingTop: topPad }]}>
@@ -159,20 +174,29 @@ export default function SpinScreen() {
         <Text style={s.subtitle}>Try your luck daily</Text>
       </View>
 
+      {/* Wheel */}
       <View style={s.wheelSection}>
+        {/* Pointer */}
         <View style={s.pointer}>
           <Ionicons name="caret-down" size={24} color="#FFD700" />
         </View>
+
         <Animated.View style={[{ width: WHEEL_SIZE, height: WHEEL_SIZE }, wheelStyle]}>
           <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
             {SEGMENTS.map((seg, i) => {
               const lp = getLabelPosition(i, NUM_SEG, RADIUS);
+              const path = getSegmentPath(i, NUM_SEG, RADIUS, INNER_RADIUS);
               return (
                 <G key={i}>
-                  <Path d={getSegmentPath(i, NUM_SEG, RADIUS, INNER_RADIUS)} fill={seg.color} stroke="#000" strokeWidth={1} />
+                  <Path d={path} fill={seg.color} stroke="#000" strokeWidth={1} />
                   <SvgText
-                    x={lp.x} y={lp.y} textAnchor="middle" alignmentBaseline="central"
-                    fill={seg.textColor} fontSize={seg.label.length > 4 ? 7 : 9} fontWeight="bold"
+                    x={lp.x}
+                    y={lp.y}
+                    textAnchor="middle"
+                    alignmentBaseline="central"
+                    fill={seg.textColor}
+                    fontSize={seg.label.length > 4 ? 7 : 9}
+                    fontWeight="bold"
                     transform={`rotate(${lp.angle}, ${lp.x}, ${lp.y})`}
                   >
                     {seg.label}
@@ -184,7 +208,8 @@ export default function SpinScreen() {
         </Animated.View>
       </View>
 
-      {!!lastPrize && (
+      {/* Prize display */}
+      {lastPrize && (
         <View style={s.prizeBox}>
           <Text style={s.prizeEmoji}>🎉</Text>
           <Text style={s.prizeText}>
@@ -194,6 +219,7 @@ export default function SpinScreen() {
         </View>
       )}
 
+      {/* Buttons */}
       <View style={s.buttonSection}>
         {canFreeSpin() ? (
           <Pressable
@@ -206,7 +232,7 @@ export default function SpinScreen() {
           </Pressable>
         ) : (
           <View style={s.cooldownBox}>
-            <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="time-outline" size={18} color={colors.mutedForeground} />
             <Text style={s.cooldownText}>Next free spin in</Text>
             <Text style={s.cooldownTimer}>{formatCountdown(freeSpinCooldownMs())}</Text>
           </View>
@@ -217,47 +243,119 @@ export default function SpinScreen() {
           onPress={() => handleSpin("ads")}
           disabled={isSpinning}
         >
-          <Ionicons name="play-circle-outline" size={20} color="#FFD700" />
+          <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
           <Text style={s.adBtnText}>SPIN WITH AD</Text>
         </Pressable>
       </View>
+
       <View style={{ height: 100 }} />
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  header: { paddingHorizontal: 24, marginBottom: 12 },
-  title: { fontFamily: "Inter_700Bold", fontSize: 28, color: "#FFD700", letterSpacing: 2 },
-  subtitle: { fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(255,255,255,0.3)", letterSpacing: 2, textTransform: "uppercase" },
-  wheelSection: { alignItems: "center", marginBottom: 12, position: "relative" },
-  pointer: { position: "absolute", top: -12, zIndex: 10 },
-  prizeBox: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    marginHorizontal: 24, padding: 16, backgroundColor: "rgba(255,215,0,0.1)",
-    borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,215,0,0.3)", marginBottom: 16,
-  },
-  prizeEmoji: { fontSize: 20 },
-  prizeText: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#FFD700" },
-  buttonSection: { paddingHorizontal: 24, gap: 12 },
-  spinBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 10, backgroundColor: "#FFD700", borderRadius: 18, paddingVertical: 18,
-  },
-  spinBtnDisabled: { opacity: 0.5 },
-  spinBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#000", letterSpacing: 1.5 },
-  cooldownBox: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    padding: 18, backgroundColor: "#111", borderRadius: 18,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
-  },
-  cooldownText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.3)" },
-  cooldownTimer: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#FFF" },
-  adBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
-    backgroundColor: "rgba(255,215,0,0.08)", borderRadius: 18, paddingVertical: 16,
-    borderWidth: 1, borderColor: "rgba(255,215,0,0.2)",
-  },
-  adBtnText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#FFD700", letterSpacing: 1.5 },
-});
+// @ts-ignore
+const styles = (colors: any, insets: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { paddingHorizontal: 24, marginBottom: 12 },
+    title: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 28,
+      color: "#FFD700",
+      letterSpacing: 2,
+    },
+    subtitle: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 11,
+      color: "rgba(255,255,255,0.3)",
+      letterSpacing: 2,
+      textTransform: "uppercase",
+    },
+    wheelSection: {
+      alignItems: "center",
+      marginBottom: 12,
+      position: "relative",
+    },
+    pointer: {
+      position: "absolute",
+      top: -12,
+      zIndex: 10,
+    },
+    prizeBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginHorizontal: 24,
+      padding: 16,
+      backgroundColor: "rgba(255,215,0,0.1)",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.3)",
+      marginBottom: 16,
+    },
+    prizeEmoji: { fontSize: 20 },
+    prizeText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 18,
+      color: "#FFD700",
+    },
+    buttonSection: {
+      paddingHorizontal: 24,
+      gap: 12,
+    },
+    spinBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: "#FFD700",
+      borderRadius: 18,
+      paddingVertical: 18,
+    },
+    spinBtnDisabled: { opacity: 0.5 },
+    spinBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: "#000",
+      letterSpacing: 1.5,
+    },
+    cooldownBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      padding: 18,
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cooldownText: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 12,
+      color: colors.mutedForeground,
+    },
+    cooldownTimer: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: colors.foreground,
+    },
+    adBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: "rgba(255,215,0,0.08)",
+      borderRadius: 18,
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.2)",
+    },
+    adBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 13,
+      color: "#FFD700",
+      letterSpacing: 1.5,
+    },
+  });

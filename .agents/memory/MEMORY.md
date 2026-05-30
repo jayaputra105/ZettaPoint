@@ -1,2 +1,3 @@
 - [ZettaPoint Telegram WebApp](zettapoint-stack.md) — Next.js → Vite/React/wouter migration; DB schema built; requires Telegram context to load past spinner
 - [DB declarations rebuild](db-declarations-rebuild.md) — @workspace/db must have tsc run after schema changes or API server typecheck fails with "no exported member"
+- [Expo artifact port conflicts](expo-port-conflicts.md) — backup dirs with same package name cause pnpm to run dev for both; old workflow must be removed before new one can claim its port
