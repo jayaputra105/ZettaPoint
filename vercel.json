@@ -1,4 +1,10 @@
 {
+  "buildCommand": "pnpm -r --filter @workspace/zettapoint run build",
+  "outputDirectory": "artifacts/zettapoint",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+
   "crons": [
     {
       "path": "/api/cron/reset",
