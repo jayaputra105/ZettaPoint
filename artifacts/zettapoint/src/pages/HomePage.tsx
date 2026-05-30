@@ -42,6 +42,7 @@ export default function Home() {
   
   const [, navigate] = useLocation();
   const currentZp = zp[currentRoom] || 0;
+  const currentMultiplierValue = multiplierLevel === 0 ? 1.0 : 1.0 + multiplierLevel * 0.1;
   
   const [userProfile, setUserProfile] = useState({
     name: "...",
@@ -57,15 +58,12 @@ export default function Home() {
   const [showMultiplierShop, setShowMultiplierShop] = useState(false);
   const [autoClickToast, setAutoClickToast] = useState<string | null>(null);
 
-  const currentMultiplierValue = multiplierLevel === 0 ? 1.0 : 1.0 + multiplierLevel * 0.1;
-
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg) {
       tg.ready();
       tg.expand();
     }
-
     const user = tg?.initDataUnsafe?.user;
     if (user) {
       setUserProfile({
@@ -85,10 +83,9 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-click timer — fires every hour if enabled
+  // Auto-click: fires every hour if enabled
   useEffect(() => {
     if (!autoClickEnabled) return;
-
     const checkAutoClick = () => {
       const lastAuto = Number(localStorage.getItem("zetta_last_auto") || "0");
       if (Date.now() - lastAuto >= AUTO_CLICK_INTERVAL_MS) {
@@ -109,7 +106,6 @@ export default function Home() {
         }
       }
     };
-
     checkAutoClick();
     const id = setInterval(checkAutoClick, 60_000);
     return () => clearInterval(id);
@@ -117,31 +113,22 @@ export default function Home() {
 
   const sinceLastFree = lastFreeClick ? now - lastFreeClick : COOLDOWN_MS;
   const isFreeAvailable = sinceLastFree >= COOLDOWN_MS;
-  
   const canEarnPoints = isFreeAvailable || isAdVerified;
   const needsAd = !isFreeAvailable && !isAdVerified && adsUsed < MAX_ADS;
   const isLocked = !isFreeAvailable && !isAdVerified && adsUsed >= MAX_ADS;
-  
   const adsRemaining = MAX_ADS - adsUsed;
   const timeUntilReset = lastFreeClick ? COOLDOWN_MS - sinceLastFree : 0;
-  
+
   const giveRewards = useCallback(async (amount: number) => {
     const tg = (window as any).Telegram?.WebApp;
     const tid = tg?.initDataUnsafe?.user?.id?.toString();
-    
     if (!tid) return;
-
     setZp(currentRoom, currentZp + amount);
-    
     try {
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegramId: tid,
-          addZp: amount,
-          room: currentRoom
-        })
+        body: JSON.stringify({ telegramId: tid, addZp: amount, room: currentRoom })
       });
     } catch (err) {
       console.error("Save error:", err);
@@ -151,9 +138,7 @@ export default function Home() {
   
   const handleCoinClick = () => {
     if (isLocked) return;
-
     playSFX("click");
-
     if (canEarnPoints) {
       if (isFreeAvailable) {
         const ts = Date.now();
@@ -164,9 +149,8 @@ export default function Home() {
       } else {
         setIsAdVerified(false);
       }
-
-      const baseZp = Math.floor(Math.random() * 101) + 100;
-      const earned = Math.floor(baseZp * currentMultiplierValue);
+      const base = Math.floor(Math.random() * 101) + 100;
+      const earned = Math.floor(base * currentMultiplierValue);
       giveRewards(earned);
     } else if (needsAd) {
       setShowAd(true);
@@ -263,9 +247,9 @@ export default function Home() {
 
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="bg-zinc-900/50 border border-white/5 px-4 py-1.5 rounded-full backdrop-blur-sm">
-             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-               ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
-             </p>
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+              ⏳ Overclock Battery: <span className="text-zinc-300 font-black">{adsRemaining}/{MAX_ADS}</span>
+            </p>
           </div>
 
           <CoinClicker 
@@ -301,7 +285,6 @@ export default function Home() {
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
           className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border backdrop-blur-xl bg-cyan-500/10 border-cyan-500/30 text-cyan-400 whitespace-nowrap"
         >
           {autoClickToast}
