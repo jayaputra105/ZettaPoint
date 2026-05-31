@@ -7,6 +7,7 @@ import AdModal from "@/components/AdModal";
 import RoomSelector from "@/components/RoomSelector";
 import MultiplierShop from "@/components/MultiplierShop";
 import { useApp } from "@/context/AppProvider";
+import { useAnimatedCounter } from "@/hooks/useAnimatedCounter";
 import { TrendingUp } from "lucide-react";
 
 const ShootingStars = lazy(() => import("@/components/ShootingStars"));
@@ -43,6 +44,8 @@ export default function Home() {
   const [, navigate] = useLocation();
   const currentZp = zp[currentRoom] || 0;
   const currentMultiplierValue = multiplierLevel === 0 ? 1.0 : 1.0 + multiplierLevel * 0.1;
+  const animatedCoins = useAnimatedCounter(coins);
+  const animatedZp = useAnimatedCounter(currentZp);
   
   const [userProfile, setUserProfile] = useState({
     name: "...",
@@ -213,7 +216,7 @@ export default function Home() {
             </button>
 
             <div className="bg-yellow-500/10 px-3 py-2 rounded-2xl border border-yellow-500/20">
-              <span className="font-black text-sm text-white">🪙 {formatNumber(coins)}</span>
+              <span className="font-black text-sm text-white">🪙 {formatNumber(animatedCoins)}</span>
             </div>
           </div>
         </header>
