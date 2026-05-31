@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "../.vercel/output/functions",
+    "rootDir": ".",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["."],
+  "references": [
+    { "path": "../artifacts/api-server" },
+    { "path": "../lib/db" },
+    { "path": "../lib/api-zod" }
+  ]
+}
