@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app/page.tsx -> @/components/ShootingStars\":{\"id\":\"app/page.tsx -> @/components/ShootingStars\",\"files\":[\"static/chunks/_app-pages-browser_src_components_ShootingStars_tsx.js\"]}}"

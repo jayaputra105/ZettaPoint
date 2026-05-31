@@ -7,6 +7,7 @@ import spinRouter from "./spin";
 import tasksRouter from "./tasks";
 import walletRouter from "./wallet";
 import referralRouter from "./referral";
+import cronRouter from "./cron";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/spin", spinRouter);
 router.use("/tasks", tasksRouter);
 router.use("/wallet", walletRouter);
 router.use("/referral", referralRouter);
+router.use("/cron", cronRouter);
 
 export default router;
