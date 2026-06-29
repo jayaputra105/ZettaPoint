@@ -68,8 +68,8 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
 
   /* ── Main click handler ── */
   const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    // Locked = immediate reject (no animation)
-    if (locked) { onClick(e); return; }
+    // Locked or overclock (needsAd) = immediate passthrough, no animation
+    if (locked || needsAd) { onClick(e); return; }
     // Already animating = ignore
     if (stage !== "idle") return;
 
@@ -89,7 +89,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
     });
     t(10900, () => setStage("fly"));
     t(12800, () => { setStage("idle"); clearTimers(); });
-  }, [stage, locked, onClick, t, clearTimers]);
+  }, [stage, locked, needsAd, onClick, t, clearTimers]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
@@ -413,7 +413,7 @@ export default function CosmicCoin({ onClick, locked, needsAd, children }: Cosmi
             zIndex: 54,
           }}
           onClick={handleClick}
-          disabled={stage !== "idle" && !locked}
+          disabled={stage !== "idle" && !locked && !needsAd}
         >
           {/* 3D Y-spin — key change per stage to reset speed */}
           <motion.div
