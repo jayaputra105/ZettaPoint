@@ -1,8 +1,8 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "pnpm install && BASE_PATH=/ pnpm --filter @workspace/zettapoint run build",
-  "outputDirectory": "artifacts/zettapoint/dist/public",
+  "buildCommand": "pnpm install && BASE_PATH=/ pnpm --filter @workspace/zettapoint run build && mkdir -p public && cp -r artifacts/zettapoint/dist/public/. public/",
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
