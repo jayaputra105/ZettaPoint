@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "framework": null,
   "buildCommand": "pnpm install && BASE_PATH=/ pnpm --filter @workspace/zettapoint run build",
   "outputDirectory": "artifacts/zettapoint/dist/public",
   "rewrites": [
